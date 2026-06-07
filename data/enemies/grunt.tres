@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/enemies/enemy_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+enemy_name = "Grunt"
+max_hp = 60.0
+move_speed = 80.0
+attack_damage = 12.0
+attack_range = 40.0
+windup_duration = 0.6
+knockback_force = 150.0
+sprite_color = Color(0.38, 0.32, 0.28, 1)
+is_stocky = true

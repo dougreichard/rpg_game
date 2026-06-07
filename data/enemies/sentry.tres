@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/enemies/enemy_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+enemy_name = "Sentry"
+max_hp = 45.0
+move_speed = 50.0
+attack_damage = 14.0
+attack_range = 220.0
+windup_duration = 0.5
+knockback_force = 80.0
+sprite_color = Color(0.3, 0.55, 0.65, 1)
+is_stocky = false
+is_ranged = true
+projectile_speed = 260.0

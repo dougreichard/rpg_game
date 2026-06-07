@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(godot --headless --path . --quit-after 200)",
+      "Read(//Applications/**)",
+      "Bash(mdfind \"kMDItemFSName == 'Godot*'\")",
+      "Bash(\"/Users/dougreichard/Applications/Godot Engine.app/Contents/MacOS/Godot\" --headless --path /Users/dougreichard/Documents/claude/rpg_game --quit-after 200)",
+      "Bash(ls \"/Users/dougreichard/Applications/Godot Engine.app/Contents/MacOS/\")",
+      "Read(//Users/dougreichard/Applications/Godot Engine.app/Contents/MacOS/**)",
+      "Bash(cat \"/Users/dougreichard/Applications/Godot Engine.app/Contents/MacOS/run.sh\" | head -5; ls \"/Users/dougreichard/Applications/Godot Engine.app/Contents/Resources/\" 2>/dev/null | head -10)",
+      "Read(//Users/dougreichard/Applications/Godot Engine.app/Contents/Resources/**)",
+      "Bash(find \"/Users/dougreichard/Library/Application Support/Steam/steamapps/common/Godot Engine\" -name \"*.app\" -o -name \"Godot\" -o -name \"godot\" 2>/dev/null | head -10)",
+      "Read(//Users/dougreichard/Library/Application Support/Steam/steamapps/common/Godot Engine/**)",
+      "Bash(\"/Users/dougreichard/Library/Application Support/Steam/steamapps/common/Godot Engine/Godot.app/Contents/MacOS/Godot\" --headless --path /Users/dougreichard/Documents/claude/rpg_game --quit-after 200)",
+      "Bash(\"/Users/dougreichard/Library/Application Support/Steam/steamapps/common/Godot Engine/Godot.app/Contents/MacOS/Godot\" --headless --path /Users/dougreichard/Documents/claude/rpg_game res://scenes/levels/OldParishChurch.tscn --quit-after 200)",
+      "Bash('/Users/dougreichard/Library/Application Support/Steam/steamapps/common/Godot Engine/Godot.app/Contents/MacOS/Godot' --headless --path /Users/dougreichard/Documents/claude/rpg_game --quit-after 200)",
+      "Bash('/Users/dougreichard/Library/Application Support/Steam/steamapps/common/Godot Engine/Godot.app/Contents/MacOS/Godot' --headless --path /Users/dougreichard/Documents/claude/rpg_game res://scenes/overworld/OverworldMap.tscn --quit-after 200)",
+      "Bash('/Users/dougreichard/Library/Application Support/Steam/steamapps/common/Godot Engine/Godot.app/Contents/MacOS/Godot' --headless --path /Users/dougreichard/Documents/claude/rpg_game res://scenes/levels/PipeOrganWorks.tscn --quit-after 200)",
+      "Bash('/Users/dougreichard/Library/Application Support/Steam/steamapps/common/Godot Engine/Godot.app/Contents/MacOS/Godot' --headless --path . res://scenes/levels/LibraryArchive.tscn --quit-after 60)",
+      "Bash('/Users/dougreichard/Library/Application Support/Steam/steamapps/common/Godot Engine/Godot.app/Contents/MacOS/Godot' --headless --path . --quit-after 200)"
+    ]
+  }
+}

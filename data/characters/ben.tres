@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="CharacterData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/players/character_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+character_name = "Ben"
+max_hp = 100.0
+move_speed = 155.0
+attack_damage = 17.0
+attack_cooldown = 0.4
+dash_distance = 130.0
+dash_iframe_duration = 0.18
+special_name = "Perfect Pitch"
+sprite_color = Color(0.75, 0.25, 0.55, 1)

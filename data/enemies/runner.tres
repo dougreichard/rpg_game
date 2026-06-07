@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/enemies/enemy_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+enemy_name = "Runner"
+max_hp = 30.0
+move_speed = 170.0
+attack_damage = 8.0
+attack_range = 30.0
+windup_duration = 0.3
+knockback_force = 220.0
+sprite_color = Color(0.5, 0.18, 0.62, 1)
+is_stocky = false

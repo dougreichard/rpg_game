@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="CharacterData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/players/character_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+character_name = "Erin"
+max_hp = 90.0
+move_speed = 180.0
+attack_damage = 15.0
+attack_cooldown = 0.35
+dash_distance = 160.0
+dash_iframe_duration = 0.2
+special_name = "Fast Talk"
+sprite_color = Color(0.9, 0.35, 0.1, 1)

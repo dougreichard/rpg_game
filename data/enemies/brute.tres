@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/enemies/enemy_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+enemy_name = "Brute"
+max_hp = 110.0
+move_speed = 65.0
+attack_damage = 18.0
+attack_range = 46.0
+windup_duration = 0.8
+knockback_force = 110.0
+sprite_color = Color(0.45, 0.2, 0.18, 1)
+is_stocky = true
