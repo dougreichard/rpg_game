@@ -73,7 +73,7 @@ var _doorway = null
 func _ready() -> void:
 	_build_floor()
 	_build_walls()
-	GameManager.register_players(quinn, erin)
+	GameManager.register_players_with_preference(quinn, erin)
 	hud.setup(quinn, erin)
 	quinn.special_used.connect(_on_special_used)
 	erin.special_used.connect(_on_special_used)
@@ -230,6 +230,8 @@ func _on_special_used(char_name: String) -> void:
 		hint_label.text = ""
 		clear_label.text = "PARISH CLEARED!\n\nPress ENTER for the Map"
 		clear_label.visible = true
+	elif GameManager.try_use_whistle():
+		Audio.play("special")
 
 func _process(_delta: float) -> void:
 	if is_instance_valid(GameManager.active_player):

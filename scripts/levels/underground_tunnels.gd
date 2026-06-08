@@ -32,10 +32,10 @@ const HATCH_POS := Vector2(880.0, 288.0)
 const HATCH_RADIUS: float = 64.0
 const HATCH_PRESSES_REQUIRED: int = 3
 
-# Collectibles: rusty key (functional, future shortcut hookup), security badge
-# (pre-fills one hatch pip if held on entry — CLAUDE.md: "auto-fills one pip
-# of Ethan's hatch hack"), pocket lantern (functional, future reveal hookup) —
-# see CLAUDE.md "Collectibles & Inventory".
+# Collectibles: rusty key (unlocks the junction shortcut door — see below),
+# security badge (pre-fills one hatch pip if held on entry — CLAUDE.md:
+# "auto-fills one pip of Ethan's hatch hack"), pocket lantern (collectible-only
+# this pass) — see CLAUDE.md "Collectibles & Inventory".
 const LootBoxScript: Script = preload("res://scripts/systems/loot_box.gd")
 const RustyKeyItem: ItemData     = preload("res://data/items/rusty_key.tres")
 const SecurityBadgeItem: ItemData = preload("res://data/items/security_badge.tres")
@@ -53,6 +53,13 @@ const PIP_FLASH_DURATION: float = 0.3
 # & multi-room levels". The duo spawns beside it in the south entry corridor;
 # walking away and back exits to the overworld at any time, cleared or not.
 const DoorwayScript: Script = preload("res://scripts/systems/doorway.gd")
+# Shortcut door — in the junction chamber, on the north wall. Opened once with
+# the rusty_key (consumed on use); exits to the overworld immediately without
+# needing to clear enemies or hack the hatch — the "hidden route" payoff the
+# CLAUDE.md spec describes for this location.
+const SHORTCUT_DOOR_POS := Vector2(480.0, 238.0)
+const SHORTCUT_DOOR_RADIUS: float = 52.0
+
 const DOORWAY_POS := Vector2(480.0, 500.0)
 
 # Multi-room layout bounding box — a literal BRANCHING MAZE matching "dark
@@ -86,6 +93,7 @@ var _hatch_hacked: bool = false
 var _cleared: bool = false
 var _rubble_sprite: Sprite2D
 var _hatch_sprite: Sprite2D
+var _shortcut_door_sprite: Sprite2D
 var _loot_boxes: Array = []
 var _doorway = null
 
@@ -94,15 +102,18 @@ var _pip_flash: float = 0.0
 var _twinkle_cooldown_timer: float = 0.0
 var _frosty_cooldown_timer: float = 0.0
 
+var _cd_scale: float = 1.0
 func _ready() -> void:
 	_build_floor()
 	_build_walls()
-	GameManager.register_players(evan, ethan)
+	GameManager.register_players_with_preference(evan, ethan)
 	hud.setup(evan, ethan)
+	_cd_scale = GameManager.companion_cooldown_scale()
 	evan.special_used.connect(_on_special_used)
 	ethan.special_used.connect(_on_special_used)
 	_create_rubble()
 	_create_hatch()
+	_create_shortcut_door()
 	_create_loot_boxes()
 	_create_hiding_spot()
 	_create_doorway()
@@ -186,6 +197,12 @@ func _create_rubble() -> void:
 	_rubble_sprite.position = RUBBLE_POS
 	add_child(_rubble_sprite)
 
+func _create_shortcut_door() -> void:
+	_shortcut_door_sprite = Sprite2D.new()
+	_shortcut_door_sprite.texture = PlaceholderArt.make_gate_texture(Color(0.38, 0.28, 0.22), 32, 48)
+	_shortcut_door_sprite.position = SHORTCUT_DOOR_POS
+	add_child(_shortcut_door_sprite)
+
 func _create_hatch() -> void:
 	_hatch_sprite = Sprite2D.new()
 	_hatch_sprite.texture = PlaceholderArt.make_gate_texture(Color(0.26, 0.32, 0.36), 44, 44)
@@ -229,7 +246,7 @@ func _summon_frosty(target: Enemy) -> void:
 	var frosty = AnimalCompanionScript.new()
 	frosty.setup(evan, target, FROSTY_COLOR)
 	add_child(frosty)
-	_frosty_cooldown_timer = FROSTY_COOLDOWN
+	_frosty_cooldown_timer = FROSTY_COOLDOWN * _cd_scale
 
 func _nearest_enemy(from_pos: Vector2):
 	var living: Array = []
@@ -245,7 +262,7 @@ func _summon_twinkle() -> void:
 	var twinkle = TwinkleScript.new()
 	twinkle.setup(evan, evan.facing)
 	add_child(twinkle)
-	_twinkle_cooldown_timer = TWINKLE_COOLDOWN
+	_twinkle_cooldown_timer = TWINKLE_COOLDOWN * _cd_scale
 
 func _spawn() -> void:
 	_add(GRUNT_SCENE,  Vector2(480.0, 260.0))
@@ -263,6 +280,19 @@ func _on_special_used(char_name: String) -> void:
 	for i in _loot_boxes.size():
 		if _loot_boxes[i].try_open(char_name, p.global_position):
 			GameManager.set_level_flag(LOCATION_ID, LOOT_FLAG_KEYS[i], true)
+			return
+	# Rusty key shortcut door — usable by either character in the duo
+	if p.global_position.distance_to(SHORTCUT_DOOR_POS) < SHORTCUT_DOOR_RADIUS:
+		if GameManager.has_item("Evan", RustyKeyItem.id) or GameManager.has_item("Ethan", RustyKeyItem.id):
+			var holder: String = "Evan" if GameManager.has_item("Evan", RustyKeyItem.id) else "Ethan"
+			GameManager.consume_item(holder, RustyKeyItem.id)
+			_shortcut_door_sprite.modulate = Color(0.4, 1.0, 0.5)
+			Audio.play("special")
+			_exit_to_overworld()
+			return
+		else:
+			hint_label.text = "This door is locked — find the rusty key"
+			Audio.play("hit")
 			return
 	if char_name == "Evan":
 		if not _rubble_cleared and evan.global_position.distance_to(RUBBLE_POS) < RUBBLE_RADIUS:
@@ -287,6 +317,8 @@ func _on_special_used(char_name: String) -> void:
 				_hatch_sprite.modulate = Color(0.4, 1.0, 0.5)
 				Audio.play("special")
 				GameManager.set_level_flag(LOCATION_ID, "hatch_hacked", true)
+	elif GameManager.try_use_whistle():
+		Audio.play("special")
 
 func _process(delta: float) -> void:
 	_pip_flash = maxf(_pip_flash - delta, 0.0)

@@ -46,7 +46,7 @@ has a distinct role; more can be added as the game expands.
 | William & Mary | Rabbits | Quick, burrows (William) / Calm, good listener (Mary) | **Puzzle scouts — always summoned and used as a pair**, never solo: William squeezes through gaps and grates too small for the duo to fetch items or trigger switches in hard-to-reach alcoves, while Mary holds a counterweight or covers a second switch in tandem — together they solve two-point puzzles ("pull a lever here, brace it there") that a single companion can't (mirrors Quinn's "gather parts" cross-dependency from the Pipe Organ Works). *(Implemented — see `the_drop.gd`: Evan's Special, used away from the wreckage, sends the pair scurrying to flanking gaps either side of it; only when BOTH are holding their point at once does it come free — an alternate, animal-handling route to the same "clear the landing site" puzzle his strength solves directly, the literal "two-point puzzle a single companion can't" from their spec.)* |
 | Calvin & Coolidge | Great Pyrenees (brothers) | Large, white | **Heavy muscle — always summoned and used as a pair**, never solo: Calvin is the **combat charger** (slams into an enemy with more force/knockback than Frosty, built for bruiser-type fights) while Coolidge is the **puzzle mover** (pairs with Evan's strength to drag or brace especially massive objects — crates, gates — that even Evan alone can't budge); whichever the moment calls for, the other tags along as backup. *(Implemented as a pair — see `harbor_docks.gd`: Evan's Special summons both together, away from a puzzle prop, to charge and stagger the two nearest foes — Calvin takes the nearest, Coolidge the next-nearest, or doubles up on Calvin's target if there's only one enemy left.)* |
 | *(unnamed)* | Guinea pigs | Small, numerous, skittish | **Crowd cover** — a scurrying group that can flood a floor, drawing every eye in the room and giving the duo a window to slip past or flank — Erin's stealth sections are the natural pairing. |
-| *(unnamed)* | Lizard | Cold-blooded, climbs | **Vertical-traversal scout** — scales walls/pipes the duo can't reach to flip a switch or drop a rope/ladder down to them; a climbing counterpart to William/Mary's burrowing. |
+| *(unnamed)* | Lizard | Cold-blooded, climbs | **Vertical-traversal scout** — scales walls/pipes the duo can't reach to flip a switch or drop a rope/ladder down to them; a climbing counterpart to William/Mary's burrowing. *(Implemented — see `lizard_companion.gd`: CLIMB → PERCH → RETURN phase machine; emits `target_reached` signal when it reaches its target position, which levels wire up as an alternate puzzle-gate route. Ethan summons it in both Zip Line Park (`_on_lizard_panel` → `_panel_hacked`) and VR Escape Room (`_on_lizard_bypass` → `_system_hacked`), cooldown-gated and scaled by `_cd_scale` / `animal_treat`.)* |
 
 **Combat-assist implementation pattern** *(established via Calvin & Coolidge at Harbor & Docks)*:
 `scripts/systems/animal_companion.gd` is a small reusable `Node2D` (no `class_name`
@@ -161,12 +161,16 @@ across the other 12 locations; 7 items wired into existing puzzle-prop gates
 Harbor container; `security_badge` → Underground hatch pip pre-fill;
 `film_reel` → Cinema projector hard gate); the 5-ticket Cinema entry gate
 implemented as `_has_all_tickets()` on the completion condition. Items without
-new-mechanic dependencies (`rusty_key`, `pocket_lantern`, `guard_whistle`,
-`crane_crank_handle`, `vr_override_chip`, `animal_treat`, `bies_charm`, all
-character tickets, all 6 junk items) placed as collectibles only — their
-CLAUDE.md "uses" reference systems (usable-item distraction, darkness/reveal,
-stat buff, etc.) that don't exist yet; those are explicitly future follow-up
-scope. Rolled out the same way the Doorway/camera/floor/stealth passes were:
+new-mechanic dependencies placed as collectibles only — their CLAUDE.md
+"uses" reference systems that didn't exist yet at the time. Subsequent passes
+have implemented: `rusty_key` → Underground Tunnels shortcut door (consume on
+use, immediate overworld exit); `guard_whistle` → one-shot `try_use_whistle()`
+fallback in all 13 `_on_special_used` functions (any character, consumed from
+whichever duo member holds it); `bies_charm` → +10% starting Bies charge via
+`register_players_with_preference`; `animal_treat` → halves companion cooldown
+via `GameManager.companion_cooldown_scale()` checked at level `_ready()`.
+Remaining collectible-only: `pocket_lantern`, `crane_crank_handle`,
+`vr_override_chip`, all character tickets, all 6 junk items. Rolled out the same way the Doorway/camera/floor/stealth passes were:
 prototype proven at Pipe Organ Works, mechanically repeated 12 more times.
 GUT 16/16 unaffected.
 

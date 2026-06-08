@@ -16,6 +16,12 @@ const SENTRY_SCENE: PackedScene = preload("res://scenes/enemies/Sentry.tscn")
 const HidingSpotScript: Script = preload("res://scripts/systems/hiding_spot.gd")
 const HIDING_SPOT_POS := Vector2(120.0, 470.0)
 
+# Guinea pigs — Erin's crowd-cover companion (see CLAUDE.md "Evan's Animals"):
+# a skittish herd that scatters from her position and floods the reading room,
+# drawing every guard's gaze toward the chaos. Cooldown-gated summon.
+const GuineaPigSwarmScript: Script = preload("res://scripts/systems/guinea_pig_swarm.gd")
+const GUINEA_PIG_COOLDOWN: float = 5.0
+
 # The librarian's desk: graduated from a purely cosmetic sprite-recolor to a
 # literal StaticBody2D collider sealing the narrow checkpoint into the
 # Restricted Stacks — the FOURTH cosmetic-to-collider upgrade of the rollout
@@ -78,12 +84,15 @@ var _desk_sprite: Sprite2D
 var _terminal_sprite: Sprite2D
 var _loot_boxes: Array = []
 var _doorway = null
+var _guinea_pig_cooldown_timer: float = 0.0
 
+var _cd_scale: float = 1.0
 func _ready() -> void:
 	_build_floor()
 	_build_walls()
-	GameManager.register_players(erin, ethan)
+	GameManager.register_players_with_preference(erin, ethan)
 	hud.setup(erin, ethan)
+	_cd_scale = GameManager.companion_cooldown_scale()
 	erin.special_used.connect(_on_special_used)
 	ethan.special_used.connect(_on_special_used)
 	_create_librarian_desk()
@@ -222,12 +231,14 @@ func _on_special_used(char_name: String) -> void:
 		if _loot_boxes[i].try_open(char_name, p.global_position):
 			GameManager.set_level_flag(LOCATION_ID, LOOT_FLAG_KEYS[i], true)
 			return
-	if char_name == "Erin" and not _librarian_talked:
-		if erin.global_position.distance_to(LIBRARIAN_POS) < LIBRARIAN_RADIUS:
+	if char_name == "Erin":
+		if not _librarian_talked and erin.global_position.distance_to(LIBRARIAN_POS) < LIBRARIAN_RADIUS:
 			_librarian_talked = true
 			_step_aside_librarian(true)
 			Audio.play("special")
 			GameManager.set_level_flag(LOCATION_ID, "librarian_talked", true)
+		elif _guinea_pig_cooldown_timer == 0.0:
+			_summon_guinea_pigs()
 	elif char_name == "Ethan" and not _librarian_talked:
 		if ethan.global_position.distance_to(LIBRARIAN_POS) < LIBRARIAN_RADIUS:
 			if GameManager.has_item("Erin", LibraryCardItem.id) or GameManager.has_item("Ethan", LibraryCardItem.id):
@@ -241,8 +252,17 @@ func _on_special_used(char_name: String) -> void:
 			_terminal_sprite.modulate = Color(0.4, 1.0, 0.5)
 			Audio.play("special")
 			GameManager.set_level_flag(LOCATION_ID, "archive_hacked", true)
+	elif GameManager.try_use_whistle():
+		Audio.play("special")
 
-func _process(_delta: float) -> void:
+func _summon_guinea_pigs() -> void:
+	var swarm = GuineaPigSwarmScript.new()
+	swarm.setup(erin)
+	add_child(swarm)
+	_guinea_pig_cooldown_timer = GUINEA_PIG_COOLDOWN * _cd_scale
+
+func _process(delta: float) -> void:
+	_guinea_pig_cooldown_timer = maxf(_guinea_pig_cooldown_timer - delta, 0.0)
 	if is_instance_valid(GameManager.active_player):
 		var active_pos: Vector2 = GameManager.active_player.global_position
 		camera.global_position = active_pos
@@ -275,7 +295,7 @@ func _update_hint() -> void:
 	if _cleared:
 		hint_label.text = ""
 	elif not _enemies_cleared:
-		hint_label.text = "Quiet but dangerous — read their patrol routes, duck into shadow, and deal with the guards before you're spotted"
+		hint_label.text = "Quiet but dangerous — read their patrol routes, duck into shadow  [ Erin: press G to release the guinea pigs — they'll flood the room and draw every guard's attention ]"
 	elif not _librarian_talked:
 		hint_label.text = "Erin: talk your way past the librarian's desk to reach the Restricted Stacks  [ approach it, press G ]"
 	elif not _archive_hacked:

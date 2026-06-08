@@ -94,11 +94,13 @@ var _mary = null
 var _scout_pair_cooldown_timer: float = 0.0
 var _frosty_cooldown_timer: float = 0.0
 
+var _cd_scale: float = 1.0
 func _ready() -> void:
 	_build_floor()
 	_build_walls()
-	GameManager.register_players(evan, ethan)
+	GameManager.register_players_with_preference(evan, ethan)
 	hud.setup(evan, ethan)
+	_cd_scale = GameManager.companion_cooldown_scale()
 	evan.special_used.connect(_on_special_used)
 	ethan.special_used.connect(_on_special_used)
 	_create_chute()
@@ -226,7 +228,7 @@ func _summon_scout_pair() -> void:
 	_mary = ScoutPairScript.new()
 	_mary.setup(evan.global_position, MARY_TARGET_POS, MARY_COLOR)
 	add_child(_mary)
-	_scout_pair_cooldown_timer = SCOUT_PAIR_COOLDOWN
+	_scout_pair_cooldown_timer = SCOUT_PAIR_COOLDOWN * _cd_scale
 
 func _check_scout_pair_holding() -> void:
 	if _landing_cleared or _william == null or _mary == null:
@@ -276,12 +278,14 @@ func _on_special_used(char_name: String) -> void:
 				_summon_frosty(target)
 			elif not _landing_cleared and _scout_pair_cooldown_timer == 0.0 and _william == null and _mary == null:
 				_summon_scout_pair()
+	elif GameManager.try_use_whistle():
+		Audio.play("special")
 
 func _summon_frosty(target: Enemy) -> void:
 	var frosty = AnimalCompanionScript.new()
 	frosty.setup(evan, target, FROSTY_COLOR)
 	add_child(frosty)
-	_frosty_cooldown_timer = FROSTY_COOLDOWN
+	_frosty_cooldown_timer = FROSTY_COOLDOWN * _cd_scale
 
 func _nearest_enemy(from_pos: Vector2):
 	var living: Array = []

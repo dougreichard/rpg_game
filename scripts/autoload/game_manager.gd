@@ -50,6 +50,57 @@ func grant_item(character_name: String, item_id: String) -> void:
 # tracking system. Mirrors `inventories`/`has_item`/`grant_item` exactly.
 var level_progress: Dictionary = {}
 
+# Character Select — set by OverworldMap before routing to CharacterSelect.tscn.
+# `preferred_active` is consumed (and cleared) by level scripts via
+# `register_players_with_preference`; "first of the level's spec duo" is the default.
+var pending_level: String = ""
+var pending_level_name: String = ""
+var pending_level_duo: Array = []
+var preferred_active: String = ""
+
+# Removes an item from a character's inventory (one-shot consumable use).
+func consume_item(character_name: String, item_id: String) -> void:
+	var key: String = character_name.to_lower()
+	if key not in inventories:
+		return
+	var idx: int = (inventories[key] as Array).find(item_id)
+	if idx < 0:
+		return
+	(inventories[key] as Array).remove_at(idx)
+	SaveManager.save_game()
+
+# Guard whistle: checks if either player holds one, consumes it, emits noise.
+# Returns true (and fires) only when a whistle is actually found. No position
+# argument — uses active_player.global_position since the active character is
+# always the one pressing Special.
+const WHISTLE_NOISE_RADIUS: float = 220.0
+
+func try_use_whistle() -> bool:
+	if not is_instance_valid(active_player):
+		return false
+	var active_name: String = active_player.data.character_name
+	var standby_name: String = standby_player.data.character_name if is_instance_valid(standby_player) else ""
+	var holder: String = ""
+	if has_item(active_name, "guard_whistle"):
+		holder = active_name
+	elif standby_name != "" and has_item(standby_name, "guard_whistle"):
+		holder = standby_name
+	if holder == "":
+		return false
+	consume_item(holder, "guard_whistle")
+	emit_noise(active_player.global_position, WHISTLE_NOISE_RADIUS)
+	return true
+
+# Returns 0.5 if either player holds an animal_treat (halves companion cooldowns),
+# 1.0 otherwise. Call once at level _ready() time; store as _cd_scale.
+func companion_cooldown_scale() -> float:
+	if not is_instance_valid(active_player) or not is_instance_valid(standby_player):
+		return 1.0
+	if has_item(active_player.data.character_name, "animal_treat") or \
+			has_item(standby_player.data.character_name, "animal_treat"):
+		return 0.5
+	return 1.0
+
 func get_level_flag(location_id: String, key: String, default = false):
 	return level_progress.get(location_id, {}).get(key, default)
 
@@ -190,6 +241,21 @@ func register_players(p1: Player, p2: Player) -> void:
 	standby_player = p2
 	active_player.is_active = true
 	standby_player.is_active = false
+
+# Respects the Character Select preference, then clears it.
+# Pass the level's default p1/p2; if preferred_active matches p2's name,
+# the order is swapped before registering.
+func register_players_with_preference(p1: Player, p2: Player) -> void:
+	if preferred_active != "" and preferred_active == p2.data.character_name:
+		register_players(p2, p1)
+	else:
+		register_players(p1, p2)
+	preferred_active = ""
+	# Bies charm: +10% starting Bies charge if either player holds one.
+	if has_item(active_player.data.character_name, "bies_charm") or \
+			has_item(standby_player.data.character_name, "bies_charm"):
+		active_player.bies_charge = minf(active_player.bies_charge + 0.1, 1.0)
+		active_player.bies_charge_changed.emit(active_player.bies_charge)
 
 func swap_characters() -> void:
 	if active_player == null or standby_player == null:

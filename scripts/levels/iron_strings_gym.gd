@@ -78,11 +78,13 @@ var _loot_boxes: Array = []
 var _doorway = null
 var _frosty_cooldown_timer: float = 0.0
 
+var _cd_scale: float = 1.0
 func _ready() -> void:
 	_build_floor()
 	_build_walls()
-	GameManager.register_players(quinn, evan)
+	GameManager.register_players_with_preference(quinn, evan)
 	hud.setup(quinn, evan)
+	_cd_scale = GameManager.companion_cooldown_scale()
 	quinn.special_used.connect(_on_special_used)
 	evan.special_used.connect(_on_special_used)
 	_create_barbell()
@@ -212,6 +214,8 @@ func _on_special_used(char_name: String) -> void:
 			GameManager.set_level_flag(LOCATION_ID, "barbell_moved", true)
 		elif _frosty_cooldown_timer == 0.0:
 			_summon_frosty()
+	elif GameManager.try_use_whistle():
+		Audio.play("special")
 
 func _summon_frosty() -> void:
 	var target = _nearest_enemy(evan.global_position)
@@ -220,7 +224,7 @@ func _summon_frosty() -> void:
 	var frosty = AnimalCompanionScript.new()
 	frosty.setup(evan, target, FROSTY_COLOR)
 	add_child(frosty)
-	_frosty_cooldown_timer = FROSTY_COOLDOWN
+	_frosty_cooldown_timer = FROSTY_COOLDOWN * _cd_scale
 
 func _nearest_enemy(from_pos: Vector2):
 	var living: Array = []

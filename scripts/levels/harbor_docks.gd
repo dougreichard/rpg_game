@@ -90,11 +90,13 @@ var _container_sprite: Sprite2D
 var _loot_boxes: Array = []
 var _doorway = null
 
+var _cd_scale: float = 1.0
 func _ready() -> void:
 	_build_floor()
 	_build_walls()
-	GameManager.register_players(quinn, evan)
+	GameManager.register_players_with_preference(quinn, evan)
 	hud.setup(quinn, evan)
+	_cd_scale = GameManager.companion_cooldown_scale()
 	quinn.special_used.connect(_on_special_used)
 	evan.special_used.connect(_on_special_used)
 	_create_container()
@@ -264,6 +266,8 @@ func _on_special_used(char_name: String) -> void:
 # (see CLAUDE.md's animal companion roster) — Calvin (combat charger) takes the
 # nearest foe, Coolidge (puzzle mover, but happy to back his brother in a brawl)
 # takes the next-nearest, or doubles up on Calvin's target if there's only one.
+	elif GameManager.try_use_whistle():
+		Audio.play("special")
 func _summon_calvin_and_coolidge() -> void:
 	var targets: Array = _nearest_enemies(evan.global_position, 2)
 	if targets.is_empty():
@@ -274,7 +278,7 @@ func _summon_calvin_and_coolidge() -> void:
 	var coolidge = AnimalCompanionScript.new()
 	coolidge.setup(evan, targets[1] if targets.size() > 1 else targets[0], COOLIDGE_COLOR)
 	add_child(coolidge)
-	_calvin_cooldown_timer = CALVIN_COOLDOWN
+	_calvin_cooldown_timer = CALVIN_COOLDOWN * _cd_scale
 
 func _nearest_enemies(from_pos: Vector2, count: int) -> Array:
 	var living: Array = []

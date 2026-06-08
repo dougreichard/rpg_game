@@ -16,6 +16,13 @@ const RUNNER_SCENE: PackedScene = preload("res://scenes/enemies/Runner.tscn")
 const HidingSpotScript: Script = preload("res://scripts/systems/hiding_spot.gd")
 const HIDING_SPOT_POS := Vector2(540.0, 440.0)
 
+# Lizard — alternate route to _panel_hacked: climbs the support pylon to
+# the high-mounted access port, letting Ethan bypass standing at the panel
+# directly (same William-&-Mary pattern from The Drop).
+const LizardScript: Script = preload("res://scripts/systems/lizard_companion.gd")
+const HIGH_ACCESS_POS := Vector2(540.0, 185.0)
+const LIZARD_COOLDOWN: float = 4.0
+
 const PANEL_POS := Vector2(540.0, 320.0)
 const PANEL_RADIUS: float = 64.0
 const RELEASE_POS := Vector2(860.0, 280.0)
@@ -80,14 +87,17 @@ var _doorway = null
 var _pulse_timer: float = 0.0
 var _release_lockout: float = 0.0
 var _miss_flash: float = 0.0
+var _lizard_cooldown_timer: float = 0.0
+var _cd_scale: float = 1.0
 
 func _ready() -> void:
 	_build_floor()
 	_build_walls()
-	GameManager.register_players(ethan, ben)
+	GameManager.register_players_with_preference(ethan, ben)
 	hud.setup(ethan, ben)
 	ethan.special_used.connect(_on_special_used)
 	ben.special_used.connect(_on_special_used)
+	_cd_scale = GameManager.companion_cooldown_scale()
 	_create_panel()
 	_create_release()
 	_create_loot_boxes()
@@ -222,6 +232,8 @@ func _on_special_used(char_name: String) -> void:
 			_panel_sprite.modulate = Color(0.4, 1.0, 0.5)
 			Audio.play("special")
 			GameManager.set_level_flag(LOCATION_ID, "panel_hacked", true)
+		elif _lizard_cooldown_timer == 0.0:
+			_summon_lizard()
 	elif char_name == "Ben" and not _release_timed:
 		if ben.global_position.distance_to(RELEASE_POS) < RELEASE_RADIUS and _release_lockout <= 0.0:
 			if _pulse_timer >= PULSE_PERIOD - PULSE_GOOD_WINDOW:
@@ -233,8 +245,27 @@ func _on_special_used(char_name: String) -> void:
 				_release_lockout = MISS_LOCKOUT
 				_miss_flash = MISS_LOCKOUT
 				Audio.play("hurt")
+	elif GameManager.try_use_whistle():
+		Audio.play("special")
+
+func _summon_lizard() -> void:
+	var lizard = LizardScript.new()
+	lizard.setup(ethan, HIGH_ACCESS_POS)
+	lizard.target_reached.connect(_on_lizard_panel)
+	add_child(lizard)
+	_lizard_cooldown_timer = LIZARD_COOLDOWN * _cd_scale
+	Audio.play("special")
+
+func _on_lizard_panel() -> void:
+	if _panel_hacked:
+		return
+	_panel_hacked = true
+	_panel_sprite.modulate = Color(0.4, 1.0, 0.5)
+	Audio.play("special")
+	GameManager.set_level_flag(LOCATION_ID, "panel_hacked", true)
 
 func _process(delta: float) -> void:
+	_lizard_cooldown_timer = maxf(_lizard_cooldown_timer - delta, 0.0)
 	_update_hint()
 	_release_lockout = maxf(_release_lockout - delta, 0.0)
 	_miss_flash = maxf(_miss_flash - delta, 0.0)

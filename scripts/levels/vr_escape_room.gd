@@ -32,6 +32,15 @@ const SENTRY_SCENE: PackedScene = preload("res://scenes/enemies/Sentry.tscn")
 const HidingSpotScript: Script = preload("res://scripts/systems/hiding_spot.gd")
 const HIDING_SPOT_POS := Vector2(470.0, 260.0)
 
+# Lizard — Evan's vertical-traversal scout (see CLAUDE.md "Evan's Animals"):
+# climbs to the bypass panel above the system console and trips the circuit,
+# providing an alternate route to _system_hacked without standing at the
+# console directly. Summoned by Ethan when away from the console (mirrors the
+# William & Mary alternate-route pattern from The Drop).
+const LizardScript: Script = preload("res://scripts/systems/lizard_companion.gd")
+const BYPASS_PANEL_POS := Vector2(630.0, 48.0)
+const LIZARD_COOLDOWN: float = 4.0
+
 const GLITCH_POS := Vector2(560.0, 370.0)
 const GLITCH_RADIUS: float = 64.0
 const SYSTEM_POS := Vector2(590.0, 110.0)
@@ -88,14 +97,17 @@ var _glitch_sprite: Sprite2D
 var _system_sprite: Sprite2D
 var _loot_boxes: Array = []
 var _doorway = null
+var _lizard_cooldown_timer: float = 0.0
+var _cd_scale: float = 1.0
 
 func _ready() -> void:
 	_build_floor()
 	_build_walls()
-	GameManager.register_players(quinn, ethan)
+	GameManager.register_players_with_preference(quinn, ethan)
 	hud.setup(quinn, ethan)
 	quinn.special_used.connect(_on_special_used)
 	ethan.special_used.connect(_on_special_used)
+	_cd_scale = GameManager.companion_cooldown_scale()
 	_create_glitch()
 	_create_system()
 	_create_loot_boxes()
@@ -260,8 +272,29 @@ func _on_special_used(char_name: String) -> void:
 			_system_sprite.modulate = Color(0.4, 1.0, 0.5)
 			Audio.play("special")
 			GameManager.set_level_flag(LOCATION_ID, "system_hacked", true)
+		elif _lizard_cooldown_timer == 0.0:
+			_summon_lizard()
+	elif GameManager.try_use_whistle():
+		Audio.play("special")
 
-func _process(_delta: float) -> void:
+func _summon_lizard() -> void:
+	var lizard = LizardScript.new()
+	lizard.setup(ethan, BYPASS_PANEL_POS)
+	lizard.target_reached.connect(_on_lizard_bypass)
+	add_child(lizard)
+	_lizard_cooldown_timer = LIZARD_COOLDOWN * _cd_scale
+	Audio.play("special")
+
+func _on_lizard_bypass() -> void:
+	if _system_hacked:
+		return
+	_system_hacked = true
+	_system_sprite.modulate = Color(0.4, 1.0, 0.5)
+	Audio.play("special")
+	GameManager.set_level_flag(LOCATION_ID, "system_hacked", true)
+
+func _process(delta: float) -> void:
+	_lizard_cooldown_timer = maxf(_lizard_cooldown_timer - delta, 0.0)
 	_update_hint()
 	if is_instance_valid(GameManager.active_player):
 		var active_pos: Vector2 = GameManager.active_player.global_position

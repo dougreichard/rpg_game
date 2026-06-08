@@ -5,66 +5,79 @@ const LOCS: Array = [
 		"id": "pipe_organ_works", "name": "Bellows & Sons Pipe Organ Works",
 		"short": "Organ\nWorks", "scene": "res://scenes/levels/PipeOrganWorks.tscn",
 		"pos": Vector2(165, 450), "requires": "", "icon": "gear",
+		"duo": ["Quinn", "Erin"],
 	},
 	{
 		"id": "old_parish_church", "name": "The Old Parish Church",
 		"short": "Parish\nChurch", "scene": "res://scenes/levels/OldParishChurch.tscn",
 		"pos": Vector2(325, 375), "requires": "pipe_organ_works", "icon": "arch",
+		"duo": ["Quinn", "Erin"],
 	},
 	{
 		"id": "iron_strings_gym", "name": "Iron & Strings Gym",
 		"short": "Gym", "scene": "res://scenes/levels/IronStringsGym.tscn",
 		"pos": Vector2(490, 340), "requires": "old_parish_church", "icon": "dumbbell",
+		"duo": ["Quinn", "Evan"],
 	},
 	{
 		"id": "recording_studio", "name": "The Recording Studio",
 		"short": "Studio", "scene": "res://scenes/levels/RecordingStudio.tscn",
 		"pos": Vector2(665, 375), "requires": "iron_strings_gym", "icon": "note",
+		"duo": ["Quinn", "Ben"],
 	},
 	{
 		"id": "clocktower", "name": "The Clocktower",
 		"short": "Clock-\ntower", "scene": "res://scenes/levels/Clocktower.tscn",
 		"pos": Vector2(595, 205), "requires": "recording_studio", "icon": "clock",
+		"duo": ["Quinn", "Ben"],
 	},
 	{
 		"id": "harbor_docks", "name": "The Harbor & Docks",
 		"short": "Harbor\n& Docks", "scene": "res://scenes/levels/HarborDocks.tscn",
 		"pos": Vector2(900, 470), "requires": "recording_studio", "icon": "anchor",
+		"duo": ["Quinn", "Evan"],
 	},
 	{
 		"id": "library", "name": "The Public Library & Archive",
 		"short": "Library", "scene": "res://scenes/levels/LibraryArchive.tscn",
 		"pos": Vector2(455, 200), "requires": "recording_studio", "icon": "book",
+		"duo": ["Erin", "Ethan"],
 	},
 	{
 		"id": "carnival", "name": "The Carnival & Fairground",
 		"short": "Carnival", "scene": "res://scenes/levels/Carnival.tscn",
 		"pos": Vector2(840, 225), "requires": "recording_studio", "icon": "star",
+		"duo": ["Quinn", "Erin"],
 	},
 	{
 		"id": "underground", "name": "The Underground Tunnels",
 		"short": "Tunnels", "scene": "res://scenes/levels/UndergroundTunnels.tscn",
 		"pos": Vector2(630, 490), "requires": "recording_studio", "icon": "tunnel",
+		"duo": ["Evan", "Ethan"],
 	},
 	{
 		"id": "zip_line", "name": "Zip Line Park",
 		"short": "Zip Line\nPark", "scene": "res://scenes/levels/ZipLinePark.tscn",
 		"pos": Vector2(975, 330), "requires": "recording_studio", "icon": "zipline",
+		"duo": ["Ethan", "Ben"],
 	},
 	{
 		"id": "vr_room", "name": "VR Escape Room",
 		"short": "VR Room", "scene": "res://scenes/levels/VrEscapeRoom.tscn",
 		"pos": Vector2(795, 155), "requires": "recording_studio", "icon": "hex",
+		"duo": ["Quinn", "Ethan"],
 	},
 	{
 		"id": "the_drop", "name": "The Drop",
 		"short": "The\nDrop", "scene": "res://scenes/levels/TheDrop.tscn",
 		"pos": Vector2(385, 155), "requires": "vr_room", "icon": "chevron",
+		"duo": ["Evan", "Ethan"],
 	},
 	{
 		"id": "grand_marquee", "name": "The Grand Marquee Cinema",
 		"short": "Grand\nMarquee", "scene": "res://scenes/levels/GrandMarqueeCinema.tscn",
 		"pos": Vector2(595, 100), "requires": "the_drop", "icon": "film",
+		"duo": ["Quinn", "Ben"],
 	},
 ]
 
@@ -204,7 +217,11 @@ func _launch() -> void:
 		_status_label.text = "Coming soon!"
 		return
 	Audio.play("ui_select")
-	get_tree().change_scene_to_file(loc["scene"])
+	GameManager.pending_level = loc["scene"]
+	GameManager.pending_level_name = loc["name"]
+	GameManager.pending_level_duo = loc.get("duo", [])
+	GameManager.preferred_active = loc.get("duo", [""])[0]
+	get_tree().change_scene_to_file("res://scenes/ui/CharacterSelect.tscn")
 
 func _draw() -> void:
 	draw_rect(Rect2(0.0, 0.0, 1280.0, 720.0), Color(0.05, 0.04, 0.13))

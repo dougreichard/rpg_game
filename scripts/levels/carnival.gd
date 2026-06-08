@@ -16,6 +16,12 @@ const BRUTE_SCENE: PackedScene = preload("res://scenes/enemies/Brute.tscn")
 const HidingSpotScript: Script = preload("res://scripts/systems/hiding_spot.gd")
 const HIDING_SPOT_POS := Vector2(150.0, 460.0)
 
+# Guinea pigs — Erin's crowd-cover companion (see CLAUDE.md "Evan's Animals"):
+# floods the midway with scurrying creatures, drawing every carnie's gaze as
+# cover for the duo to slip through or set up a flanking attack.
+const GuineaPigSwarmScript: Script = preload("res://scripts/systems/guinea_pig_swarm.gd")
+const GUINEA_PIG_COOLDOWN: float = 5.0
+
 const RIDE_POS := Vector2(380.0, 340.0)
 const RIDE_RADIUS: float = 64.0
 
@@ -88,12 +94,15 @@ var _gate_sprite: Sprite2D
 var _doug_poster: Sprite2D
 var _loot_boxes: Array = []
 var _doorway = null
+var _guinea_pig_cooldown_timer: float = 0.0
 
+var _cd_scale: float = 1.0
 func _ready() -> void:
 	_build_floor()
 	_build_walls()
-	GameManager.register_players(quinn, erin)
+	GameManager.register_players_with_preference(quinn, erin)
 	hud.setup(quinn, erin)
+	_cd_scale = GameManager.companion_cooldown_scale()
 	quinn.special_used.connect(_on_special_used)
 	erin.special_used.connect(_on_special_used)
 	_create_ride()
@@ -259,14 +268,25 @@ func _on_special_used(char_name: String) -> void:
 				_raise_curtain(true)
 				Audio.play("special")
 				GameManager.set_level_flag(LOCATION_ID, "backstage_talked", true)
-	elif char_name == "Erin" and not _backstage_talked:
-		if erin.global_position.distance_to(BACKSTAGE_POS) < BACKSTAGE_RADIUS:
+	elif char_name == "Erin":
+		if not _backstage_talked and erin.global_position.distance_to(BACKSTAGE_POS) < BACKSTAGE_RADIUS:
 			_backstage_talked = true
 			_raise_curtain(true)
 			Audio.play("special")
 			GameManager.set_level_flag(LOCATION_ID, "backstage_talked", true)
+		elif _guinea_pig_cooldown_timer == 0.0:
+			_summon_guinea_pigs()
+	elif GameManager.try_use_whistle():
+		Audio.play("special")
 
-func _process(_delta: float) -> void:
+func _summon_guinea_pigs() -> void:
+	var swarm = GuineaPigSwarmScript.new()
+	swarm.setup(erin)
+	add_child(swarm)
+	_guinea_pig_cooldown_timer = GUINEA_PIG_COOLDOWN * _cd_scale
+
+func _process(delta: float) -> void:
+	_guinea_pig_cooldown_timer = maxf(_guinea_pig_cooldown_timer - delta, 0.0)
 	if is_instance_valid(GameManager.active_player):
 		var active_pos: Vector2 = GameManager.active_player.global_position
 		camera.global_position = active_pos
@@ -299,7 +319,7 @@ func _update_hint() -> void:
 	if _cleared:
 		hint_label.text = ""
 	elif not _enemies_cleared:
-		hint_label.text = "The carnies haven't noticed you yet — work the midway quietly, or start the brawl on your own terms"
+		hint_label.text = "The carnies haven't noticed you yet — work the midway quietly  [ Erin: press G to release the guinea pigs and flood the midway with chaos ]"
 	elif not _ride_repaired:
 		hint_label.text = "Quinn: repair the broken ride  [ approach it, press G ]"
 	elif not _backstage_talked:

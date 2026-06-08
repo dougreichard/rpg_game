@@ -82,7 +82,7 @@ var _doorway = null
 func _ready() -> void:
 	_build_floor()
 	_build_walls()
-	GameManager.register_players(quinn, ben)
+	GameManager.register_players_with_preference(quinn, ben)
 	hud.setup(quinn, ben)
 	quinn.special_used.connect(_on_special_used)
 	ben.special_used.connect(_on_special_used)
@@ -228,6 +228,8 @@ func _on_special_used(char_name: String) -> void:
 			_open_booth_door(true)
 			Audio.play("special")
 			GameManager.set_level_flag(LOCATION_ID, "console_tuned", true)
+	elif GameManager.try_use_whistle():
+		Audio.play("special")
 
 func _process(_delta: float) -> void:
 	if is_instance_valid(GameManager.active_player):

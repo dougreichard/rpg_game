@@ -77,7 +77,7 @@ var _doorway = null
 func _ready() -> void:
 	_build_floor()
 	_build_walls()
-	GameManager.register_players(quinn, erin)
+	GameManager.register_players_with_preference(quinn, erin)
 	hud.setup(quinn, erin)
 	quinn.special_used.connect(_on_special_used)
 	erin.special_used.connect(_on_special_used)
@@ -239,6 +239,8 @@ func _on_special_used(char_name: String) -> void:
 			_organ_sprite.modulate = Color(0.4, 1.0, 0.5)
 			Audio.play("special")
 			GameManager.set_level_flag(LOCATION_ID, "organ_repaired", true)
+	elif GameManager.try_use_whistle():
+		Audio.play("special")
 
 func _spawn() -> void:
 	_add(GRUNT_SCENE,  Vector2(700.0, 120.0))
