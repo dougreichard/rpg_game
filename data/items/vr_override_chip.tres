@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="ItemData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/systems/item_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "vr_override_chip"
+display_name = "VR Override Chip"
+description = "Lets Quinn or Ethan instantly clear one corrupted VR Escape Room stage."
+icon_color = Color(0.3, 0.8, 0.85, 1)
+owner_character = ""
+is_junk = false

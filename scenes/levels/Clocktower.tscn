@@ -1,4 +1,4 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene load_steps=9 format=3]
 
 [ext_resource type="Script" path="res://scripts/levels/clocktower.gd" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/players/Player.tscn" id="2"]
@@ -7,56 +7,87 @@
 [ext_resource type="PackedScene" path="res://scenes/ui/HUD.tscn" id="5"]
 
 [sub_resource type="RectangleShape2D" id="6"]
-size = Vector2(640.0, 16.0)
+size = Vector2(16.0, 560.0)
 
 [sub_resource type="RectangleShape2D" id="7"]
-size = Vector2(16.0, 360.0)
+size = Vector2(320.0, 16.0)
+
+[sub_resource type="RectangleShape2D" id="8"]
+size = Vector2(120.0, 16.0)
 
 [node name="Clocktower" type="Node2D"]
 script = ExtResource("1")
 
 [node name="Camera2D" type="Camera2D" parent="."]
-position = Vector2(320.0, 180.0)
+position = Vector2(440.0, 520.0)
 zoom = Vector2(2.0, 2.0)
 
 [node name="Walls" type="Node2D" parent="."]
 
-[node name="TopWall" type="StaticBody2D" parent="Walls"]
-position = Vector2(320.0, 8.0)
+[node name="TowerWest" type="StaticBody2D" parent="Walls"]
+position = Vector2(272.0, 320.0)
 collision_layer = 1
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Walls/TopWall"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Walls/TowerWest"]
 shape = SubResource("6")
 
-[node name="BottomWall" type="StaticBody2D" parent="Walls"]
-position = Vector2(320.0, 352.0)
+[node name="TowerEast" type="StaticBody2D" parent="Walls"]
+position = Vector2(608.0, 320.0)
 collision_layer = 1
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Walls/BottomWall"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Walls/TowerEast"]
 shape = SubResource("6")
 
-[node name="LeftWall" type="StaticBody2D" parent="Walls"]
-position = Vector2(8.0, 180.0)
+[node name="TowerNorth" type="StaticBody2D" parent="Walls"]
+position = Vector2(440.0, 32.0)
 collision_layer = 1
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Walls/LeftWall"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Walls/TowerNorth"]
 shape = SubResource("7")
 
-[node name="RightWall" type="StaticBody2D" parent="Walls"]
-position = Vector2(632.0, 180.0)
+[node name="LandingSouth" type="StaticBody2D" parent="Walls"]
+position = Vector2(440.0, 608.0)
 collision_layer = 1
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Walls/RightWall"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Walls/LandingSouth"]
 shape = SubResource("7")
+
+[node name="DividerALeft" type="StaticBody2D" parent="Walls"]
+position = Vector2(340.0, 440.0)
+collision_layer = 1
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Walls/DividerALeft"]
+shape = SubResource("8")
+
+[node name="DividerARight" type="StaticBody2D" parent="Walls"]
+position = Vector2(540.0, 440.0)
+collision_layer = 1
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Walls/DividerARight"]
+shape = SubResource("8")
+
+[node name="DividerBLeft" type="StaticBody2D" parent="Walls"]
+position = Vector2(340.0, 200.0)
+collision_layer = 1
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Walls/DividerBLeft"]
+shape = SubResource("8")
+
+[node name="DividerBRight" type="StaticBody2D" parent="Walls"]
+position = Vector2(540.0, 200.0)
+collision_layer = 1
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Walls/DividerBRight"]
+shape = SubResource("8")
 
 [node name="Players" type="Node2D" parent="."]
 
 [node name="Quinn" parent="Players" instance=ExtResource("2")]
-position = Vector2(80.0, 180.0)
+position = Vector2(420.0, 570.0)
 data = ExtResource("3")
 
 [node name="Ben" parent="Players" instance=ExtResource("2")]
-position = Vector2(130.0, 180.0)
+position = Vector2(460.0, 570.0)
 data = ExtResource("4")
 
 [node name="Enemies" type="Node2D" parent="."]

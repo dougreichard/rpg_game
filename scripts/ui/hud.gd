@@ -7,6 +7,7 @@ extends CanvasLayer
 @onready var label_a: Label = $Panel/LabelA
 @onready var label_b: Label = $Panel/LabelB
 @onready var duo_panel: Node = $DuoPanel
+@onready var inventory_panel: Node = $InventoryPanel
 
 var _a: Player = null
 var _b: Player = null
@@ -26,6 +27,7 @@ func setup(a: Player, b: Player) -> void:
 	bies_bar.max_value = 1.0
 	bies_bar.value = 0.0
 	duo_panel.call("setup", a, b)
+	inventory_panel.call("setup", a, b)
 	_update_active_labels()
 
 func _on_a_hp(current: float, _maximum: float) -> void:

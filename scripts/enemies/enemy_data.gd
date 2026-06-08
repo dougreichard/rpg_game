@@ -21,3 +21,13 @@ extends Resource
 @export_group("Ranged")
 @export var is_ranged: bool = false
 @export var projectile_speed: float = 240.0
+
+@export_group("Stealth")
+## How far this guard can spot the player straight ahead, inside vision_angle_deg.
+@export var vision_range: float = 170.0
+## Width of the forward vision cone, in degrees (total, split either side of facing).
+@export var vision_angle_deg: float = 100.0
+## How close a noisy player action (attack/dash) needs to be to be heard through walls.
+@export var hearing_range: float = 90.0
+## How far this guard wanders from its spawn point while patrolling.
+@export var patrol_radius: float = 80.0

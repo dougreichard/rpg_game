@@ -17,7 +17,37 @@
       "Bash('/Users/dougreichard/Library/Application Support/Steam/steamapps/common/Godot Engine/Godot.app/Contents/MacOS/Godot' --headless --path /Users/dougreichard/Documents/claude/rpg_game res://scenes/overworld/OverworldMap.tscn --quit-after 200)",
       "Bash('/Users/dougreichard/Library/Application Support/Steam/steamapps/common/Godot Engine/Godot.app/Contents/MacOS/Godot' --headless --path /Users/dougreichard/Documents/claude/rpg_game res://scenes/levels/PipeOrganWorks.tscn --quit-after 200)",
       "Bash('/Users/dougreichard/Library/Application Support/Steam/steamapps/common/Godot Engine/Godot.app/Contents/MacOS/Godot' --headless --path . res://scenes/levels/LibraryArchive.tscn --quit-after 60)",
-      "Bash('/Users/dougreichard/Library/Application Support/Steam/steamapps/common/Godot Engine/Godot.app/Contents/MacOS/Godot' --headless --path . --quit-after 200)"
+      "Bash('/Users/dougreichard/Library/Application Support/Steam/steamapps/common/Godot Engine/Godot.app/Contents/MacOS/Godot' --headless --path . --quit-after 200)",
+      "Bash(\"/Users/dougreichard/Library/Application Support/Steam/steamapps/common/Godot Engine/Godot.app/Contents/MacOS/Godot\" --headless --path . -s addons/gut/gut_cmdln.gd -gdir=res://tests/unit -gexit)",
+      "Bash(echo \"EXIT=$?\")",
+      "Read(//tmp/**)",
+      "Bash(grep -n \"### Bies Mode \\(\\\\`bies_mode.gd\\\\`\\)\\\\|Implementation note — first level with a tile-mapped floor\\\\|^### Stealth & awareness\" /Users/dougreichard/Documents/claude/rpg_game/CLAUDE.md)",
+      "Bash(grep -n \"^## \\\\|^---$\" /Users/dougreichard/.claude/projects/-Users-dougreichard-Documents-claude-rpg-game/memory/feedback_godot_technical.md)",
+      "Bash(\"/Users/dougreichard/Library/Application Support/Steam/steamapps/common/Godot Engine/Godot.app/Contents/MacOS/Godot\" --headless --path . --quit-after 200)",
+      "Bash(python3 -c ' *)",
+      "Bash(\"/Users/dougreichard/Library/Application Support/Steam/steamapps/common/Godot Engine/Godot.app/Contents/MacOS/Godot\" --headless --path . --quit-after 400)",
+      "Bash(\"/Users/dougreichard/Library/Application Support/Steam/steamapps/common/Godot Engine/Godot.app/Contents/MacOS/Godot\" --headless --path . --quit-after 600)",
+      "Bash(grep -n \"completion of \\\\`\\\\\"library\\\\\"\\\\`\" /Users/dougreichard/Documents/claude/rpg_game/CLAUDE.md)",
+      "Bash(\"/Users/dougreichard/Library/Application Support/Steam/steamapps/common/Godot Engine/Godot.app/Contents/MacOS/Godot\" --headless --path . --quit-after 200 > /tmp/boot_carnival.log 2>&1; grep -iE \"error|parse|fail\" /tmp/boot_carnival.log | head -40; echo \"---DONE---\")",
+      "Bash(timeout 170 \"/Users/dougreichard/Library/Application Support/Steam/steamapps/common/Godot Engine/Godot.app/Contents/MacOS/Godot\" --headless --path . --quit-after 2000)",
+      "Bash(\"/Users/dougreichard/Library/Application Support/Steam/steamapps/common/Godot Engine/Godot.app/Contents/MacOS/Godot\" --headless --path . --quit-after 2000)",
+      "Bash(echo \"started with PID $!\")",
+      "Bash(rm -f /tmp/cinema_check_out.txt)",
+      "Bash(echo \"started PID $!\")",
+      "Bash(rm -f /tmp/cinema_check_out2.txt)",
+      "Bash(rm -f \"/Users/dougreichard/Library/Application Support/Godot/app_userdata/Hunkle Bunkle/savegame.cfg\" && echo removed)",
+      "Bash(rm -f /tmp/cinema_check_out3.txt)",
+      "Bash(rm -f \"/Users/dougreichard/Library/Application Support/Godot/app_userdata/Hunkle Bunkle/savegame.cfg\")",
+      "Bash(rm -f /tmp/cinema_check_out4.txt)",
+      "Bash(ls project.godot.bak_cinema scripts/_tmp_cinema_check.gd*)",
+      "Bash(mv project.godot.bak_cinema project.godot)",
+      "Bash(rm -f scripts/_tmp_cinema_check.gd*)",
+      "Bash(rm -f /tmp/gut_cinema_out.txt)",
+      "Bash(grep -n \"### 13. The Grand Marquee Cinema\\\\|^---$\" CLAUDE.md)"
+    ],
+    "additionalDirectories": [
+      "/tmp",
+      "/Users/dougreichard/Library/Application Support/Godot/app_userdata/Hunkle Bunkle"
     ]
   }
 }

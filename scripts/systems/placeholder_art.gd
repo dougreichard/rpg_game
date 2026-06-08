@@ -114,6 +114,53 @@ static func make_gate_texture(color: Color, w: int, h: int) -> ImageTexture:
 		img.set_pixel(w - 1, y, Color.BLACK)
 	return ImageTexture.create_from_image(img)
 
+# Running-bond brick pattern scaled to fit an arbitrary w x h rectangle —
+# matches a level's wall StaticBody2D collider exactly, whatever its size, so
+# the same call works for both the long horizontal top/bottom walls and the
+# tall vertical side walls without separate textures or tiling artifacts.
+static func make_wall_texture(color: Color, w: int, h: int) -> ImageTexture:
+	const BRICK_W: int = 16
+	const BRICK_H: int = 8
+	var mortar: Color = color.darkened(0.45)
+	var iw: int = maxi(w, 1)
+	var ih: int = maxi(h, 1)
+	var img := Image.create(iw, ih, false, Image.FORMAT_RGBA8)
+	img.fill(color)
+	for y: int in range(ih):
+		var row: int = y / BRICK_H
+		if y % BRICK_H == 0:
+			for x: int in range(iw):
+				img.set_pixel(x, y, mortar)
+			continue
+		var offset: int = (BRICK_W / 2) if row % 2 == 1 else 0
+		var x: int = -offset
+		while x < iw:
+			if x >= 0:
+				img.set_pixel(x, y, mortar)
+			x += BRICK_W
+	return ImageTexture.create_from_image(img)
+
+# 16x16 collectible icon: a gem-like diamond in `color` over a dark backing
+# square, with a darker outline — junk items additionally get a muted, desaturated
+# rendering so the HUD inventory can tell "might matter later" from "keepsake"
+# at a glance without text (see CLAUDE.md "Collectibles & Inventory").
+static func make_item_icon(color: Color, is_junk: bool = false) -> ImageTexture:
+	var fill: Color = color.darkened(0.35) if is_junk else color
+	var outline: Color = fill.darkened(0.4)
+	var img := Image.create(16, 16, false, Image.FORMAT_RGBA8)
+	_rect(img, 1, 1, 14, 14, Color(0.12, 0.12, 0.16, 0.85 if is_junk else 1.0))
+	for i: int in range(8):
+		_rect(img, 7 - i / 2, 2 + i, 2 + i, 1, fill)
+	for i: int in range(7):
+		_rect(img, 1 + i, 9 + i, 14 - i * 2, 1, fill)
+	for x: int in range(16):
+		img.set_pixel(x, 0, outline)
+		img.set_pixel(x, 15, outline)
+	for y: int in range(16):
+		img.set_pixel(0, y, outline)
+		img.set_pixel(15, y, outline)
+	return ImageTexture.create_from_image(img)
+
 static func _rect(img: Image, x: int, y: int, w: int, h: int, color: Color) -> void:
 	var iw: int = img.get_width()
 	var ih: int = img.get_height()

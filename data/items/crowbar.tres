@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="ItemData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/systems/item_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "crowbar"
+display_name = "Crowbar"
+description = "Lets Evan force a stuck Harbor & Docks crate without summoning Calvin & Coolidge."
+icon_color = Color(0.45, 0.45, 0.5, 1)
+owner_character = ""
+is_junk = false

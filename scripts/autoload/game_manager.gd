@@ -6,6 +6,9 @@ signal characters_swapped
 signal game_over
 signal paused
 signal unpaused
+signal noise_emitted(position: Vector2, radius: float)
+signal enemies_calmed(position: Vector2, radius: float)
+signal item_collected(character_name: String, item_id: String)
 
 const UNLOCKS_CHARACTER: Dictionary = {
 	"pipe_organ_works": "erin",
@@ -18,6 +21,43 @@ var active_player: Player = null
 var standby_player: Player = null
 var completed_locations: Array = []
 var unlocked_characters: Array = ["quinn", "erin"]
+
+# Collectibles & inventory — see CLAUDE.md "Collectibles & Inventory".
+# Keyed by lowercase character name (matches `unlocked_characters`), each
+# value an Array[String] of held ItemData ids. `grant_item` is idempotent —
+# re-opening an already-looted box (e.g. after a scene reload) is a no-op.
+var inventories: Dictionary = {}
+
+func has_item(character_name: String, item_id: String) -> bool:
+	var key: String = character_name.to_lower()
+	return key in inventories and item_id in inventories[key]
+
+func grant_item(character_name: String, item_id: String) -> void:
+	var key: String = character_name.to_lower()
+	if key not in inventories:
+		inventories[key] = []
+	if item_id in inventories[key]:
+		return
+	inventories[key].append(item_id)
+	item_collected.emit(character_name, item_id)
+	SaveManager.save_game()
+
+# Mid-level progress — see CLAUDE.md "Doorways, camera-follow & multi-room
+# levels". A flat per-location flag store (location_id -> {flag_name: value})
+# so a level can persist exactly the booleans it already tracks locally
+# (`_enemies_cleared`, `_organ_repaired`, a loot box's `is_open`, ...) across
+# Doorway exits/re-entries, without inventing per-enemy IDs or a parallel
+# tracking system. Mirrors `inventories`/`has_item`/`grant_item` exactly.
+var level_progress: Dictionary = {}
+
+func get_level_flag(location_id: String, key: String, default = false):
+	return level_progress.get(location_id, {}).get(key, default)
+
+func set_level_flag(location_id: String, key: String, value) -> void:
+	if location_id not in level_progress:
+		level_progress[location_id] = {}
+	level_progress[location_id][key] = value
+	SaveManager.save_game()
 
 func _ready() -> void:
 	SaveManager.load_game()
@@ -134,6 +174,16 @@ func _retry_level() -> void:
 	_paused = false
 	Engine.time_scale = 1.0
 	get_tree().reload_current_scene()
+
+# Stealth: a loud player action (attack/dash) ripples outward — patrolling
+# enemies within `radius` may hear it and go investigate, even without sight.
+func emit_noise(position: Vector2, radius: float) -> void:
+	noise_emitted.emit(position, radius)
+
+# Stealth: a calming presence (Erin's Fast Talk) talks down nearby enemies —
+# suspicious/alerted guards within `radius` stand down and resume their patrol.
+func calm_enemies(position: Vector2, radius: float) -> void:
+	enemies_calmed.emit(position, radius)
 
 func register_players(p1: Player, p2: Player) -> void:
 	active_player = p1

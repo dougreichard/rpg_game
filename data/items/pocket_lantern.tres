@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="ItemData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/systems/item_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "pocket_lantern"
+display_name = "Pocket Lantern"
+description = "Reveals hidden loot boxes in the dark of the Underground Tunnels."
+icon_color = Color(0.9, 0.75, 0.35, 1)
+owner_character = ""
+is_junk = false

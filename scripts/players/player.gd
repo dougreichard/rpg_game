@@ -15,6 +15,10 @@ var bies_charge: float = 0.0
 var facing: Vector2 = Vector2.RIGHT
 var revive_progress: float = 0.0
 
+# Stealth: true while standing inside a HidingSpot — guards' vision checks
+# treat a hidden player as unseeable (still audible if loud nearby).
+var is_hidden: bool = false
+
 enum State { IDLE, WALK, ATTACK, DASH, HURT, DOWN }
 var _state: State = State.IDLE
 
@@ -37,6 +41,15 @@ const REVIVE_RING_RADIUS: float = 12.0
 const REVIVE_RING_BG_COLOR: Color = Color(0.4, 1.0, 0.6, 0.25)
 const REVIVE_RING_FILL_COLOR: Color = Color(0.4, 1.0, 0.6, 0.95)
 
+# Stealth: how far attacking/dashing rings out — patrolling guards within
+# range may hear it and go investigate even if they can't see the player.
+const ATTACK_NOISE_RADIUS: float = 110.0
+const DASH_NOISE_RADIUS: float = 160.0
+# Stealth: Erin's Fast Talk doubles as a "stand down" tool — guards within
+# this radius who are suspicious or alerted are talked back into patrolling.
+const FAST_TALK_CALM_RADIUS: float = 130.0
+const HIDDEN_MODULATE: Color = Color(1.0, 1.0, 1.0, 0.55)
+
 @onready var sprite: AnimatedSprite2D = $AnimatedSprite2D
 @onready var hurtbox: Hurtbox = $Hurtbox
 @onready var hitbox: Hitbox = $HitboxPivot/Hitbox
@@ -55,6 +68,7 @@ func _ready() -> void:
 
 func _physics_process(delta: float) -> void:
 	_tick_timers(delta)
+	sprite.modulate = HIDDEN_MODULATE if is_hidden else Color.WHITE
 	match _state:
 		State.IDLE:   _tick_idle()
 		State.WALK:   _tick_walk(delta)
@@ -126,6 +140,7 @@ func _enter_attack() -> void:
 	hitbox_pivot.position = facing * 24.0
 	_attack_timer = data.attack_cooldown
 	Audio.play("attack")
+	GameManager.emit_noise(global_position, ATTACK_NOISE_RADIUS)
 	_set_state(State.ATTACK)
 
 func _enter_dash() -> void:
@@ -136,6 +151,7 @@ func _enter_dash() -> void:
 	_dash_timer = DASH_DURATION
 	_iframe_timer = data.dash_iframe_duration
 	Audio.play("dash")
+	GameManager.emit_noise(global_position, DASH_NOISE_RADIUS)
 	_set_state(State.DASH)
 
 func _set_state(new_state: State) -> void:
@@ -150,6 +166,8 @@ func _set_state(new_state: State) -> void:
 
 func _use_special() -> void:
 	Audio.play("special")
+	if data.character_name == "Erin":
+		GameManager.calm_enemies(global_position, FAST_TALK_CALM_RADIUS)
 	special_used.emit(data.character_name)
 
 func _get_move() -> Vector2:

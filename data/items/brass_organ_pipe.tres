@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="ItemData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/systems/item_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "brass_organ_pipe"
+display_name = "Brass Organ Pipe"
+description = "A scattered part Quinn needs to finish the workshop's pipe organ repair."
+icon_color = Color(0.7, 0.55, 0.25, 1)
+owner_character = ""
+is_junk = false

@@ -1,10 +1,12 @@
 extends Node2D
 
+const LOCATION_ID: String = "the_drop"
+
 # Tile-mapped floor palette — sandy landing-site tones (see CLAUDE.md "Tile-mapped floors")
 const FLOOR_BASE_COLOR: Color = Color(0.36, 0.34, 0.30)
 const FLOOR_ACCENT_COLOR: Color = Color(0.58, 0.40, 0.30)
-const FLOOR_COLS: int = 20
-const FLOOR_ROWS: int = 12
+const FLOOR_COLS: int = 18
+const FLOOR_ROWS: int = 17
 const FLOOR_TILE_PLAIN: Vector2i = Vector2i(0, 0)
 const FLOOR_TILE_ACCENT: Vector2i = Vector2i(1, 0)
 const FLOOR_ACCENT_PERIOD: int = 4
@@ -12,12 +14,47 @@ const FLOOR_ACCENT_PERIOD: int = 4
 const GRUNT_SCENE: PackedScene = preload("res://scenes/enemies/Grunt.tscn")
 const RUNNER_SCENE: PackedScene = preload("res://scenes/enemies/Runner.tscn")
 const BRUTE_SCENE: PackedScene = preload("res://scenes/enemies/Brute.tscn")
+const HidingSpotScript: Script = preload("res://scripts/systems/hiding_spot.gd")
+const HIDING_SPOT_POS := Vector2(460.0, 460.0)
+const ScoutPairScript: Script = preload("res://scripts/systems/scout_pair_companion.gd")
 
-const CHUTE_POS := Vector2(220.0, 180.0)
+const CHUTE_POS := Vector2(360.0, 110.0)
 const CHUTE_RADIUS: float = 64.0
-const LANDING_POS := Vector2(560.0, 180.0)
+const LANDING_POS := Vector2(340.0, 330.0)
 const LANDING_RADIUS: float = 64.0
 
+const WILLIAM_TARGET_POS := Vector2(290.0, 330.0)
+const MARY_TARGET_POS := Vector2(390.0, 330.0)
+const WILLIAM_COLOR := Color(0.82, 0.78, 0.72)
+const MARY_COLOR := Color(0.70, 0.62, 0.56)
+const SCOUT_PAIR_COOLDOWN: float = 4.0
+
+# Doorway: the level's entrance/exit — see CLAUDE.md "Doorways, camera-follow
+# & multi-room levels". The duo touches down right beside it in the Touchdown
+# Clearing; walking away and back exits to the overworld at any time, cleared
+# or not.
+const DoorwayScript: Script = preload("res://scripts/systems/doorway.gd")
+const DOORWAY_POS := Vector2(160.0, 490.0)
+
+# Multi-room layout bounding box — a literal AERIAL-DESCENT-TO-GROUND-PHASE
+# layout matching this location's two-phase spec ("a kinetic aerial descent,
+# then a standard brawler ground phase"): the duo touches down in a wide
+# Touchdown Clearing (south — Doorway, spawn, the wreckage Evan must clear or
+# send William & Mary to brace), a narrow Corridor (the very gap that wreckage
+# blocks) leads north to the Snag Grove (the parachute's jammed release,
+# tangled in branches — Ethan's hack). The wreckage physically gates the path
+# OUT of the clearing toward "a marquee in the distance" — the spec's intel
+# payoff — making "the landing zone is locked until the right character steers
+# to it" a literal chokepoint rather than a flavor line. Feeds the camera's
+# pan limits — see CLAUDE.md "Doorways, camera-follow & multi-room levels".
+# Recompute if the wall layout changes.
+const CAMERA_LIMIT_LEFT: int = 24
+const CAMERA_LIMIT_TOP: int = 24
+const CAMERA_LIMIT_RIGHT: int = 576
+const CAMERA_LIMIT_BOTTOM: int = 536
+const CAMERA_SMOOTHING_SPEED: float = 5.0
+
+@onready var camera: Camera2D = $Camera2D
 @onready var evan: Player = $Players/Evan
 @onready var ethan: Player = $Players/Ethan
 @onready var hud: HUD = $HUD
@@ -32,20 +69,81 @@ var _landing_cleared: bool = false
 var _cleared: bool = false
 var _chute_sprite: Sprite2D
 var _landing_sprite: Sprite2D
+var _doorway = null
+
+var _william = null
+var _mary = null
+var _scout_pair_cooldown_timer: float = 0.0
 
 func _ready() -> void:
 	_build_floor()
+	_build_walls()
 	GameManager.register_players(evan, ethan)
 	hud.setup(evan, ethan)
 	evan.special_used.connect(_on_special_used)
 	ethan.special_used.connect(_on_special_used)
 	_create_chute()
 	_create_landing()
-	_spawn()
+	_create_hiding_spot()
+	_create_doorway()
+	_setup_camera()
+	_restore_progress()
 
+# Camera follows the active character — see CLAUDE.md "Doorways,
+# camera-follow & multi-room levels".
+func _setup_camera() -> void:
+	camera.position_smoothing_enabled = true
+	camera.position_smoothing_speed = CAMERA_SMOOTHING_SPEED
+	camera.limit_left = CAMERA_LIMIT_LEFT
+	camera.limit_top = CAMERA_LIMIT_TOP
+	camera.limit_right = CAMERA_LIMIT_RIGHT
+	camera.limit_bottom = CAMERA_LIMIT_BOTTOM
+
+# Mid-level progress restoration — see CLAUDE.md "Doorways, camera-follow &
+# multi-room levels". Reads back exactly the booleans this level already
+# tracks locally, so re-entering after a Doorway exit picks up where the duo
+# left off: skip respawning a cleared floor and restore both prop palettes
+# (the William & Mary scout pair is a transient mid-session aid — it doesn't
+# need to survive a re-entry, only the _landing_cleared outcome it produces).
+func _restore_progress() -> void:
+	_enemies_cleared = GameManager.get_level_flag(LOCATION_ID, "enemies_cleared", false)
+	_chute_hacked = GameManager.get_level_flag(LOCATION_ID, "chute_hacked", false)
+	_landing_cleared = GameManager.get_level_flag(LOCATION_ID, "landing_cleared", false)
+	if _chute_hacked:
+		_chute_sprite.modulate = Color(0.4, 1.0, 0.5)
+	if _landing_cleared:
+		_landing_sprite.modulate = Color(0.4, 1.0, 0.5)
+	if _enemies_cleared:
+		_spawned = true
+	else:
+		_spawn()
+	if _enemies_cleared and _chute_hacked and _landing_cleared:
+		_cleared = true
+		hint_label.text = ""
+		clear_label.text = "TOUCHDOWN!\n\nA hostile ground crew scatters — and a marquee\nin the distance bears Uncle Doug's name.\n\nPress ENTER for the Map"
+		clear_label.visible = true
 
 # Tile-mapped retro floor (Zelda-style two-tone grid), generated at runtime
 # via PlaceholderArt to keep the original-IP guarantee — no imported tile art.
+# Wall art: a Sprite2D per StaticBody2D wall, sized to its exact
+# CollisionShape2D rect and textured via PlaceholderArt.make_wall_texture — a
+# darker stone tone of the floor's base color, so the room reads as a bordered
+# space instead of walls-on-a-void (matches the tile-floor visual-style pass;
+# generated at runtime, no imported wall art, original-IP guarantee intact).
+# Iterates whatever StaticBody2D children it finds — the Touchdown Clearing +
+# Corridor + Snag Grove layout (12 wall segments) needed zero changes here,
+# only more .tscn nodes.
+func _build_walls() -> void:
+	var wall_color: Color = FLOOR_BASE_COLOR.darkened(0.35)
+	for wall in $Walls.get_children():
+		if not wall is StaticBody2D:
+			continue
+		var shape: CollisionShape2D = wall.get_node("CollisionShape2D")
+		var rect: RectangleShape2D = shape.shape
+		var sprite := Sprite2D.new()
+		sprite.texture = PlaceholderArt.make_wall_texture(wall_color, int(rect.size.x), int(rect.size.y))
+		wall.add_child(sprite)
+
 func _build_floor() -> void:
 	var tile_map := TileMap.new()
 	tile_map.name = "Floor"
@@ -56,6 +154,7 @@ func _build_floor() -> void:
 		for y: int in range(FLOOR_ROWS):
 			var variant: Vector2i = FLOOR_TILE_ACCENT if (x + y) % FLOOR_ACCENT_PERIOD == 0 else FLOOR_TILE_PLAIN
 			tile_map.set_cell(0, Vector2i(x, y), 0, variant)
+
 func _create_chute() -> void:
 	_chute_sprite = Sprite2D.new()
 	_chute_sprite.texture = PlaceholderArt.make_gate_texture(Color(0.5, 0.42, 0.18), 44, 56)
@@ -68,10 +167,53 @@ func _create_landing() -> void:
 	_landing_sprite.position = LANDING_POS
 	add_child(_landing_sprite)
 
+# Stealth: a shadowed thicket in the Touchdown Clearing's far corner — the
+# ground crew's patrol loop crosses right by it, so ducking in to let one pass
+# is a real option before committing to the brawl — see CLAUDE.md "Stealth &
+# awareness".
+func _create_hiding_spot() -> void:
+	var spot = HidingSpotScript.new()
+	spot.position = HIDING_SPOT_POS
+	add_child(spot)
+
+func _create_doorway() -> void:
+	_doorway = DoorwayScript.new()
+	_doorway.setup(DOORWAY_POS)
+	add_child(_doorway)
+
+# William & Mary — an alternate way to clear the landing site: Evan's Special,
+# used away from the wreckage, calls in the rabbit pair instead of muscling it
+# himself (his "works with animals" strength, same as he flexes via Calvin &
+# Coolidge elsewhere). They scurry to flanking gaps either side of the wreck —
+# squeezing through where Evan can't fit — and brace it from both sides at
+# once; only holding BOTH points simultaneously frees the landing site, the
+# "two-point puzzle a single companion can't solve" from their CLAUDE.md spec.
+func _summon_scout_pair() -> void:
+	_william = ScoutPairScript.new()
+	_william.setup(evan.global_position, WILLIAM_TARGET_POS, WILLIAM_COLOR)
+	add_child(_william)
+	_mary = ScoutPairScript.new()
+	_mary.setup(evan.global_position, MARY_TARGET_POS, MARY_COLOR)
+	add_child(_mary)
+	_scout_pair_cooldown_timer = SCOUT_PAIR_COOLDOWN
+
+func _check_scout_pair_holding() -> void:
+	if _landing_cleared or _william == null or _mary == null:
+		return
+	if not is_instance_valid(_william) or not is_instance_valid(_mary):
+		_william = null
+		_mary = null
+		return
+	if _william.is_holding and _mary.is_holding:
+		_landing_cleared = true
+		_landing_sprite.modulate = Color(0.4, 1.0, 0.5)
+		Audio.play("special")
+		GameManager.set_level_flag(LOCATION_ID, "landing_cleared", true)
+
 func _spawn() -> void:
-	_add(GRUNT_SCENE,  Vector2(380.0, 110.0))
-	_add(RUNNER_SCENE, Vector2(180.0, 280.0))
-	_add(BRUTE_SCENE,  Vector2(460.0, 270.0))
+	_add(GRUNT_SCENE,  Vector2(200.0, 380.0))
+	_add(RUNNER_SCENE, Vector2(450.0, 110.0))
+	_add(BRUTE_SCENE,  Vector2(460.0, 380.0))
 	_spawned = true
 
 func _add(scene: PackedScene, pos: Vector2) -> void:
@@ -84,32 +226,56 @@ func _on_special_used(char_name: String) -> void:
 		if ethan.global_position.distance_to(CHUTE_POS) < CHUTE_RADIUS:
 			_chute_hacked = true
 			_chute_sprite.modulate = Color(0.4, 1.0, 0.5)
+			Audio.play("special")
+			GameManager.set_level_flag(LOCATION_ID, "chute_hacked", true)
 	elif char_name == "Evan" and not _landing_cleared:
 		if evan.global_position.distance_to(LANDING_POS) < LANDING_RADIUS:
 			_landing_cleared = true
 			_landing_sprite.modulate = Color(0.4, 1.0, 0.5)
+			Audio.play("special")
+			GameManager.set_level_flag(LOCATION_ID, "landing_cleared", true)
+		elif _scout_pair_cooldown_timer == 0.0 and _william == null and _mary == null:
+			_summon_scout_pair()
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
+	_scout_pair_cooldown_timer = maxf(_scout_pair_cooldown_timer - delta, 0.0)
+	_check_scout_pair_holding()
 	_update_hint()
+	if is_instance_valid(GameManager.active_player):
+		var active_pos: Vector2 = GameManager.active_player.global_position
+		camera.global_position = active_pos
+		if _doorway.check(active_pos):
+			_exit_to_overworld()
+			return
 	if _spawned and not _enemies_cleared and enemies.get_child_count() == 0:
 		_enemies_cleared = true
+		GameManager.set_level_flag(LOCATION_ID, "enemies_cleared", true)
 	if _enemies_cleared and _chute_hacked and _landing_cleared and not _cleared:
 		_cleared = true
 		hint_label.text = ""
 		clear_label.text = "TOUCHDOWN!\n\nA hostile ground crew scatters — and a marquee\nin the distance bears Uncle Doug's name.\n\nPress ENTER for the Map"
 		clear_label.visible = true
 	if _cleared and Input.is_action_just_pressed("ui_accept"):
-		GameManager.complete_location("the_drop")
+		GameManager.complete_location(LOCATION_ID)
 		get_tree().change_scene_to_file("res://scenes/overworld/OverworldMap.tscn")
+
+# Doorway-triggered exit — distinct from the clear-overlay's "press ENTER"
+# exit above. Per the established pattern, the duo can walk out at any time,
+# cleared or not; complete_location is idempotent, so calling it here when
+# already cleared never double-grants.
+func _exit_to_overworld() -> void:
+	if _cleared:
+		GameManager.complete_location(LOCATION_ID)
+	get_tree().change_scene_to_file("res://scenes/overworld/OverworldMap.tscn")
 
 func _update_hint() -> void:
 	if _cleared:
 		hint_label.text = ""
 	elif not _enemies_cleared:
-		hint_label.text = "The descent ends hard — a hostile ground crew rushes in!"
-	elif not _chute_hacked:
-		hint_label.text = "Ethan: hack the jammed chute release  [ approach it, press G ]"
+		hint_label.text = "The landing was rough but quiet — the ground crew hasn't spotted you. Move fast and pick your fight"
 	elif not _landing_cleared:
-		hint_label.text = "Evan: clear the wreckage blocking the landing site  [ approach it, press G ]"
+		hint_label.text = "Evan: clear the wreckage blocking the way out  [ approach it, press G — or press G elsewhere to send William & Mary to brace it from both sides ]"
+	elif not _chute_hacked:
+		hint_label.text = "Ethan: in the snag grove, hack the jammed chute release  [ approach it, press G ]"
 	else:
 		hint_label.text = ""
