@@ -19,6 +19,18 @@ const HIDING_SPOT_POS := Vector2(150.0, 460.0)
 const RIDE_POS := Vector2(380.0, 340.0)
 const RIDE_RADIUS: float = 64.0
 
+# Collectibles: backstage pass (lets Quinn bypass the curtain guard instead of
+# requiring Erin), Erin's movie ticket, and a junk torn ticket stub — see
+# CLAUDE.md "Collectibles & Inventory".
+const LootBoxScript: Script = preload("res://scripts/systems/loot_box.gd")
+const BackstagePassItem: ItemData  = preload("res://data/items/backstage_pass.tres")
+const TicketErinItem: ItemData     = preload("res://data/items/ticket_erin.tres")
+const TicketStubItem: ItemData     = preload("res://data/items/ticket_stub_torn.tres")
+const PASS_LOOT_POS    := Vector2(250.0, 400.0)
+const TICKET_LOOT_POS  := Vector2(550.0, 200.0)
+const STUB_LOOT_POS    := Vector2(280.0, 460.0)
+const LOOT_FLAG_KEYS   := ["pass_loot_open", "ticket_loot_open", "stub_loot_open"]
+
 # The backstage gate: a curtain/rope barrier that graduated from a purely
 # cosmetic guard sprite-recolor to a literal StaticBody2D collider sealing the
 # only passage into the backstage alcove — the FIFTH cosmetic-to-collider
@@ -74,6 +86,7 @@ var _ride_sprite: Sprite2D
 var _gate_shape: CollisionShape2D
 var _gate_sprite: Sprite2D
 var _doug_poster: Sprite2D
+var _loot_boxes: Array = []
 var _doorway = null
 
 func _ready() -> void:
@@ -85,6 +98,7 @@ func _ready() -> void:
 	erin.special_used.connect(_on_special_used)
 	_create_ride()
 	_create_backstage_gate()
+	_create_loot_boxes()
 	_create_hiding_spot()
 	_create_doorway()
 	_setup_camera()
@@ -195,6 +209,22 @@ func _create_hiding_spot() -> void:
 	spot.position = HIDING_SPOT_POS
 	add_child(spot)
 
+func _create_loot_boxes() -> void:
+	var pass_box = LootBoxScript.new()
+	pass_box.setup(BackstagePassItem, PASS_LOOT_POS, GameManager.get_level_flag(LOCATION_ID, LOOT_FLAG_KEYS[0], false))
+	add_child(pass_box)
+	_loot_boxes.append(pass_box)
+
+	var ticket_box = LootBoxScript.new()
+	ticket_box.setup(TicketErinItem, TICKET_LOOT_POS, GameManager.get_level_flag(LOCATION_ID, LOOT_FLAG_KEYS[1], false))
+	add_child(ticket_box)
+	_loot_boxes.append(ticket_box)
+
+	var stub_box = LootBoxScript.new()
+	stub_box.setup(TicketStubItem, STUB_LOOT_POS, GameManager.get_level_flag(LOCATION_ID, LOOT_FLAG_KEYS[2], false))
+	add_child(stub_box)
+	_loot_boxes.append(stub_box)
+
 func _create_doorway() -> void:
 	_doorway = DoorwayScript.new()
 	_doorway.setup(DOORWAY_POS)
@@ -212,12 +242,23 @@ func _add(scene: PackedScene, pos: Vector2) -> void:
 	enemies.add_child(e)
 
 func _on_special_used(char_name: String) -> void:
-	if char_name == "Quinn" and not _ride_repaired:
-		if quinn.global_position.distance_to(RIDE_POS) < RIDE_RADIUS:
+	var p: Player = quinn if char_name == "Quinn" else erin
+	for i in _loot_boxes.size():
+		if _loot_boxes[i].try_open(char_name, p.global_position):
+			GameManager.set_level_flag(LOCATION_ID, LOOT_FLAG_KEYS[i], true)
+			return
+	if char_name == "Quinn":
+		if not _ride_repaired and quinn.global_position.distance_to(RIDE_POS) < RIDE_RADIUS:
 			_ride_repaired = true
 			_ride_sprite.modulate = Color(0.4, 1.0, 0.5)
 			Audio.play("special")
 			GameManager.set_level_flag(LOCATION_ID, "ride_repaired", true)
+		elif not _backstage_talked and quinn.global_position.distance_to(BACKSTAGE_POS) < BACKSTAGE_RADIUS:
+			if GameManager.has_item("Quinn", BackstagePassItem.id) or GameManager.has_item("Erin", BackstagePassItem.id):
+				_backstage_talked = true
+				_raise_curtain(true)
+				Audio.play("special")
+				GameManager.set_level_flag(LOCATION_ID, "backstage_talked", true)
 	elif char_name == "Erin" and not _backstage_talked:
 		if erin.global_position.distance_to(BACKSTAGE_POS) < BACKSTAGE_RADIUS:
 			_backstage_talked = true

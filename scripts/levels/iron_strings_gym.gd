@@ -16,6 +16,23 @@ const BRUTE_SCENE: PackedScene = preload("res://scenes/enemies/Brute.tscn")
 const HidingSpotScript: Script = preload("res://scripts/systems/hiding_spot.gd")
 const HIDING_SPOT_POS := Vector2(420.0, 460.0)
 
+# Frosty — Evan's Schnoodle, the general-purpose combat-distractor companion
+# (see CLAUDE.md "Evan's Animals"): charges the nearest enemy, headbutts to
+# stagger it, then returns to Evan's side. Cooldown-gated so it can't be
+# spammed every frame — same summon pattern as Calvin & Coolidge at the docks.
+const AnimalCompanionScript: Script = preload("res://scripts/systems/animal_companion.gd")
+const FROSTY_COLOR := Color(0.95, 0.95, 0.95)
+const FROSTY_COOLDOWN: float = 3.0
+
+# Collectibles: Ben's ticket (found in the cage where he's freed — fitting) and
+# an animal treat — see CLAUDE.md "Collectibles & Inventory".
+const LootBoxScript: Script = preload("res://scripts/systems/loot_box.gd")
+const TicketBenItem: ItemData    = preload("res://data/items/ticket_ben.tres")
+const AnimalTreatItem: ItemData  = preload("res://data/items/animal_treat.tres")
+const TICKET_LOOT_POS    := Vector2(700.0, 100.0)
+const TREAT_LOOT_POS     := Vector2(130.0, 200.0)
+const LOOT_FLAG_KEYS     := ["ticket_loot_open", "treat_loot_open"]
+
 # Doorway: the level's entrance/exit — see CLAUDE.md "Doorways, camera-follow
 # & multi-room levels". The duo spawns beside it in the locker room; walking
 # away and back exits to the overworld at any time, cleared or not.
@@ -57,15 +74,19 @@ var _barbell_moved: bool = false
 var _cleared: bool = false
 var _barbell_shape: CollisionShape2D
 var _barbell_sprite: Sprite2D
+var _loot_boxes: Array = []
 var _doorway = null
+var _frosty_cooldown_timer: float = 0.0
 
 func _ready() -> void:
 	_build_floor()
 	_build_walls()
 	GameManager.register_players(quinn, evan)
 	hud.setup(quinn, evan)
+	quinn.special_used.connect(_on_special_used)
 	evan.special_used.connect(_on_special_used)
 	_create_barbell()
+	_create_loot_boxes()
 	_create_hiding_spot()
 	_create_doorway()
 	_setup_camera()
@@ -150,6 +171,17 @@ func _create_hiding_spot() -> void:
 	spot.position = HIDING_SPOT_POS
 	add_child(spot)
 
+func _create_loot_boxes() -> void:
+	var ticket_box = LootBoxScript.new()
+	ticket_box.setup(TicketBenItem, TICKET_LOOT_POS, GameManager.get_level_flag(LOCATION_ID, LOOT_FLAG_KEYS[0], false))
+	add_child(ticket_box)
+	_loot_boxes.append(ticket_box)
+
+	var treat_box = LootBoxScript.new()
+	treat_box.setup(AnimalTreatItem, TREAT_LOOT_POS, GameManager.get_level_flag(LOCATION_ID, LOOT_FLAG_KEYS[1], false))
+	add_child(treat_box)
+	_loot_boxes.append(treat_box)
+
 func _create_doorway() -> void:
 	_doorway = DoorwayScript.new()
 	_doorway.setup(DOORWAY_POS)
@@ -167,14 +199,41 @@ func _add(scene: PackedScene, pos: Vector2) -> void:
 	enemies.add_child(e)
 
 func _on_special_used(char_name: String) -> void:
-	if char_name == "Evan" and not _barbell_moved:
-		if evan.global_position.distance_to(BARBELL_POS) < BARBELL_RADIUS:
+	var p: Player = quinn if char_name == "Quinn" else evan
+	for i in _loot_boxes.size():
+		if _loot_boxes[i].try_open(char_name, p.global_position):
+			GameManager.set_level_flag(LOCATION_ID, LOOT_FLAG_KEYS[i], true)
+			return
+	if char_name == "Evan":
+		if not _barbell_moved and evan.global_position.distance_to(BARBELL_POS) < BARBELL_RADIUS:
 			_barbell_moved = true
 			_move_barbell(true)
 			Audio.play("special")
 			GameManager.set_level_flag(LOCATION_ID, "barbell_moved", true)
+		elif _frosty_cooldown_timer == 0.0:
+			_summon_frosty()
 
-func _process(_delta: float) -> void:
+func _summon_frosty() -> void:
+	var target = _nearest_enemy(evan.global_position)
+	if target == null:
+		return
+	var frosty = AnimalCompanionScript.new()
+	frosty.setup(evan, target, FROSTY_COLOR)
+	add_child(frosty)
+	_frosty_cooldown_timer = FROSTY_COOLDOWN
+
+func _nearest_enemy(from_pos: Vector2):
+	var living: Array = []
+	for child in enemies.get_children():
+		if child is Enemy and is_instance_valid(child):
+			living.append(child)
+	if living.is_empty():
+		return null
+	living.sort_custom(func(a, b): return from_pos.distance_to(a.global_position) < from_pos.distance_to(b.global_position))
+	return living[0]
+
+func _process(delta: float) -> void:
+	_frosty_cooldown_timer = maxf(_frosty_cooldown_timer - delta, 0.0)
 	if is_instance_valid(GameManager.active_player):
 		var active_pos: Vector2 = GameManager.active_player.global_position
 		camera.global_position = active_pos
@@ -207,7 +266,7 @@ func _update_hint() -> void:
 	if _cleared:
 		hint_label.text = ""
 	elif not _enemies_cleared:
-		hint_label.text = "The bruisers haven't clocked you yet — pick them off one at a time, or slip past to free Ben first"
+		hint_label.text = "The bruisers haven't clocked you yet — pick them off (Evan: press G to send Frosty charging), or slip past to free Ben first"
 	elif not _barbell_moved:
 		hint_label.text = "Evan: shove the barbell rack off Ben's cage doorway  [ approach it, press G ]"
 	else:

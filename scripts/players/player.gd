@@ -63,7 +63,7 @@ func _ready() -> void:
 	hurtbox.hit.connect(_on_hurtbox_hit)
 	hitbox.hit_landed.connect(register_hit_landed)
 	if sprite.sprite_frames == null:
-		sprite.sprite_frames = PlaceholderArt.make_player_frames(data.sprite_color)
+		sprite.sprite_frames = PlaceholderArt.make_player_frames(data.sprite_color, data.character_name)
 	sprite.play("idle")
 
 func _physics_process(delta: float) -> void:

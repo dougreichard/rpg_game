@@ -43,7 +43,11 @@
       "Bash(mv project.godot.bak_cinema project.godot)",
       "Bash(rm -f scripts/_tmp_cinema_check.gd*)",
       "Bash(rm -f /tmp/gut_cinema_out.txt)",
-      "Bash(grep -n \"### 13. The Grand Marquee Cinema\\\\|^---$\" CLAUDE.md)"
+      "Bash(grep -n \"### 13. The Grand Marquee Cinema\\\\|^---$\" CLAUDE.md)",
+      "Bash(rm -f /tmp/cinema_check_out*.txt /tmp/gut_cinema_out.txt)",
+      "Bash(rm -f /tmp/final_boot.txt)",
+      "Bash(echo \"PID $!\")",
+      "Bash(claude mcp *)"
     ],
     "additionalDirectories": [
       "/tmp",

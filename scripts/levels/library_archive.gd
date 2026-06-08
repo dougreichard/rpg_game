@@ -34,6 +34,16 @@ const LIBRARIAN_DESK_SCALE_TARGET := Vector2(0.25, 0.25)
 const TERMINAL_POS := Vector2(700.0, 340.0)
 const TERMINAL_RADIUS: float = 64.0
 
+# Collectibles: library card (lets Ethan bypass the librarian desk that normally
+# only Erin can handle) and a skeleton key (junk — "doesn't fit anything I've
+# tried") — see CLAUDE.md "Collectibles & Inventory".
+const LootBoxScript: Script = preload("res://scripts/systems/loot_box.gd")
+const LibraryCardItem: ItemData = preload("res://data/items/library_card.tres")
+const SkeletonKeyItem: ItemData = preload("res://data/items/skeleton_key.tres")
+const CARD_LOOT_POS   := Vector2(240.0, 250.0)
+const KEY_LOOT_POS    := Vector2(780.0, 250.0)
+const LOOT_FLAG_KEYS  := ["card_loot_open", "key_loot_open"]
+
 # Doorway: the level's entrance/exit — see CLAUDE.md "Doorways, camera-follow
 # & multi-room levels". The duo spawns beside it in the reading room; walking
 # away and back exits to the overworld at any time, cleared or not.
@@ -66,6 +76,7 @@ var _cleared: bool = false
 var _desk_shape: CollisionShape2D
 var _desk_sprite: Sprite2D
 var _terminal_sprite: Sprite2D
+var _loot_boxes: Array = []
 var _doorway = null
 
 func _ready() -> void:
@@ -77,6 +88,7 @@ func _ready() -> void:
 	ethan.special_used.connect(_on_special_used)
 	_create_librarian_desk()
 	_create_terminal()
+	_create_loot_boxes()
 	_create_hiding_spot()
 	_create_doorway()
 	_setup_camera()
@@ -178,6 +190,17 @@ func _create_hiding_spot() -> void:
 	spot.position = HIDING_SPOT_POS
 	add_child(spot)
 
+func _create_loot_boxes() -> void:
+	var card_box = LootBoxScript.new()
+	card_box.setup(LibraryCardItem, CARD_LOOT_POS, GameManager.get_level_flag(LOCATION_ID, LOOT_FLAG_KEYS[0], false))
+	add_child(card_box)
+	_loot_boxes.append(card_box)
+
+	var key_box = LootBoxScript.new()
+	key_box.setup(SkeletonKeyItem, KEY_LOOT_POS, GameManager.get_level_flag(LOCATION_ID, LOOT_FLAG_KEYS[1], false))
+	add_child(key_box)
+	_loot_boxes.append(key_box)
+
 func _create_doorway() -> void:
 	_doorway = DoorwayScript.new()
 	_doorway.setup(DOORWAY_POS)
@@ -194,12 +217,24 @@ func _add(scene: PackedScene, pos: Vector2) -> void:
 	enemies.add_child(e)
 
 func _on_special_used(char_name: String) -> void:
+	var p: Player = erin if char_name == "Erin" else ethan
+	for i in _loot_boxes.size():
+		if _loot_boxes[i].try_open(char_name, p.global_position):
+			GameManager.set_level_flag(LOCATION_ID, LOOT_FLAG_KEYS[i], true)
+			return
 	if char_name == "Erin" and not _librarian_talked:
 		if erin.global_position.distance_to(LIBRARIAN_POS) < LIBRARIAN_RADIUS:
 			_librarian_talked = true
 			_step_aside_librarian(true)
 			Audio.play("special")
 			GameManager.set_level_flag(LOCATION_ID, "librarian_talked", true)
+	elif char_name == "Ethan" and not _librarian_talked:
+		if ethan.global_position.distance_to(LIBRARIAN_POS) < LIBRARIAN_RADIUS:
+			if GameManager.has_item("Erin", LibraryCardItem.id) or GameManager.has_item("Ethan", LibraryCardItem.id):
+				_librarian_talked = true
+				_step_aside_librarian(true)
+				Audio.play("special")
+				GameManager.set_level_flag(LOCATION_ID, "librarian_talked", true)
 	elif char_name == "Ethan" and not _archive_hacked:
 		if ethan.global_position.distance_to(TERMINAL_POS) < TERMINAL_RADIUS:
 			_archive_hacked = true

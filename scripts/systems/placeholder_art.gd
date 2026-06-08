@@ -1,18 +1,21 @@
 class_name PlaceholderArt
 extends RefCounted
 
-static func make_player_frames(color: Color) -> SpriteFrames:
+static func make_player_frames(color: Color, character_name: String = "") -> SpriteFrames:
 	var frames := SpriteFrames.new()
 	frames.remove_animation("default")
 	var skin := color.lightened(0.25)
 	var limb := color.darkened(0.2)
-	_add(frames, "idle",   [_humanoid(skin, color, limb, Color.WHITE, 0)])
-	_add(frames, "walk",   [_humanoid(skin, color, limb, Color.WHITE, 0),
-							_humanoid(skin, color, limb, Color.WHITE, 1)])
-	_add(frames, "attack", [_humanoid(skin, color.lightened(0.45), limb, Color.WHITE, 0)])
-	_add(frames, "dash",   [_humanoid(skin, color.lightened(0.2), limb, Color.WHITE, 0)])
-	_add(frames, "hurt",   [_humanoid(skin, Color(1.0, 0.3, 0.3), Color(0.8, 0.2, 0.2), Color.WHITE, 0)])
-	_add(frames, "down",   [_humanoid(color.darkened(0.4), color.darkened(0.55), color.darkened(0.55), Color.TRANSPARENT, 0)])
+	_add(frames, "idle",   [_humanoid(skin, color, limb, Color.WHITE, 0, character_name)])
+	_add(frames, "walk",   [_humanoid(skin, color, limb, Color.WHITE, 0, character_name),
+							_humanoid(skin, color, limb, Color.WHITE, 1, character_name),
+							_humanoid(skin, color, limb, Color.WHITE, 0, character_name),
+							_humanoid(skin, color, limb, Color.WHITE, 2, character_name)])
+	_add(frames, "attack", [_humanoid(skin, color.lightened(0.45), limb, Color.WHITE, 0, character_name, true),
+							_humanoid(skin, color.lightened(0.45), limb, Color.WHITE, 2, character_name, true)])
+	_add(frames, "dash",   [_humanoid(skin, color.lightened(0.2), limb, Color.WHITE, 0, character_name)])
+	_add(frames, "hurt",   [_humanoid(skin, Color(1.0, 0.3, 0.3), Color(0.8, 0.2, 0.2), Color.WHITE, 0, character_name)])
+	_add(frames, "down",   [_humanoid(color.darkened(0.4), color.darkened(0.55), color.darkened(0.55), Color.TRANSPARENT, 0, character_name)])
 	return frames
 
 static func make_enemy_frames(color: Color, stocky: bool = false) -> SpriteFrames:
@@ -33,21 +36,69 @@ static func _add(frames: SpriteFrames, anim: String, textures: Array) -> void:
 	for t: ImageTexture in textures:
 		frames.add_frame(anim, t)
 
-# 32×32 humanoid sprite, facing right — compact chibi proportions (big head, short legs)
-static func _humanoid(head: Color, body: Color, limb: Color, eye: Color, walk: int) -> ImageTexture:
+# 32×32 humanoid sprite, facing right — compact chibi proportions (big head,
+# short legs). `walk_frame` cycles 0 (neutral stance) → 1 (left leg forward) →
+# 2 (right leg forward), giving a smoother passing-pose walk than the old
+# 2-frame leg swap. `character_name` additionally silhouettes that character's
+# CLAUDE.md roster "Weapon / Tool" near their hand (see `_draw_character_prop`)
+# so the cast reads as themselves at a glance, not "differently-colored chibi
+# #3" — `attacking` swings it up into a strike pose.
+static func _humanoid(head: Color, body: Color, limb: Color, eye: Color, walk_frame: int, character_name: String = "", attacking: bool = false) -> ImageTexture:
 	var img := Image.create(32, 32, false, Image.FORMAT_RGBA8)
 	_rect(img, 12,  1,  9,  8, head)   # head (right-of-centre = facing right)
 	_rect(img, 10,  9, 12,  9, body)   # torso
 	_rect(img,  7, 10,  4,  7, limb)   # left arm
 	_rect(img, 21, 10,  4,  7, limb)   # right arm
-	var ll_y: int = 18 + (2 if walk == 1 else 0)
-	var rl_y: int = 18 + (2 if walk == 0 else 0)
+	var ll_y: int = 18
+	var rl_y: int = 18
+	if walk_frame == 1:
+		ll_y = 20
+	elif walk_frame == 2:
+		rl_y = 20
 	_rect(img, 11, ll_y, 4, 30 - ll_y, limb)  # left leg
 	_rect(img, 17, rl_y, 4, 30 - rl_y, limb)  # right leg
 	if eye.a > 0.5:
 		img.set_pixel(19, 4, eye)
 		img.set_pixel(18, 4, eye)
+	if not character_name.is_empty():
+		_draw_character_prop(img, character_name, walk_frame, attacking)
 	return ImageTexture.create_from_image(img)
+
+# Draws a small held-prop silhouette keyed to the CLAUDE.md roster's
+# "Weapon / Tool" column, next to the right hand (raised into a strike pose
+# when `attacking`). Purely a recognizability cue — same procedural
+# Image/_rect technique as the rest of this file, so it costs nothing beyond
+# a few extra rects and keeps the no-imported-assets/original-IP guarantee.
+# Prototyped on Quinn; extend the match arm-by-arm as each character gets
+# its pass (mirrors the tile-floor/wall rollout's "prototype, then repeat").
+static func _draw_character_prop(img: Image, character_name: String, walk_frame: int, attacking: bool) -> void:
+	var x: int = 24
+	var y: int = 6 if attacking else 15
+	match character_name:
+		"Quinn":
+			# wrench — grey shaft with a lighter L-shaped jaw
+			_rect(img, x, y, 2, 6, Color(0.55, 0.57, 0.6))
+			_rect(img, x - 2, y - 2, 6, 2, Color(0.72, 0.74, 0.78))
+		"Erin":
+			# torch — handle plus a flame that flickers between two hues across frames
+			var flame: Color = Color(1.0, 0.55, 0.1) if walk_frame % 2 == 0 else Color(1.0, 0.75, 0.2)
+			_rect(img, x, y + 1, 2, 5, Color(0.4, 0.3, 0.2))
+			_rect(img, x - 1, y - 2, 4, 4, flame)
+		"Evan":
+			# oversized fists — broaden both hand blocks past the arm sprites
+			_rect(img, x - 1, y, 5, 5, Color(0.9, 0.9, 0.92))
+			_rect(img, 5, y, 5, 5, Color(0.9, 0.9, 0.92))
+		"Ben":
+			# keytar — a strap across the torso plus a small key row at the hand
+			_rect(img, 9, 12, 13, 2, Color(0.2, 0.2, 0.25))
+			_rect(img, x - 2, y, 7, 3, Color(0.15, 0.15, 0.2))
+			for i: int in range(3):
+				img.set_pixel(x - 1 + i * 2, y, Color.WHITE)
+		"Ethan":
+			# tech gadget — a compact device with a glowing cyan readout
+			_rect(img, x, y, 4, 4, Color(0.22, 0.22, 0.27))
+			img.set_pixel(x + 1, y + 1, Color(0.3, 1.0, 1.0))
+			img.set_pixel(x + 2, y + 1, Color(0.3, 1.0, 1.0))
 
 # 32×32 enemy sprite — compact chibi proportions
 static func _enemy(body: Color, limb: Color, stocky: bool, walk: int) -> ImageTexture:

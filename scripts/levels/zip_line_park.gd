@@ -26,6 +26,16 @@ const PULSE_GOOD_WINDOW: float = 0.28
 const RING_RADIUS: float = 30.0
 const MISS_LOCKOUT: float = 0.4
 
+# Collectibles: guard whistle (collectible-only this pass — usable-item distraction
+# mechanic is a future follow-up) and arcade token (junk — embossed with a defunct
+# arcade's logo, no arcade machine in the game) — see CLAUDE.md "Collectibles & Inventory".
+const LootBoxScript: Script = preload("res://scripts/systems/loot_box.gd")
+const GuardWhistleItem: ItemData = preload("res://data/items/guard_whistle.tres")
+const ArcadeTokenItem: ItemData  = preload("res://data/items/arcade_token.tres")
+const WHISTLE_LOOT_POS := Vector2(280.0, 460.0)
+const TOKEN_LOOT_POS   := Vector2(820.0, 200.0)
+const LOOT_FLAG_KEYS   := ["whistle_loot_open", "token_loot_open"]
+
 # Doorway: the level's entrance/exit — see CLAUDE.md "Doorways, camera-follow
 # & multi-room levels". The duo spawns beside it on the Landing platform;
 # walking away and back exits to the overworld at any time, cleared or not.
@@ -64,6 +74,7 @@ var _release_timed: bool = false
 var _cleared: bool = false
 var _panel_sprite: Sprite2D
 var _release_sprite: Sprite2D
+var _loot_boxes: Array = []
 var _doorway = null
 
 var _pulse_timer: float = 0.0
@@ -79,6 +90,7 @@ func _ready() -> void:
 	ben.special_used.connect(_on_special_used)
 	_create_panel()
 	_create_release()
+	_create_loot_boxes()
 	_create_hiding_spot()
 	_create_doorway()
 	_setup_camera()
@@ -162,6 +174,17 @@ func _create_release() -> void:
 	_release_sprite.position = RELEASE_POS
 	add_child(_release_sprite)
 
+func _create_loot_boxes() -> void:
+	var whistle_box = LootBoxScript.new()
+	whistle_box.setup(GuardWhistleItem, WHISTLE_LOOT_POS, GameManager.get_level_flag(LOCATION_ID, LOOT_FLAG_KEYS[0], false))
+	add_child(whistle_box)
+	_loot_boxes.append(whistle_box)
+
+	var token_box = LootBoxScript.new()
+	token_box.setup(ArcadeTokenItem, TOKEN_LOOT_POS, GameManager.get_level_flag(LOCATION_ID, LOOT_FLAG_KEYS[1], false))
+	add_child(token_box)
+	_loot_boxes.append(token_box)
+
 # Stealth: a shadowed alcove on the Mid Platform — the crossroads every
 # patrol crossing between the lower and upper lines must pass through, so
 # ducking in here to let one go by is meaningful regardless of which
@@ -188,6 +211,11 @@ func _add(scene: PackedScene, pos: Vector2) -> void:
 	enemies.add_child(e)
 
 func _on_special_used(char_name: String) -> void:
+	var p: Player = ethan if char_name == "Ethan" else ben
+	for i in _loot_boxes.size():
+		if _loot_boxes[i].try_open(char_name, p.global_position):
+			GameManager.set_level_flag(LOCATION_ID, LOOT_FLAG_KEYS[i], true)
+			return
 	if char_name == "Ethan" and not _panel_hacked:
 		if ethan.global_position.distance_to(PANEL_POS) < PANEL_RADIUS:
 			_panel_hacked = true

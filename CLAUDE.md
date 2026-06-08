@@ -154,11 +154,21 @@ Verified functionally end-to-end via a temp-autoload script driving
 `inventories` updated → puzzle gate passes → re-opening an already-looted box
 is a confirmed no-op.
 
-**Follow-up pass (not yet done):** loot boxes + gates in the other 12
-locations (including the five-ticket Grand Marquee Cinema gate — its
-headline use case) and the remaining ~25 items' puzzle hookups. Scope it
-the same way the floor/wall/stealth visual passes were rolled out: prototype
-proven on one level, then mechanically repeated across the rest.
+**Follow-up pass: COMPLETE.** All 26 remaining items placed as loot boxes
+across the other 12 locations; 7 items wired into existing puzzle-prop gates
+(`sheet_music_page`/`tuning_fork` → Clocktower bells hard gate; `library_card`
+→ Library librarian desk; `backstage_pass` → Carnival curtain; `crowbar` →
+Harbor container; `security_badge` → Underground hatch pip pre-fill;
+`film_reel` → Cinema projector hard gate); the 5-ticket Cinema entry gate
+implemented as `_has_all_tickets()` on the completion condition. Items without
+new-mechanic dependencies (`rusty_key`, `pocket_lantern`, `guard_whistle`,
+`crane_crank_handle`, `vr_override_chip`, `animal_treat`, `bies_charm`, all
+character tickets, all 6 junk items) placed as collectibles only — their
+CLAUDE.md "uses" reference systems (usable-item distraction, darkness/reveal,
+stat buff, etc.) that don't exist yet; those are explicitly future follow-up
+scope. Rolled out the same way the Doorway/camera/floor/stealth passes were:
+prototype proven at Pipe Organ Works, mechanically repeated 12 more times.
+GUT 16/16 unaffected.
 
 ### Functional collectibles (gate or buff something)
 | Item | Use |
@@ -197,12 +207,12 @@ Visually distinguish the two categories in the `InventoryPanel` (e.g. a dimmer
 icon border for junk items) so players can tell "this might matter later" from
 "this is just a keepsake," without it being a complete non-clue.
 
-> **Status: core implemented + vertical slice proven.** `ItemData`,
+> **Status: COMPLETE — full 13-location rollout done.** `ItemData`,
 > `GameManager` inventory state/signals, `LootBox`, `InventoryPanel`, and all
-> 29 `.tres` item resources exist and are exercised end-to-end at Pipe Organ
-> Works (loot box → item granted → organ-repair gate → workshop clear). Full
-> rollout to the other 12 locations and the five-ticket Cinema gate is the
-> remaining follow-up pass — see the vertical-slice note above.
+> 29 `.tres` item resources implemented and placed. All 13 locations have loot
+> boxes; 7 items are wired into puzzle-prop gates; the 5-ticket Cinema
+> completion gate (`_has_all_tickets()`) is the headline capstone. See the
+> "Follow-up pass: COMPLETE" note above for the per-item placement map.
 
 ---
 

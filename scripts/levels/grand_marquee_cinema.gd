@@ -21,6 +21,23 @@ const PROJECTOR_RADIUS: float = 64.0
 const ORGAN_POS := Vector2(400.0, 92.0)
 const ORGAN_RADIUS: float = 64.0
 
+# Collectibles: film reel is the "second item needed with the projector
+# repair" per CLAUDE.md — wired as a hard gate on Quinn's projector puzzle
+# (proximity + Special succeeds only if either character holds the reel).
+# The 5-ticket check is the headline use case for the whole ticket system:
+# all five character movie tickets must be held (across either duo member)
+# for the level to be completable — see _has_all_tickets().
+# See CLAUDE.md "Collectibles & Inventory".
+const LootBoxScript: Script = preload("res://scripts/systems/loot_box.gd")
+const FilmReelItem: ItemData   = preload("res://data/items/film_reel.tres")
+const REEL_LOOT_POS := Vector2(185.0, 150.0)
+const LOOT_FLAG_KEYS := ["reel_loot_open"]
+const TicketQuinnItem: ItemData = preload("res://data/items/ticket_quinn.tres")
+const TicketErinItem: ItemData  = preload("res://data/items/ticket_erin.tres")
+const TicketEvanItem: ItemData  = preload("res://data/items/ticket_evan.tres")
+const TicketBenItem: ItemData   = preload("res://data/items/ticket_ben.tres")
+const TicketEthanItem: ItemData = preload("res://data/items/ticket_ethan.tres")
+
 # Doorway: the level's entrance/exit — see CLAUDE.md "Doorways, camera-follow
 # & multi-room levels". The duo arrives through the lobby; walking away and
 # back exits at any time, cleared or not — see _exit_to_overworld for this
@@ -64,6 +81,7 @@ var _organ_played: bool = false
 var _cleared: bool = false
 var _projector_sprite: Sprite2D
 var _organ_sprite: Sprite2D
+var _loot_boxes: Array = []
 var _doorway = null
 
 func _ready() -> void:
@@ -75,6 +93,7 @@ func _ready() -> void:
 	ben.special_used.connect(_on_special_used)
 	_create_projector()
 	_create_organ()
+	_create_loot_boxes()
 	_create_hiding_spot()
 	_create_doorway()
 	_setup_camera()
@@ -107,7 +126,7 @@ func _restore_progress() -> void:
 		_spawned = true
 	else:
 		_spawn()
-	if _enemies_cleared and _projector_repaired and _organ_played:
+	if _enemies_cleared and _projector_repaired and _organ_played and _has_all_tickets():
 		_cleared = true
 		hint_label.text = ""
 		clear_label.text = "THE FINAL REEL!\n\nThe house lights rise — and there, in the\nprojection booth, stands Uncle Doug.\n\nPress ENTER to continue"
@@ -166,6 +185,28 @@ func _create_hiding_spot() -> void:
 	spot.position = HIDING_SPOT_POS
 	add_child(spot)
 
+func _create_loot_boxes() -> void:
+	var reel_box = LootBoxScript.new()
+	reel_box.setup(FilmReelItem, REEL_LOOT_POS, GameManager.get_level_flag(LOCATION_ID, LOOT_FLAG_KEYS[0], false))
+	add_child(reel_box)
+	_loot_boxes.append(reel_box)
+
+# The headline ticket gate — all five character movie tickets must be held
+# (across the active duo) to complete the Cinema — see CLAUDE.md
+# "Collectibles & Inventory" for the full ticket system.
+func _has_all_tickets() -> bool:
+	var characters: Array = ["Quinn", "Erin", "Evan", "Ben", "Ethan"]
+	var items: Array = [TicketQuinnItem, TicketErinItem, TicketEvanItem, TicketBenItem, TicketEthanItem]
+	for i in characters.size():
+		var held: bool = false
+		for char_name in characters:
+			if GameManager.has_item(char_name, items[i].id):
+				held = true
+				break
+		if not held:
+			return false
+	return true
+
 func _create_doorway() -> void:
 	_doorway = DoorwayScript.new()
 	_doorway.setup(DOORWAY_POS)
@@ -183,12 +224,18 @@ func _add(scene: PackedScene, pos: Vector2) -> void:
 	enemies.add_child(e)
 
 func _on_special_used(char_name: String) -> void:
+	var p: Player = quinn if char_name == "Quinn" else ben
+	for i in _loot_boxes.size():
+		if _loot_boxes[i].try_open(char_name, p.global_position):
+			GameManager.set_level_flag(LOCATION_ID, LOOT_FLAG_KEYS[i], true)
+			return
 	if char_name == "Quinn" and not _projector_repaired:
 		if quinn.global_position.distance_to(PROJECTOR_POS) < PROJECTOR_RADIUS:
-			_projector_repaired = true
-			_projector_sprite.modulate = Color(0.4, 1.0, 0.5)
-			Audio.play("special")
-			GameManager.set_level_flag(LOCATION_ID, "projector_repaired", true)
+			if GameManager.has_item("Quinn", FilmReelItem.id) or GameManager.has_item("Ben", FilmReelItem.id):
+				_projector_repaired = true
+				_projector_sprite.modulate = Color(0.4, 1.0, 0.5)
+				Audio.play("special")
+				GameManager.set_level_flag(LOCATION_ID, "projector_repaired", true)
 	elif char_name == "Ben" and not _organ_played:
 		if ben.global_position.distance_to(ORGAN_POS) < ORGAN_RADIUS:
 			_organ_played = true
@@ -207,7 +254,7 @@ func _process(_delta: float) -> void:
 	if _spawned and not _enemies_cleared and enemies.get_child_count() == 0:
 		_enemies_cleared = true
 		GameManager.set_level_flag(LOCATION_ID, "enemies_cleared", true)
-	if _enemies_cleared and _projector_repaired and _organ_played and not _cleared:
+	if _enemies_cleared and _projector_repaired and _organ_played and _has_all_tickets() and not _cleared:
 		_cleared = true
 		hint_label.text = ""
 		clear_label.text = "THE FINAL REEL!\n\nThe house lights rise — and there, in the\nprojection booth, stands Uncle Doug.\n\nPress ENTER to continue"
@@ -236,8 +283,14 @@ func _update_hint() -> void:
 	elif not _enemies_cleared:
 		hint_label.text = "A guardian holds the aisle, flanked by patrolling stagehands — find your opening and fight through!"
 	elif not _projector_repaired:
-		hint_label.text = "Quinn: in the projection booth, repair the equipment  [ approach it, press G ]"
+		var has_reel: bool = GameManager.has_item("Quinn", FilmReelItem.id) or GameManager.has_item("Ben", FilmReelItem.id)
+		if has_reel:
+			hint_label.text = "Quinn: in the projection booth, repair the equipment  [ approach it, press G ]"
+		else:
+			hint_label.text = "Quinn: the projector is missing its film reel — check the crates in the projection booth"
 	elif not _organ_played:
 		hint_label.text = "Ben: up on the balcony, play the house organ to calm the crowd  [ approach it, press G ]"
+	elif not _has_all_tickets():
+		hint_label.text = "The box office won't open without all five tickets — the whole team's admissions are required"
 	else:
 		hint_label.text = ""

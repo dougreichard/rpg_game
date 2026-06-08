@@ -19,6 +19,16 @@ const HIDING_SPOT_POS := Vector2(340.0, 460.0)
 const CONSOLE_POS := Vector2(580.0, 340.0)
 const CONSOLE_RADIUS: float = 64.0
 
+# Collectibles: Ethan's ticket (found inside the booth where he's freed —
+# parallel to Ben/cage) and junk headphone cable — see CLAUDE.md "Collectibles
+# & Inventory".
+const LootBoxScript: Script = preload("res://scripts/systems/loot_box.gd")
+const TicketEthanItem: ItemData    = preload("res://data/items/ticket_ethan.tres")
+const HeadphoneCableItem: ItemData = preload("res://data/items/tangled_headphone_cable.tres")
+const TICKET_LOOT_POS  := Vector2(640.0, 100.0)
+const CABLE_LOOT_POS   := Vector2(160.0, 440.0)
+const LOOT_FLAG_KEYS   := ["ticket_loot_open", "cable_loot_open"]
+
 # Doorway: the level's entrance/exit — see CLAUDE.md "Doorways, camera-follow
 # & multi-room levels". The duo spawns beside it in the lobby; walking away
 # and back exits to the overworld at any time, cleared or not.
@@ -66,6 +76,7 @@ var _console_sprite: Sprite2D
 var _booth_door_shape: CollisionShape2D
 var _booth_door_sprite: Sprite2D
 var _ethan_prop: Sprite2D
+var _loot_boxes: Array = []
 var _doorway = null
 
 func _ready() -> void:
@@ -73,9 +84,11 @@ func _ready() -> void:
 	_build_walls()
 	GameManager.register_players(quinn, ben)
 	hud.setup(quinn, ben)
+	quinn.special_used.connect(_on_special_used)
 	ben.special_used.connect(_on_special_used)
 	_create_console()
 	_create_booth_door()
+	_create_loot_boxes()
 	_create_hiding_spot()
 	_create_doorway()
 	_setup_camera()
@@ -174,6 +187,17 @@ func _create_hiding_spot() -> void:
 	spot.position = HIDING_SPOT_POS
 	add_child(spot)
 
+func _create_loot_boxes() -> void:
+	var ticket_box = LootBoxScript.new()
+	ticket_box.setup(TicketEthanItem, TICKET_LOOT_POS, GameManager.get_level_flag(LOCATION_ID, LOOT_FLAG_KEYS[0], false))
+	add_child(ticket_box)
+	_loot_boxes.append(ticket_box)
+
+	var cable_box = LootBoxScript.new()
+	cable_box.setup(HeadphoneCableItem, CABLE_LOOT_POS, GameManager.get_level_flag(LOCATION_ID, LOOT_FLAG_KEYS[1], false))
+	add_child(cable_box)
+	_loot_boxes.append(cable_box)
+
 func _create_doorway() -> void:
 	_doorway = DoorwayScript.new()
 	_doorway.setup(DOORWAY_POS)
@@ -192,6 +216,11 @@ func _add(scene: PackedScene, pos: Vector2) -> void:
 	enemies.add_child(e)
 
 func _on_special_used(char_name: String) -> void:
+	var p: Player = quinn if char_name == "Quinn" else ben
+	for i in _loot_boxes.size():
+		if _loot_boxes[i].try_open(char_name, p.global_position):
+			GameManager.set_level_flag(LOCATION_ID, LOOT_FLAG_KEYS[i], true)
+			return
 	if char_name == "Ben" and not _console_tuned:
 		if ben.global_position.distance_to(CONSOLE_POS) < CONSOLE_RADIUS:
 			_console_tuned = true

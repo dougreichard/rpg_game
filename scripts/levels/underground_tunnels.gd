@@ -15,6 +15,13 @@ const GRUNT_SCENE: PackedScene = preload("res://scenes/enemies/Grunt.tscn")
 const RUNNER_SCENE: PackedScene = preload("res://scenes/enemies/Runner.tscn")
 const HidingSpotScript: Script = preload("res://scripts/systems/hiding_spot.gd")
 const TwinkleScript: Script = preload("res://scripts/systems/twinkle_companion.gd")
+# Frosty — Evan's general-purpose combat distractor (see CLAUDE.md "Evan's Animals").
+# Priority over Twinkle: when enemies are still alive, Evan's away-from-rubble
+# Special sends Frosty to stagger; once the floor is clear, Twinkle's noise
+# burst is the useful tool for drawing any lingering investigators.
+const AnimalCompanionScript: Script = preload("res://scripts/systems/animal_companion.gd")
+const FROSTY_COLOR := Color(0.95, 0.95, 0.95)
+const FROSTY_COOLDOWN: float = 3.0
 
 const HIDING_SPOT_POS := Vector2(480.0, 280.0)
 const TWINKLE_COOLDOWN: float = 3.0
@@ -24,6 +31,19 @@ const RUBBLE_RADIUS: float = 64.0
 const HATCH_POS := Vector2(880.0, 288.0)
 const HATCH_RADIUS: float = 64.0
 const HATCH_PRESSES_REQUIRED: int = 3
+
+# Collectibles: rusty key (functional, future shortcut hookup), security badge
+# (pre-fills one hatch pip if held on entry — CLAUDE.md: "auto-fills one pip
+# of Ethan's hatch hack"), pocket lantern (functional, future reveal hookup) —
+# see CLAUDE.md "Collectibles & Inventory".
+const LootBoxScript: Script = preload("res://scripts/systems/loot_box.gd")
+const RustyKeyItem: ItemData     = preload("res://data/items/rusty_key.tres")
+const SecurityBadgeItem: ItemData = preload("res://data/items/security_badge.tres")
+const PocketLanternItem: ItemData = preload("res://data/items/pocket_lantern.tres")
+const KEY_LOOT_POS    := Vector2(560.0, 330.0)
+const BADGE_LOOT_POS  := Vector2(820.0, 350.0)
+const LANTERN_LOOT_POS := Vector2(300.0, 240.0)
+const LOOT_FLAG_KEYS  := ["key_loot_open", "badge_loot_open", "lantern_loot_open"]
 const PIP_RADIUS: float = 5.0
 const PIP_SPACING: float = 16.0
 const PIP_OFFSET_Y: float = -38.0
@@ -66,11 +86,13 @@ var _hatch_hacked: bool = false
 var _cleared: bool = false
 var _rubble_sprite: Sprite2D
 var _hatch_sprite: Sprite2D
+var _loot_boxes: Array = []
 var _doorway = null
 
 var _hatch_progress: int = 0
 var _pip_flash: float = 0.0
 var _twinkle_cooldown_timer: float = 0.0
+var _frosty_cooldown_timer: float = 0.0
 
 func _ready() -> void:
 	_build_floor()
@@ -81,6 +103,7 @@ func _ready() -> void:
 	ethan.special_used.connect(_on_special_used)
 	_create_rubble()
 	_create_hatch()
+	_create_loot_boxes()
 	_create_hiding_spot()
 	_create_doorway()
 	_setup_camera()
@@ -108,6 +131,12 @@ func _restore_progress() -> void:
 	_rubble_cleared = GameManager.get_level_flag(LOCATION_ID, "rubble_cleared", false)
 	_hatch_hacked = GameManager.get_level_flag(LOCATION_ID, "hatch_hacked", false)
 	_hatch_progress = GameManager.get_level_flag(LOCATION_ID, "hatch_progress", 0)
+	# Security badge pre-fills the first hatch pip if either character holds one
+	# and no progress has been made yet — see CLAUDE.md "Collectibles & Inventory".
+	if not _hatch_hacked and _hatch_progress == 0:
+		if GameManager.has_item("Evan", SecurityBadgeItem.id) or GameManager.has_item("Ethan", SecurityBadgeItem.id):
+			_hatch_progress = 1
+			GameManager.set_level_flag(LOCATION_ID, "hatch_progress", 1)
 	if _rubble_cleared:
 		_rubble_sprite.modulate = Color(0.4, 1.0, 0.5)
 	if _hatch_hacked:
@@ -171,6 +200,22 @@ func _create_hiding_spot() -> void:
 	spot.position = HIDING_SPOT_POS
 	add_child(spot)
 
+func _create_loot_boxes() -> void:
+	var key_box = LootBoxScript.new()
+	key_box.setup(RustyKeyItem, KEY_LOOT_POS, GameManager.get_level_flag(LOCATION_ID, LOOT_FLAG_KEYS[0], false))
+	add_child(key_box)
+	_loot_boxes.append(key_box)
+
+	var badge_box = LootBoxScript.new()
+	badge_box.setup(SecurityBadgeItem, BADGE_LOOT_POS, GameManager.get_level_flag(LOCATION_ID, LOOT_FLAG_KEYS[1], false))
+	add_child(badge_box)
+	_loot_boxes.append(badge_box)
+
+	var lantern_box = LootBoxScript.new()
+	lantern_box.setup(PocketLanternItem, LANTERN_LOOT_POS, GameManager.get_level_flag(LOCATION_ID, LOOT_FLAG_KEYS[2], false))
+	add_child(lantern_box)
+	_loot_boxes.append(lantern_box)
+
 func _create_doorway() -> void:
 	_doorway = DoorwayScript.new()
 	_doorway.setup(DOORWAY_POS)
@@ -180,6 +225,22 @@ func _create_doorway() -> void:
 # off to bark — a noise burst (GameManager.emit_noise) that lures patrolling
 # or investigating guards toward her racket and away from the duo's actual
 # position (cooldown-gated so it can't be spammed every frame).
+func _summon_frosty(target: Enemy) -> void:
+	var frosty = AnimalCompanionScript.new()
+	frosty.setup(evan, target, FROSTY_COLOR)
+	add_child(frosty)
+	_frosty_cooldown_timer = FROSTY_COOLDOWN
+
+func _nearest_enemy(from_pos: Vector2):
+	var living: Array = []
+	for child in enemies.get_children():
+		if child is Enemy and is_instance_valid(child):
+			living.append(child)
+	if living.is_empty():
+		return null
+	living.sort_custom(func(a, b): return from_pos.distance_to(a.global_position) < from_pos.distance_to(b.global_position))
+	return living[0]
+
 func _summon_twinkle() -> void:
 	var twinkle = TwinkleScript.new()
 	twinkle.setup(evan, evan.facing)
@@ -198,14 +259,23 @@ func _add(scene: PackedScene, pos: Vector2) -> void:
 	enemies.add_child(e)
 
 func _on_special_used(char_name: String) -> void:
+	var p: Player = evan if char_name == "Evan" else ethan
+	for i in _loot_boxes.size():
+		if _loot_boxes[i].try_open(char_name, p.global_position):
+			GameManager.set_level_flag(LOCATION_ID, LOOT_FLAG_KEYS[i], true)
+			return
 	if char_name == "Evan":
 		if not _rubble_cleared and evan.global_position.distance_to(RUBBLE_POS) < RUBBLE_RADIUS:
 			_rubble_cleared = true
 			_rubble_sprite.modulate = Color(0.4, 1.0, 0.5)
 			Audio.play("special")
 			GameManager.set_level_flag(LOCATION_ID, "rubble_cleared", true)
-		elif _twinkle_cooldown_timer == 0.0:
-			_summon_twinkle()
+		elif _frosty_cooldown_timer == 0.0:
+			var target = _nearest_enemy(evan.global_position)
+			if target != null:
+				_summon_frosty(target)
+			elif _twinkle_cooldown_timer == 0.0:
+				_summon_twinkle()
 	elif char_name == "Ethan" and not _hatch_hacked:
 		if ethan.global_position.distance_to(HATCH_POS) < HATCH_RADIUS:
 			_hatch_progress += 1
@@ -221,6 +291,7 @@ func _on_special_used(char_name: String) -> void:
 func _process(delta: float) -> void:
 	_pip_flash = maxf(_pip_flash - delta, 0.0)
 	_twinkle_cooldown_timer = maxf(_twinkle_cooldown_timer - delta, 0.0)
+	_frosty_cooldown_timer = maxf(_frosty_cooldown_timer - delta, 0.0)
 	queue_redraw()
 	if is_instance_valid(GameManager.active_player):
 		var active_pos: Vector2 = GameManager.active_player.global_position
@@ -267,7 +338,7 @@ func _update_hint() -> void:
 	if _cleared:
 		hint_label.text = ""
 	elif not _enemies_cleared:
-		hint_label.text = "Patrols haven't spotted you — sneak past (watch their cones, duck into shadow) or strike before they're alerted  [ Evan: press G away from the rubble to send Twinkle off barking — lures patrols off your trail ]"
+		hint_label.text = "Patrols haven't spotted you — sneak past or strike first  [ Evan: press G away from the rubble — sends Frosty charging at the nearest guard (enemies nearby) or Twinkle off barking to lure patrols away (no enemies in range) ]"
 	elif not _rubble_cleared:
 		hint_label.text = "Evan: force the blocked passage open — west tunnel  [ approach the rubble, press G ]"
 	elif not _hatch_hacked:

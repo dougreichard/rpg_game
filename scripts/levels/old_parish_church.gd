@@ -15,6 +15,16 @@ const GATE_RADIUS: float = 64.0
 const QUINN_GATE_POS := Vector2(260.0, 300.0)
 const ERIN_GATE_POS  := Vector2(700.0, 300.0)
 
+# Collectibles: Quinn's movie ticket (needed for the Cinema finale) and a lore
+# photograph — see CLAUDE.md "Collectibles & Inventory". Both sit in the
+# vestibule so the duo finds them on the way in or out.
+const LootBoxScript: Script = preload("res://scripts/systems/loot_box.gd")
+const TicketQuinnItem: ItemData = preload("res://data/items/ticket_quinn.tres")
+const FadedPhotoItem: ItemData = preload("res://data/items/faded_photograph.tres")
+const TICKET_LOOT_POS := Vector2(280.0, 520.0)
+const PHOTO_LOOT_POS  := Vector2(680.0, 520.0)
+const LOOT_FLAG_KEYS  := ["ticket_loot_open", "photo_loot_open"]
+
 # Doorway: the level's entrance/exit — see CLAUDE.md "Doorways, camera-follow
 # & multi-room levels". The duo spawns beside it in the vestibule; walking
 # away and back exits to the overworld at any time, cleared or not.
@@ -57,6 +67,7 @@ var _erin_sprite: Sprite2D
 var _secret_wall_shape: CollisionShape2D
 var _secret_wall_sprite: Sprite2D
 var _organ_prop: Sprite2D
+var _loot_boxes: Array = []
 var _doorway = null
 
 func _ready() -> void:
@@ -68,6 +79,7 @@ func _ready() -> void:
 	erin.special_used.connect(_on_special_used)
 	_create_gates()
 	_create_secret_passage()
+	_create_loot_boxes()
 	_create_doorway()
 	_setup_camera()
 	_restore_progress()
@@ -179,12 +191,28 @@ func _reveal_secret_passage() -> void:
 	Audio.play("special")
 	GameManager.set_level_flag(LOCATION_ID, "secret_revealed", true)
 
+func _create_loot_boxes() -> void:
+	var ticket_box = LootBoxScript.new()
+	ticket_box.setup(TicketQuinnItem, TICKET_LOOT_POS, GameManager.get_level_flag(LOCATION_ID, LOOT_FLAG_KEYS[0], false))
+	add_child(ticket_box)
+	_loot_boxes.append(ticket_box)
+
+	var photo_box = LootBoxScript.new()
+	photo_box.setup(FadedPhotoItem, PHOTO_LOOT_POS, GameManager.get_level_flag(LOCATION_ID, LOOT_FLAG_KEYS[1], false))
+	add_child(photo_box)
+	_loot_boxes.append(photo_box)
+
 func _create_doorway() -> void:
 	_doorway = DoorwayScript.new()
 	_doorway.setup(DOORWAY_POS)
 	add_child(_doorway)
 
 func _on_special_used(char_name: String) -> void:
+	var p: Player = quinn if char_name == "Quinn" else erin
+	for i in _loot_boxes.size():
+		if _loot_boxes[i].try_open(char_name, p.global_position):
+			GameManager.set_level_flag(LOCATION_ID, LOOT_FLAG_KEYS[i], true)
+			return
 	if char_name == "Quinn" and not _secret_revealed and quinn.global_position.distance_to(LEVER_POS) < LEVER_RADIUS:
 		_reveal_secret_passage()
 		return

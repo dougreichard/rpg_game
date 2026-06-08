@@ -21,6 +21,17 @@ const GEAR_RADIUS: float = 64.0
 const BELL_POS := Vector2(440.0, 120.0)
 const BELL_RADIUS: float = 64.0
 
+# Collectibles: sheet music (needed to solve the bell sequence) and a tuning
+# fork — either one is sufficient to unlock the belfry gate; without both, Ben
+# has no way to identify the correct pitch sequence — see CLAUDE.md
+# "Collectibles & Inventory".
+const LootBoxScript: Script = preload("res://scripts/systems/loot_box.gd")
+const SheetMusicItem: ItemData = preload("res://data/items/sheet_music_page.tres")
+const TuningForkItem: ItemData = preload("res://data/items/tuning_fork.tres")
+const MUSIC_LOOT_POS := Vector2(360.0, 400.0)
+const FORK_LOOT_POS  := Vector2(510.0, 160.0)
+const LOOT_FLAG_KEYS := ["music_loot_open", "fork_loot_open"]
+
 # Doorway: the level's entrance/exit — see CLAUDE.md "Doorways, camera-follow
 # & multi-room levels". The duo spawns beside it on the ground-floor landing;
 # walking away and back exits to the overworld at any time, cleared or not.
@@ -52,6 +63,7 @@ var _bells_played: bool = false
 var _cleared: bool = false
 var _gear_sprite: Sprite2D
 var _bell_sprite: Sprite2D
+var _loot_boxes: Array = []
 var _doorway = null
 
 func _ready() -> void:
@@ -63,6 +75,7 @@ func _ready() -> void:
 	ben.special_used.connect(_on_special_used)
 	_create_gear()
 	_create_bells()
+	_create_loot_boxes()
 	_create_hiding_spot()
 	_create_doorway()
 	_setup_camera()
@@ -151,6 +164,17 @@ func _create_hiding_spot() -> void:
 	spot.position = HIDING_SPOT_POS
 	add_child(spot)
 
+func _create_loot_boxes() -> void:
+	var music_box = LootBoxScript.new()
+	music_box.setup(SheetMusicItem, MUSIC_LOOT_POS, GameManager.get_level_flag(LOCATION_ID, LOOT_FLAG_KEYS[0], false))
+	add_child(music_box)
+	_loot_boxes.append(music_box)
+
+	var fork_box = LootBoxScript.new()
+	fork_box.setup(TuningForkItem, FORK_LOOT_POS, GameManager.get_level_flag(LOCATION_ID, LOOT_FLAG_KEYS[1], false))
+	add_child(fork_box)
+	_loot_boxes.append(fork_box)
+
 func _create_doorway() -> void:
 	_doorway = DoorwayScript.new()
 	_doorway.setup(DOORWAY_POS)
@@ -168,6 +192,11 @@ func _add(scene: PackedScene, pos: Vector2) -> void:
 	enemies.add_child(e)
 
 func _on_special_used(char_name: String) -> void:
+	var p: Player = quinn if char_name == "Quinn" else ben
+	for i in _loot_boxes.size():
+		if _loot_boxes[i].try_open(char_name, p.global_position):
+			GameManager.set_level_flag(LOCATION_ID, LOOT_FLAG_KEYS[i], true)
+			return
 	if char_name == "Quinn" and not _gear_repaired:
 		if quinn.global_position.distance_to(GEAR_POS) < GEAR_RADIUS:
 			_gear_repaired = true
@@ -176,10 +205,15 @@ func _on_special_used(char_name: String) -> void:
 			GameManager.set_level_flag(LOCATION_ID, "gear_repaired", true)
 	elif char_name == "Ben" and not _bells_played:
 		if ben.global_position.distance_to(BELL_POS) < BELL_RADIUS:
-			_bells_played = true
-			_bell_sprite.modulate = Color(0.4, 1.0, 0.5)
-			Audio.play("special")
-			GameManager.set_level_flag(LOCATION_ID, "bells_played", true)
+			var has_sequence: bool = GameManager.has_item("Ben", SheetMusicItem.id) or \
+				GameManager.has_item("Quinn", SheetMusicItem.id) or \
+				GameManager.has_item("Ben", TuningForkItem.id) or \
+				GameManager.has_item("Quinn", TuningForkItem.id)
+			if has_sequence:
+				_bells_played = true
+				_bell_sprite.modulate = Color(0.4, 1.0, 0.5)
+				Audio.play("special")
+				GameManager.set_level_flag(LOCATION_ID, "bells_played", true)
 
 func _process(_delta: float) -> void:
 	if is_instance_valid(GameManager.active_player):
@@ -218,6 +252,13 @@ func _update_hint() -> void:
 	elif not _gear_repaired:
 		hint_label.text = "Quinn: repair the gear floor's mechanism  [ approach it, press G ]"
 	elif not _bells_played:
-		hint_label.text = "Ben: climb to the belfry and play the true pitch sequence  [ approach it, press G ]"
+		var has_sequence: bool = GameManager.has_item("Ben", SheetMusicItem.id) or \
+			GameManager.has_item("Quinn", SheetMusicItem.id) or \
+			GameManager.has_item("Ben", TuningForkItem.id) or \
+			GameManager.has_item("Quinn", TuningForkItem.id)
+		if has_sequence:
+			hint_label.text = "Ben: climb to the belfry and play the pitch sequence  [ approach it, press G ]"
+		else:
+			hint_label.text = "Ben: the correct bell sequence is unknown — find the sheet music or tuning fork first"
 	else:
 		hint_label.text = ""

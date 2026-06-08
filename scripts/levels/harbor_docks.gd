@@ -42,6 +42,18 @@ const CALVIN_COOLDOWN: float = 2.5
 # texture, siblings of $Walls so _build_walls()'s generic brick pass skips them).
 const MAZE_CRATE_COLOR := Color(0.5, 0.36, 0.16)
 
+# Collectibles: crowbar (Quinn's alternate route to shift the container — with
+# it she doesn't need Evan), crane crank handle (functional, future hookup),
+# and a faded treasure map (junk) — see CLAUDE.md "Collectibles & Inventory".
+const LootBoxScript: Script = preload("res://scripts/systems/loot_box.gd")
+const CrowbarItem: ItemData       = preload("res://data/items/crowbar.tres")
+const CrankHandleItem: ItemData   = preload("res://data/items/crane_crank_handle.tres")
+const TreasureMapItem: ItemData   = preload("res://data/items/faded_treasure_map.tres")
+const CROWBAR_LOOT_POS  := Vector2(840.0, 200.0)
+const CRANK_LOOT_POS    := Vector2(230.0, 200.0)
+const TREEMAP_LOOT_POS  := Vector2(450.0, 460.0)
+const LOOT_FLAG_KEYS    := ["crowbar_loot_open", "crank_loot_open", "treemap_loot_open"]
+
 # Doorway: the level's entrance/exit — see CLAUDE.md "Doorways, camera-follow
 # & multi-room levels". The duo spawns beside it on the pier; walking away and
 # back exits to the overworld at any time, cleared or not.
@@ -75,6 +87,7 @@ var _container_moved: bool = false
 var _cleared: bool = false
 var _container_shape: CollisionShape2D
 var _container_sprite: Sprite2D
+var _loot_boxes: Array = []
 var _doorway = null
 
 func _ready() -> void:
@@ -82,9 +95,11 @@ func _ready() -> void:
 	_build_walls()
 	GameManager.register_players(quinn, evan)
 	hud.setup(quinn, evan)
+	quinn.special_used.connect(_on_special_used)
 	evan.special_used.connect(_on_special_used)
 	_create_container()
 	_create_maze_crates()
+	_create_loot_boxes()
 	_create_hiding_spot()
 	_create_doorway()
 	_setup_camera()
@@ -190,6 +205,22 @@ func _create_hiding_spot() -> void:
 	spot.position = HIDING_SPOT_POS
 	add_child(spot)
 
+func _create_loot_boxes() -> void:
+	var crowbar_box = LootBoxScript.new()
+	crowbar_box.setup(CrowbarItem, CROWBAR_LOOT_POS, GameManager.get_level_flag(LOCATION_ID, LOOT_FLAG_KEYS[0], false))
+	add_child(crowbar_box)
+	_loot_boxes.append(crowbar_box)
+
+	var crank_box = LootBoxScript.new()
+	crank_box.setup(CrankHandleItem, CRANK_LOOT_POS, GameManager.get_level_flag(LOCATION_ID, LOOT_FLAG_KEYS[1], false))
+	add_child(crank_box)
+	_loot_boxes.append(crank_box)
+
+	var treemap_box = LootBoxScript.new()
+	treemap_box.setup(TreasureMapItem, TREEMAP_LOOT_POS, GameManager.get_level_flag(LOCATION_ID, LOOT_FLAG_KEYS[2], false))
+	add_child(treemap_box)
+	_loot_boxes.append(treemap_box)
+
 func _create_doorway() -> void:
 	_doorway = DoorwayScript.new()
 	_doorway.setup(DOORWAY_POS)
@@ -208,15 +239,26 @@ func _add(scene: PackedScene, pos: Vector2) -> void:
 	enemies.add_child(e)
 
 func _on_special_used(char_name: String) -> void:
-	if char_name != "Evan":
-		return
-	if not _container_moved and evan.global_position.distance_to(CONTAINER_POS) < CONTAINER_RADIUS:
-		_container_moved = true
-		_move_container(true)
-		Audio.play("special")
-		GameManager.set_level_flag(LOCATION_ID, "container_moved", true)
-	elif _calvin_cooldown_timer == 0.0:
-		_summon_calvin_and_coolidge()
+	var p: Player = quinn if char_name == "Quinn" else evan
+	for i in _loot_boxes.size():
+		if _loot_boxes[i].try_open(char_name, p.global_position):
+			GameManager.set_level_flag(LOCATION_ID, LOOT_FLAG_KEYS[i], true)
+			return
+	if char_name == "Evan":
+		if not _container_moved and evan.global_position.distance_to(CONTAINER_POS) < CONTAINER_RADIUS:
+			_container_moved = true
+			_move_container(true)
+			Audio.play("special")
+			GameManager.set_level_flag(LOCATION_ID, "container_moved", true)
+		elif _calvin_cooldown_timer == 0.0:
+			_summon_calvin_and_coolidge()
+	elif char_name == "Quinn" and not _container_moved:
+		if quinn.global_position.distance_to(CONTAINER_POS) < CONTAINER_RADIUS:
+			if GameManager.has_item("Quinn", CrowbarItem.id) or GameManager.has_item("Evan", CrowbarItem.id):
+				_container_moved = true
+				_move_container(true)
+				Audio.play("special")
+				GameManager.set_level_flag(LOCATION_ID, "container_moved", true)
 
 # Calvin and Coolidge are brothers who are always summoned and fight as a pair
 # (see CLAUDE.md's animal companion roster) — Calvin (combat charger) takes the

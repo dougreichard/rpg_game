@@ -37,6 +37,16 @@ const GLITCH_RADIUS: float = 64.0
 const SYSTEM_POS := Vector2(590.0, 110.0)
 const SYSTEM_RADIUS: float = 64.0
 
+# Collectibles: VR override chip (collectible-only this pass — stage-skip mechanic
+# is a future follow-up) and a Bies charm (collectible-only — stat buff hook not
+# yet implemented) — see CLAUDE.md "Collectibles & Inventory".
+const LootBoxScript: Script = preload("res://scripts/systems/loot_box.gd")
+const VrOverrideChipItem: ItemData = preload("res://data/items/vr_override_chip.tres")
+const BiesCharmItem: ItemData      = preload("res://data/items/bies_charm.tres")
+const CHIP_LOOT_POS  := Vector2(160.0, 360.0)
+const CHARM_LOOT_POS := Vector2(680.0, 120.0)
+const LOOT_FLAG_KEYS := ["chip_loot_open", "charm_loot_open"]
+
 # Doorway: the level's entrance/exit — see CLAUDE.md "Doorways, camera-follow
 # & multi-room levels". The duo spawns beside it in the Boot Chamber; walking
 # away and back exits to the overworld at any time, cleared or not.
@@ -76,6 +86,7 @@ var _system_hacked: bool = false
 var _cleared: bool = false
 var _glitch_sprite: Sprite2D
 var _system_sprite: Sprite2D
+var _loot_boxes: Array = []
 var _doorway = null
 
 func _ready() -> void:
@@ -87,6 +98,7 @@ func _ready() -> void:
 	ethan.special_used.connect(_on_special_used)
 	_create_glitch()
 	_create_system()
+	_create_loot_boxes()
 	_create_hiding_spot()
 	_create_doorway()
 	_setup_camera()
@@ -194,6 +206,17 @@ func _create_system() -> void:
 	_system_sprite.position = SYSTEM_POS
 	add_child(_system_sprite)
 
+func _create_loot_boxes() -> void:
+	var chip_box = LootBoxScript.new()
+	chip_box.setup(VrOverrideChipItem, CHIP_LOOT_POS, GameManager.get_level_flag(LOCATION_ID, LOOT_FLAG_KEYS[0], false))
+	add_child(chip_box)
+	_loot_boxes.append(chip_box)
+
+	var charm_box = LootBoxScript.new()
+	charm_box.setup(BiesCharmItem, CHARM_LOOT_POS, GameManager.get_level_flag(LOCATION_ID, LOOT_FLAG_KEYS[1], false))
+	add_child(charm_box)
+	_loot_boxes.append(charm_box)
+
 # Stealth: a shadowed alcove at the Stage Alpha junction — every patrol
 # crossing between the Boot Chamber and Stage Beta must pass through here, so
 # ducking in to let one go by is meaningful regardless of which stage the duo
@@ -220,6 +243,11 @@ func _add(scene: PackedScene, pos: Vector2) -> void:
 	enemies.add_child(e)
 
 func _on_special_used(char_name: String) -> void:
+	var p: Player = quinn if char_name == "Quinn" else ethan
+	for i in _loot_boxes.size():
+		if _loot_boxes[i].try_open(char_name, p.global_position):
+			GameManager.set_level_flag(LOCATION_ID, LOOT_FLAG_KEYS[i], true)
+			return
 	if char_name == "Quinn" and not _glitch_repaired:
 		if quinn.global_position.distance_to(GLITCH_POS) < GLITCH_RADIUS:
 			_glitch_repaired = true

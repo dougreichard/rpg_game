@@ -17,6 +17,13 @@ const BRUTE_SCENE: PackedScene = preload("res://scenes/enemies/Brute.tscn")
 const HidingSpotScript: Script = preload("res://scripts/systems/hiding_spot.gd")
 const HIDING_SPOT_POS := Vector2(460.0, 460.0)
 const ScoutPairScript: Script = preload("res://scripts/systems/scout_pair_companion.gd")
+# Frosty — Evan's general-purpose combat distractor (see CLAUDE.md "Evan's Animals").
+# Priority over William & Mary: when the ground crew is still up, Evan's away-from-
+# landing Special sends Frosty to stagger; once the floor is clear, the puzzle
+# companion slot opens to William & Mary's two-point landing-brace move.
+const AnimalCompanionScript: Script = preload("res://scripts/systems/animal_companion.gd")
+const FROSTY_COLOR := Color(0.95, 0.95, 0.95)
+const FROSTY_COOLDOWN: float = 3.0
 
 const CHUTE_POS := Vector2(360.0, 110.0)
 const CHUTE_RADIUS: float = 64.0
@@ -28,6 +35,16 @@ const MARY_TARGET_POS := Vector2(390.0, 330.0)
 const WILLIAM_COLOR := Color(0.82, 0.78, 0.72)
 const MARY_COLOR := Color(0.70, 0.62, 0.56)
 const SCOUT_PAIR_COOLDOWN: float = 4.0
+
+# Collectibles: lucky rabbit's foot keychain (junk — "does nothing for the
+# rabbits or anyone", an exact joke fit given William & Mary appear here) and
+# Evan's movie ticket — see CLAUDE.md "Collectibles & Inventory".
+const LootBoxScript: Script = preload("res://scripts/systems/loot_box.gd")
+const RabbitFootItem: ItemData  = preload("res://data/items/rabbits_foot_keychain.tres")
+const TicketEvanItem: ItemData  = preload("res://data/items/ticket_evan.tres")
+const FOOT_LOOT_POS   := Vector2(430.0, 380.0)
+const TICKET_LOOT_POS := Vector2(200.0, 140.0)
+const LOOT_FLAG_KEYS  := ["foot_loot_open", "ticket_loot_open"]
 
 # Doorway: the level's entrance/exit — see CLAUDE.md "Doorways, camera-follow
 # & multi-room levels". The duo touches down right beside it in the Touchdown
@@ -69,11 +86,13 @@ var _landing_cleared: bool = false
 var _cleared: bool = false
 var _chute_sprite: Sprite2D
 var _landing_sprite: Sprite2D
+var _loot_boxes: Array = []
 var _doorway = null
 
 var _william = null
 var _mary = null
 var _scout_pair_cooldown_timer: float = 0.0
+var _frosty_cooldown_timer: float = 0.0
 
 func _ready() -> void:
 	_build_floor()
@@ -84,6 +103,7 @@ func _ready() -> void:
 	ethan.special_used.connect(_on_special_used)
 	_create_chute()
 	_create_landing()
+	_create_loot_boxes()
 	_create_hiding_spot()
 	_create_doorway()
 	_setup_camera()
@@ -167,6 +187,17 @@ func _create_landing() -> void:
 	_landing_sprite.position = LANDING_POS
 	add_child(_landing_sprite)
 
+func _create_loot_boxes() -> void:
+	var foot_box = LootBoxScript.new()
+	foot_box.setup(RabbitFootItem, FOOT_LOOT_POS, GameManager.get_level_flag(LOCATION_ID, LOOT_FLAG_KEYS[0], false))
+	add_child(foot_box)
+	_loot_boxes.append(foot_box)
+
+	var ticket_box = LootBoxScript.new()
+	ticket_box.setup(TicketEvanItem, TICKET_LOOT_POS, GameManager.get_level_flag(LOCATION_ID, LOOT_FLAG_KEYS[1], false))
+	add_child(ticket_box)
+	_loot_boxes.append(ticket_box)
+
 # Stealth: a shadowed thicket in the Touchdown Clearing's far corner — the
 # ground crew's patrol loop crosses right by it, so ducking in to let one pass
 # is a real option before committing to the brawl — see CLAUDE.md "Stealth &
@@ -222,23 +253,49 @@ func _add(scene: PackedScene, pos: Vector2) -> void:
 	enemies.add_child(e)
 
 func _on_special_used(char_name: String) -> void:
+	var p: Player = evan if char_name == "Evan" else ethan
+	for i in _loot_boxes.size():
+		if _loot_boxes[i].try_open(char_name, p.global_position):
+			GameManager.set_level_flag(LOCATION_ID, LOOT_FLAG_KEYS[i], true)
+			return
 	if char_name == "Ethan" and not _chute_hacked:
 		if ethan.global_position.distance_to(CHUTE_POS) < CHUTE_RADIUS:
 			_chute_hacked = true
 			_chute_sprite.modulate = Color(0.4, 1.0, 0.5)
 			Audio.play("special")
 			GameManager.set_level_flag(LOCATION_ID, "chute_hacked", true)
-	elif char_name == "Evan" and not _landing_cleared:
-		if evan.global_position.distance_to(LANDING_POS) < LANDING_RADIUS:
+	elif char_name == "Evan":
+		if not _landing_cleared and evan.global_position.distance_to(LANDING_POS) < LANDING_RADIUS:
 			_landing_cleared = true
 			_landing_sprite.modulate = Color(0.4, 1.0, 0.5)
 			Audio.play("special")
 			GameManager.set_level_flag(LOCATION_ID, "landing_cleared", true)
-		elif _scout_pair_cooldown_timer == 0.0 and _william == null and _mary == null:
-			_summon_scout_pair()
+		elif _frosty_cooldown_timer == 0.0:
+			var target = _nearest_enemy(evan.global_position)
+			if target != null:
+				_summon_frosty(target)
+			elif not _landing_cleared and _scout_pair_cooldown_timer == 0.0 and _william == null and _mary == null:
+				_summon_scout_pair()
+
+func _summon_frosty(target: Enemy) -> void:
+	var frosty = AnimalCompanionScript.new()
+	frosty.setup(evan, target, FROSTY_COLOR)
+	add_child(frosty)
+	_frosty_cooldown_timer = FROSTY_COOLDOWN
+
+func _nearest_enemy(from_pos: Vector2):
+	var living: Array = []
+	for child in enemies.get_children():
+		if child is Enemy and is_instance_valid(child):
+			living.append(child)
+	if living.is_empty():
+		return null
+	living.sort_custom(func(a, b): return from_pos.distance_to(a.global_position) < from_pos.distance_to(b.global_position))
+	return living[0]
 
 func _process(delta: float) -> void:
 	_scout_pair_cooldown_timer = maxf(_scout_pair_cooldown_timer - delta, 0.0)
+	_frosty_cooldown_timer = maxf(_frosty_cooldown_timer - delta, 0.0)
 	_check_scout_pair_holding()
 	_update_hint()
 	if is_instance_valid(GameManager.active_player):
@@ -272,7 +329,7 @@ func _update_hint() -> void:
 	if _cleared:
 		hint_label.text = ""
 	elif not _enemies_cleared:
-		hint_label.text = "The landing was rough but quiet — the ground crew hasn't spotted you. Move fast and pick your fight"
+		hint_label.text = "The landing was rough but quiet — the ground crew hasn't spotted you  [ Evan: press G to send Frosty charging at the nearest guard ]"
 	elif not _landing_cleared:
 		hint_label.text = "Evan: clear the wreckage blocking the way out  [ approach it, press G — or press G elsewhere to send William & Mary to brace it from both sides ]"
 	elif not _chute_hacked:
