@@ -1,27 +1,22 @@
 name: Deploy to GitHub Pages
 
-# Runs automatically when a release tag is pushed, or on-demand from the
-# Actions tab (useful to redeploy without cutting a full release).
 on:
   push:
     tags:
       - 'v*'
   workflow_dispatch:
 
-# ── Edit these to match your setup ──────────────────────────────────────────
+# ── Edit this to match your Godot version ───────────────────────────────────
 env:
-  GODOT_VERSION: "4.3.0"      # Must match the version in your local Godot editor.
+  GODOT_VERSION: "4.6.3"
   PROJECT_NAME: "HunkleBunkle"
 # ────────────────────────────────────────────────────────────────────────────
 
-# Required for the GitHub Pages deployment API.
 permissions:
   pages: write
   id-token: write
   contents: read
 
-# Only one Pages deploy can run at a time; cancel any in-progress deploy when
-# a newer one is queued.
 concurrency:
   group: pages
   cancel-in-progress: true
@@ -38,22 +33,26 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # ── Godot install ──────────────────────────────────────────────────────
+      # ── Godot + templates ──────────────────────────────────────────────────
       - name: Install Godot ${{ env.GODOT_VERSION }}
         run: |
-          GODOT_ZIP="Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
-          wget -q "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/${GODOT_ZIP}" -O godot.zip
+          BASE="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable"
+          wget --fail -q "${BASE}/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip" -O godot.zip
           unzip -q godot.zip
           sudo mv "Godot_v${GODOT_VERSION}-stable_linux.x86_64" /usr/local/bin/godot
           sudo chmod +x /usr/local/bin/godot
 
       - name: Install export templates
         run: |
-          TEMPLATES_DIR="$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
-          mkdir -p "$TEMPLATES_DIR"
-          wget -q "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz" -O /tmp/templates.tpz
+          BASE="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable"
+          wget --fail -q "${BASE}/Godot_v${GODOT_VERSION}-stable_export_templates.tpz" -O /tmp/templates.tpz
           cd /tmp && unzip -q templates.tpz
-          mv /tmp/templates/* "$TEMPLATES_DIR/"
+          mkdir -p "$HOME/.local/share/godot/export_templates"
+          mv /tmp/templates "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
+
+      # Godot must scan and import all project resources once before exporting.
+      - name: Import project resources
+        run: godot --headless --editor --path . --quit-after 2000 2>&1 || true
 
       # ── Web export ────────────────────────────────────────────────────────
       - name: Export Web
@@ -62,22 +61,20 @@ jobs:
           godot --headless --path . --export-release "Web" build/web/index.html 2>&1
 
       # ── Cross-origin isolation fix ────────────────────────────────────────
-      # Godot 4's Web export requires SharedArrayBuffer, which browsers only
-      # allow in a Cross-Origin Isolated context.  GitHub Pages doesn't support
-      # custom HTTP headers, so we use a service worker shim that sets the
-      # required COOP/COEP headers client-side.
+      # Godot 4 requires SharedArrayBuffer (for threading), which browsers only
+      # allow in a Cross-Origin Isolated context. GitHub Pages can't serve custom
+      # HTTP headers, so a service worker shim sets them client-side instead.
       - name: Add cross-origin isolation service worker
         run: |
-          wget -q "https://raw.githubusercontent.com/gzuidhof/coi-serviceworker/master/coi-serviceworker.js" \
+          wget --fail -q \
+            "https://raw.githubusercontent.com/gzuidhof/coi-serviceworker/master/coi-serviceworker.js" \
             -O build/web/coi-serviceworker.js
-          # Inject the service worker registration into <head>.
           sed -i 's|<head>|<head>\n  <script src="coi-serviceworker.js"></script>|' build/web/index.html
 
-      # Prevent Jekyll from mangling the Godot export files.
       - name: Add .nojekyll
         run: touch build/web/.nojekyll
 
-      # ── GitHub Pages deployment ───────────────────────────────────────────
+      # ── Deploy ────────────────────────────────────────────────────────────
       - name: Configure Pages
         uses: actions/configure-pages@v5
 

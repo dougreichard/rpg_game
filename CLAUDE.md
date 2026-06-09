@@ -1034,7 +1034,7 @@ godot --headless --path . --quit-after 200
 godot --headless --path . -s addons/gut/gut_cmdln.gd -gdir=res://tests/unit -gexit
 
 # Export release build (configure presets first)
-godot --headless --path . --export-release "Linux/X11" build/hunkle_bunkle.x86_64
+godot --headless --path . --export-release "Linux" build/hunkle_bunkle.x86_64
 ```
 
 Always boot the game (or the relevant scene) after non-trivial changes to

@@ -1,8 +1,7 @@
 name: Release Builds
 
 # Triggers on any tag starting with 'v' (e.g. v1.0.0, v0.3.1-beta).
-# Can also be run manually from the Actions tab — provide a version string
-# when prompted (used as the release tag if there is no git tag).
+# Can also be run manually from the Actions tab.
 on:
   push:
     tags:
@@ -14,14 +13,14 @@ on:
         required: true
         default: 'v0.0.0-manual'
 
-# ── Edit these to match your setup ──────────────────────────────────────────
+# ── Edit this to match your Godot version ───────────────────────────────────
 env:
-  GODOT_VERSION: "4.3.0"      # Must match the version in your local Godot editor.
+  GODOT_VERSION: "4.6.3"
   PROJECT_NAME: "HunkleBunkle"
 # ────────────────────────────────────────────────────────────────────────────
 
 permissions:
-  contents: write   # Required to create GitHub Releases and upload assets.
+  contents: write   # Required to create GitHub Releases.
 
 jobs:
   build:
@@ -32,11 +31,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # ── Godot install ──────────────────────────────────────────────────────
+      # ── Godot + templates ──────────────────────────────────────────────────
       - name: Install Godot ${{ env.GODOT_VERSION }}
         run: |
-          GODOT_ZIP="Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
-          wget -q "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/${GODOT_ZIP}" -O godot.zip
+          BASE="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable"
+          wget --fail -q "${BASE}/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip" -O godot.zip
           unzip -q godot.zip
           sudo mv "Godot_v${GODOT_VERSION}-stable_linux.x86_64" /usr/local/bin/godot
           sudo chmod +x /usr/local/bin/godot
@@ -44,22 +43,17 @@ jobs:
 
       - name: Install export templates
         run: |
-          TEMPLATES_DIR="$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
-          mkdir -p "$TEMPLATES_DIR"
-          wget -q "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz" -O /tmp/templates.tpz
+          BASE="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable"
+          wget --fail -q "${BASE}/Godot_v${GODOT_VERSION}-stable_export_templates.tpz" -O /tmp/templates.tpz
+          # The .tpz contains a 'templates/' folder; rename it to the version path Godot expects.
           cd /tmp && unzip -q templates.tpz
-          mv /tmp/templates/* "$TEMPLATES_DIR/"
-          echo "Templates installed to $TEMPLATES_DIR"
+          mkdir -p "$HOME/.local/share/godot/export_templates"
+          mv /tmp/templates "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
 
-      # ── Determine release version ──────────────────────────────────────────
-      - name: Set version string
-        id: version
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "tag=${{ github.event.inputs.version }}" >> "$GITHUB_OUTPUT"
-          else
-            echo "tag=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
-          fi
+      # Godot must scan and import all project resources once before exporting.
+      # The .godot/ cache is gitignored so CI always starts cold.
+      - name: Import project resources
+        run: godot --headless --editor --path . --quit-after 2000 2>&1 || true
 
       # ── Exports ───────────────────────────────────────────────────────────
       - name: Export Windows
@@ -71,32 +65,34 @@ jobs:
       - name: Export Linux
         run: |
           mkdir -p build/linux
-          godot --headless --path . --export-release "Linux/X11" \
+          godot --headless --path . --export-release "Linux" \
             "build/linux/${PROJECT_NAME}.x86_64" 2>&1
           chmod +x "build/linux/${PROJECT_NAME}.x86_64"
 
       - name: Export macOS
         run: |
           mkdir -p build/macos
-          # Godot on Linux produces a .zip containing the .app bundle.
-          # Users on macOS will need to right-click → Open the first time
-          # because the build is not notarized.
+          # Produces a .zip containing the unsigned .app bundle.
           godot --headless --path . --export-release "macOS" \
             "build/macos/${PROJECT_NAME}.zip" 2>&1
 
+      # ── Determine version tag ──────────────────────────────────────────────
+      - name: Set version string
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "tag=${{ github.event.inputs.version }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+          fi
+
       # ── Package ───────────────────────────────────────────────────────────
       - name: Package artifacts
-        id: package
         run: |
           TAG=${{ steps.version.outputs.tag }}
-
-          zip -j "${PROJECT_NAME}-${TAG}-Windows.zip"    build/windows/
-          zip -j "${PROJECT_NAME}-${TAG}-Linux.zip"      build/linux/
-          cp      "build/macos/${PROJECT_NAME}.zip"      "${PROJECT_NAME}-${TAG}-macOS.zip"
-
-          echo "windows=${PROJECT_NAME}-${TAG}-Windows.zip" >> "$GITHUB_OUTPUT"
-          echo "linux=${PROJECT_NAME}-${TAG}-Linux.zip"     >> "$GITHUB_OUTPUT"
-          echo "macos=${PROJECT_NAME}-${TAG}-macOS.zip"     >> "$GITHUB_OUTPUT"
+          (cd build/windows && zip -r "${GITHUB_WORKSPACE}/${PROJECT_NAME}-${TAG}-Windows.zip" .)
+          (cd build/linux   && zip -r "${GITHUB_WORKSPACE}/${PROJECT_NAME}-${TAG}-Linux.zip"   .)
+          cp "build/macos/${PROJECT_NAME}.zip" "${PROJECT_NAME}-${TAG}-macOS.zip"
 
       # ── GitHub Release ────────────────────────────────────────────────────
       - name: Create GitHub Release
@@ -104,7 +100,6 @@ jobs:
         with:
           tag_name: ${{ steps.version.outputs.tag }}
           name: "Hunkle Bunkle ${{ steps.version.outputs.tag }}"
-          # Treat tags containing a hyphen (e.g. v1.0.0-beta) as pre-releases.
           prerelease: ${{ contains(steps.version.outputs.tag, '-') }}
           generate_release_notes: true
           body: |
@@ -113,11 +108,11 @@ jobs:
             | Platform | Notes |
             |----------|-------|
             | **Windows** | Extract and run `HunkleBunkle.exe` |
-            | **Linux** | Extract and run `HunkleBunkle.x86_64` — mark executable with `chmod +x` if needed |
+            | **Linux** | Extract, then `chmod +x HunkleBunkle.x86_64` and run |
             | **macOS** | Extract the `.zip` to get `HunkleBunkle.app`. First launch: right-click → Open (unsigned build) |
 
             A web-playable build is deployed to [GitHub Pages](../../deployments/github-pages) on each release.
           files: |
-            ${{ steps.package.outputs.windows }}
-            ${{ steps.package.outputs.linux }}
-            ${{ steps.package.outputs.macos }}
+            ${{ env.PROJECT_NAME }}-${{ steps.version.outputs.tag }}-Windows.zip
+            ${{ env.PROJECT_NAME }}-${{ steps.version.outputs.tag }}-Linux.zip
+            ${{ env.PROJECT_NAME }}-${{ steps.version.outputs.tag }}-macOS.zip
