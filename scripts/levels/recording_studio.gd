@@ -125,7 +125,7 @@ func _restore_progress() -> void:
 func _build_floor() -> void:
 	var tile_map := TileMap.new()
 	tile_map.name = "Floor"
-	tile_map.tile_set = PlaceholderArt.make_kenney_tileset()
+	tile_map.tile_set = PlaceholderArt.make_level_tileset(FLOOR_BASE_COLOR, FLOOR_ACCENT_COLOR)
 	add_child(tile_map)
 	move_child(tile_map, 0)
 	tile_map.position = Vector2(CAMERA_LIMIT_LEFT, CAMERA_LIMIT_TOP)

@@ -7,8 +7,8 @@ const FLOOR_BASE_COLOR: Color = Color(0.30, 0.32, 0.36)
 const FLOOR_ACCENT_COLOR: Color = Color(0.55, 0.50, 0.40)
 const FLOOR_COLS: int = 25
 const FLOOR_ROWS: int = 21
-const FLOOR_TILE_PLAIN: Vector2i = Vector2i(2, 0)
-const FLOOR_TILE_ACCENT: Vector2i = Vector2i(2, 1)
+const FLOOR_TILE_PLAIN: Vector2i = Vector2i(0, 0)
+const FLOOR_TILE_ACCENT: Vector2i = Vector2i(1, 0)
 const FLOOR_ACCENT_PERIOD: int = 4
 
 const GATE_RADIUS: float = 64.0
@@ -121,7 +121,7 @@ func _restore_progress() -> void:
 func _build_floor() -> void:
 	var tile_map := TileMap.new()
 	tile_map.name = "Floor"
-	tile_map.tile_set = PlaceholderArt.make_kenney_tileset()
+	tile_map.tile_set = PlaceholderArt.make_level_tileset(FLOOR_BASE_COLOR, FLOOR_ACCENT_COLOR)
 	add_child(tile_map)
 	move_child(tile_map, 0)
 	tile_map.position = Vector2(CAMERA_LIMIT_LEFT, CAMERA_LIMIT_TOP)
