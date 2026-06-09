@@ -37,7 +37,7 @@ jobs:
       - name: Install Godot ${{ env.GODOT_VERSION }}
         run: |
           BASE="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable"
-          wget --fail -q "${BASE}/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip" -O godot.zip
+          curl -fsSL "${BASE}/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip" -o godot.zip
           unzip -q godot.zip
           sudo mv "Godot_v${GODOT_VERSION}-stable_linux.x86_64" /usr/local/bin/godot
           sudo chmod +x /usr/local/bin/godot
@@ -45,7 +45,7 @@ jobs:
       - name: Install export templates
         run: |
           BASE="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable"
-          wget --fail -q "${BASE}/Godot_v${GODOT_VERSION}-stable_export_templates.tpz" -O /tmp/templates.tpz
+          curl -fsSL "${BASE}/Godot_v${GODOT_VERSION}-stable_export_templates.tpz" -o /tmp/templates.tpz
           cd /tmp && unzip -q templates.tpz
           mkdir -p "$HOME/.local/share/godot/export_templates"
           mv /tmp/templates "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
@@ -66,9 +66,9 @@ jobs:
       # HTTP headers, so a service worker shim sets them client-side instead.
       - name: Add cross-origin isolation service worker
         run: |
-          wget --fail -q \
+          curl -fsSL \
             "https://raw.githubusercontent.com/gzuidhof/coi-serviceworker/master/coi-serviceworker.js" \
-            -O build/web/coi-serviceworker.js
+            -o build/web/coi-serviceworker.js
           sed -i 's|<head>|<head>\n  <script src="coi-serviceworker.js"></script>|' build/web/index.html
 
       - name: Add .nojekyll

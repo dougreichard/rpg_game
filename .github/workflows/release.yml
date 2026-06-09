@@ -35,7 +35,7 @@ jobs:
       - name: Install Godot ${{ env.GODOT_VERSION }}
         run: |
           BASE="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable"
-          wget --fail -q "${BASE}/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip" -O godot.zip
+          curl -fsSL "${BASE}/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip" -o godot.zip
           unzip -q godot.zip
           sudo mv "Godot_v${GODOT_VERSION}-stable_linux.x86_64" /usr/local/bin/godot
           sudo chmod +x /usr/local/bin/godot
@@ -44,7 +44,7 @@ jobs:
       - name: Install export templates
         run: |
           BASE="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable"
-          wget --fail -q "${BASE}/Godot_v${GODOT_VERSION}-stable_export_templates.tpz" -O /tmp/templates.tpz
+          curl -fsSL "${BASE}/Godot_v${GODOT_VERSION}-stable_export_templates.tpz" -o /tmp/templates.tpz
           # The .tpz contains a 'templates/' folder; rename it to the version path Godot expects.
           cd /tmp && unzip -q templates.tpz
           mkdir -p "$HOME/.local/share/godot/export_templates"
