@@ -7,8 +7,8 @@ const FLOOR_BASE_COLOR: Color = Color(0.34, 0.29, 0.33)
 const FLOOR_ACCENT_COLOR: Color = Color(0.78, 0.55, 0.24)
 const FLOOR_COLS: int = 30
 const FLOOR_ROWS: int = 17
-const FLOOR_TILE_PLAIN: Vector2i = Vector2i(0, 0)
-const FLOOR_TILE_ACCENT: Vector2i = Vector2i(1, 0)
+const FLOOR_TILE_PLAIN: Vector2i = Vector2i(0, 4)
+const FLOOR_TILE_ACCENT: Vector2i = Vector2i(2, 4)
 const FLOOR_ACCENT_PERIOD: int = 4
 
 const GRUNT_SCENE: PackedScene = preload("res://scenes/enemies/Grunt.tscn")
@@ -152,9 +152,10 @@ func _restore_progress() -> void:
 func _build_floor() -> void:
 	var tile_map := TileMap.new()
 	tile_map.name = "Floor"
-	tile_map.tile_set = PlaceholderArt.make_level_tileset(FLOOR_BASE_COLOR, FLOOR_ACCENT_COLOR)
+	tile_map.tile_set = PlaceholderArt.make_kenney_tileset()
 	add_child(tile_map)
 	move_child(tile_map, 0)
+	tile_map.position = Vector2(CAMERA_LIMIT_LEFT, CAMERA_LIMIT_TOP)
 	for x: int in range(FLOOR_COLS):
 		for y: int in range(FLOOR_ROWS):
 			var variant: Vector2i = FLOOR_TILE_ACCENT if (x + y) % FLOOR_ACCENT_PERIOD == 0 else FLOOR_TILE_PLAIN

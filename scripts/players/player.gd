@@ -18,6 +18,7 @@ var revive_progress: float = 0.0
 # Stealth: true while standing inside a HidingSpot — guards' vision checks
 # treat a hidden player as unseeable (still audible if loud nearby).
 var is_hidden: bool = false
+var action_prefix: String = ""
 
 enum State { IDLE, WALK, ATTACK, DASH, HURT, DOWN }
 var _state: State = State.IDLE
@@ -26,11 +27,13 @@ var _attack_timer: float = 0.0
 var _dash_timer: float = 0.0
 var _hurt_timer: float = 0.0
 var _iframe_timer: float = 0.0
+var _flash_timer: float = 0.0
 var _knockback: Vector2 = Vector2.ZERO
 var _dash_vel: Vector2 = Vector2.ZERO
 
 const DASH_DURATION: float = 0.2
 const HURT_DURATION: float = 0.3
+const FLASH_DURATION: float = 0.1
 const KNOCKBACK_FRICTION: float = 800.0
 const BIES_GAIN_PER_HIT: float = 0.1
 const STANDBY_LEASH: float = 300.0
@@ -68,7 +71,8 @@ func _ready() -> void:
 
 func _physics_process(delta: float) -> void:
 	_tick_timers(delta)
-	sprite.modulate = HIDDEN_MODULATE if is_hidden else Color.WHITE
+	if _flash_timer <= 0.0:
+		sprite.modulate = HIDDEN_MODULATE if is_hidden else Color.WHITE
 	match _state:
 		State.IDLE:   _tick_idle()
 		State.WALK:   _tick_walk(delta)
@@ -82,16 +86,17 @@ func _tick_timers(delta: float) -> void:
 	_dash_timer   = maxf(_dash_timer   - delta, 0.0)
 	_hurt_timer   = maxf(_hurt_timer   - delta, 0.0)
 	_iframe_timer = maxf(_iframe_timer - delta, 0.0)
+	_flash_timer  = maxf(_flash_timer  - delta, 0.0)
 
 func _tick_idle() -> void:
 	velocity = Vector2.ZERO
 	if not is_active:
 		return
-	if Input.is_action_just_pressed("attack"):
+	if Input.is_action_just_pressed(action_prefix + "attack"):
 		_enter_attack()
-	elif Input.is_action_just_pressed("dash"):
+	elif Input.is_action_just_pressed(action_prefix + "dash"):
 		_enter_dash()
-	elif Input.is_action_just_pressed("special"):
+	elif Input.is_action_just_pressed(action_prefix + "special"):
 		_use_special()
 	elif _get_move().length_squared() > 0.0:
 		_set_state(State.WALK)
@@ -105,11 +110,11 @@ func _tick_walk(delta: float) -> void:
 	sprite.flip_h = facing.x < 0.0
 	velocity = Vector2(facing.x * data.move_speed, facing.y * data.move_speed * 0.6)
 	move_and_slide()
-	if Input.is_action_just_pressed("attack"):
+	if Input.is_action_just_pressed(action_prefix + "attack"):
 		_enter_attack()
-	elif Input.is_action_just_pressed("dash"):
+	elif Input.is_action_just_pressed(action_prefix + "dash"):
 		_enter_dash()
-	elif Input.is_action_just_pressed("special"):
+	elif Input.is_action_just_pressed(action_prefix + "special"):
 		_use_special()
 
 func _tick_attack() -> void:
@@ -173,7 +178,7 @@ func _use_special() -> void:
 func _get_move() -> Vector2:
 	if not is_active:
 		return Vector2.ZERO
-	return Input.get_vector("move_left", "move_right", "move_up", "move_down")
+	return Input.get_vector(action_prefix + "move_left", action_prefix + "move_right", action_prefix + "move_up", action_prefix + "move_down")
 
 func _on_hurtbox_hit(damage: float, knockback: Vector2) -> void:
 	if _iframe_timer > 0.0 or _state == State.DOWN:
@@ -181,6 +186,8 @@ func _on_hurtbox_hit(damage: float, knockback: Vector2) -> void:
 	hp = maxf(hp - damage, 0.0)
 	hp_changed.emit(hp, data.max_hp)
 	Audio.play("hurt")
+	sprite.modulate = Color(5.0, 5.0, 5.0, 1.0)
+	_flash_timer = FLASH_DURATION
 	CombatFX.sparks(global_position, Color(1.0, 0.25, 0.25), 6)
 	CombatFX.shake(0.5)
 	if hp == 0.0:

@@ -126,6 +126,8 @@ const BIES_DURATION: float = 5.0
 const REVIVE_RADIUS: float = 48.0
 const REVIVE_DECAY_RATE: float = 2.0
 
+var is_coop: bool = false
+
 var _bies_active: bool = false
 var _bies_timer: float = 0.0
 var _game_over_active: bool = false
@@ -154,14 +156,17 @@ func _process(delta: float) -> void:
 		return
 
 	if Input.is_action_just_pressed("bies_mode") and active_player.bies_charge >= 1.0:
-		_activate_bies()
+		_activate_bies_for(active_player)
 
-	if Input.is_action_just_pressed("swap"):
+	if not is_coop and Input.is_action_just_pressed("swap"):
 		swap_characters()
 
 	if is_instance_valid(standby_player):
-		standby_player.leash_to(active_player.global_position)
+		if not is_coop:
+			standby_player.leash_to(active_player.global_position)
 		_tick_revive(delta)
+		if is_coop and Input.is_action_just_pressed("p2_bies_mode") and standby_player.bies_charge >= 1.0:
+			_activate_bies_for(standby_player)
 
 func _tick_revive(delta: float) -> void:
 	if active_player.is_down() and standby_player.is_down():
@@ -246,8 +251,12 @@ func register_players(p1: Player, p2: Player) -> void:
 	_reloading = false
 	active_player = p1
 	standby_player = p2
+	p1.action_prefix = ""
+	p2.action_prefix = "p2_"
+	is_coop = Input.get_connected_joypads().size() >= 2
 	active_player.is_active = true
-	standby_player.is_active = false
+	standby_player.is_active = is_coop
+	Audio.play_music("combat")
 
 # Respects the Character Select preference, then clears it.
 # Pass the level's default p1/p2; if preferred_active matches p2's name,
@@ -265,7 +274,7 @@ func register_players_with_preference(p1: Player, p2: Player) -> void:
 		active_player.bies_charge_changed.emit(active_player.bies_charge)
 
 func swap_characters() -> void:
-	if active_player == null or standby_player == null:
+	if not is_instance_valid(active_player) or not is_instance_valid(standby_player):
 		return
 	var prev: Player = active_player
 	active_player = standby_player
@@ -275,9 +284,11 @@ func swap_characters() -> void:
 	Audio.play("swap")
 	characters_swapped.emit()
 
-func _activate_bies() -> void:
-	active_player.bies_charge = 0.0
-	active_player.bies_charge_changed.emit(0.0)
+func _activate_bies_for(player: Player) -> void:
+	if _bies_active:
+		return
+	player.bies_charge = 0.0
+	player.bies_charge_changed.emit(0.0)
 	Engine.time_scale = BIES_SLOWDOWN
 	_bies_timer = BIES_DURATION
 	_bies_active = true

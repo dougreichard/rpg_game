@@ -32,18 +32,24 @@ const HATCH_POS := Vector2(880.0, 288.0)
 const HATCH_RADIUS: float = 64.0
 const HATCH_PRESSES_REQUIRED: int = 3
 
-# Collectibles: rusty key (unlocks the junction shortcut door  --  see below),
-# security badge (pre-fills one hatch pip if held on entry  --  CLAUDE.md:
-# "auto-fills one pip of Ethan's hatch hack"), pocket lantern (collectible-only
-# this pass)  --  see CLAUDE.md "Collectibles & Inventory".
+# Collectibles:
+# - pocket_lantern: ALWAYS VISIBLE loot box in the junction chamber. Picking it
+#   up reveals the two dark loot boxes hidden in the tunnels  --  the
+#   "reveals hidden loot boxes in the dark Underground Tunnels" mechanic from
+#   CLAUDE.md "Collectibles & Inventory".
+# - rusty_key / security_badge: DARK loot boxes, hidden (visible=false) until
+#   the lantern is held. The duo must find the lantern first to light the way.
 const LootBoxScript: Script = preload("res://scripts/systems/loot_box.gd")
-const RustyKeyItem: ItemData     = preload("res://data/items/rusty_key.tres")
+const DarknessOverlayScript: Script = preload("res://scripts/systems/dark_overlay.gd")
+const RustyKeyItem: ItemData      = preload("res://data/items/rusty_key.tres")
 const SecurityBadgeItem: ItemData = preload("res://data/items/security_badge.tres")
 const PocketLanternItem: ItemData = preload("res://data/items/pocket_lantern.tres")
 const KEY_LOOT_POS    := Vector2(560.0, 330.0)
 const BADGE_LOOT_POS  := Vector2(820.0, 350.0)
 const LANTERN_LOOT_POS := Vector2(300.0, 240.0)
-const LOOT_FLAG_KEYS  := ["key_loot_open", "badge_loot_open", "lantern_loot_open"]
+# Persistence flags  --  kept separate so the restore logic stays readable.
+const LANTERN_LOOT_FLAG: String  = "lantern_loot_open"
+const DARK_LOOT_FLAG_KEYS := ["key_loot_open", "badge_loot_open"]
 const PIP_RADIUS: float = 5.0
 const PIP_SPACING: float = 16.0
 const PIP_OFFSET_Y: float = -38.0
@@ -66,12 +72,12 @@ const DOORWAY_POS := Vector2(480.0, 500.0)
 # maze of maintenance tunnels": a south entry corridor opens onto a central
 # junction chamber, which forks into a west tunnel (dead-ending at Evan's
 # rubble) and an east tunnel (dead-ending at Ethan's hatch). Feeds the
-# camera's pan limits  --  see CLAUDE.md "Doorways, camera-follow & multi-room
-# levels". Recompute if the wall layout changes. Note the unusually high
-# CAMERA_LIMIT_TOP (184, not the standard locations' 24): the maze's
-# northernmost wall (the junction chamber's north face) sits well below the
-# room's nominal top  --  there's no content above it, so the camera shouldn't
-# pan there.
+# camera's pan limits and the darkness overlay's world_rect  --  see CLAUDE.md
+# "Doorways, camera-follow & multi-room levels". Recompute if the wall layout
+# changes. Note the unusually high CAMERA_LIMIT_TOP (184, not the standard
+# locations' 24): the maze's northernmost wall (the junction chamber's north
+# face) sits well below the room's nominal top  --  there's no content above it,
+# so the camera shouldn't pan there.
 const CAMERA_LIMIT_LEFT: int = 24
 const CAMERA_LIMIT_TOP: int = 184
 const CAMERA_LIMIT_RIGHT: int = 936
@@ -94,7 +100,12 @@ var _cleared: bool = false
 var _rubble_sprite: Sprite2D
 var _hatch_sprite: Sprite2D
 var _shortcut_door_sprite: Sprite2D
+# Always-visible loot box (the lantern itself).
 var _loot_boxes: Array = []
+# Dark loot boxes: hidden until the pocket lantern is held.
+var _dark_loot_boxes: Array = []
+var _dark_revealed: bool = false
+var _darkness: Node2D = null
 var _doorway = null
 
 var _hatch_progress: int = 0
@@ -103,6 +114,7 @@ var _twinkle_cooldown_timer: float = 0.0
 var _frosty_cooldown_timer: float = 0.0
 
 var _cd_scale: float = 1.0
+
 func _ready() -> void:
 	_build_floor()
 	_build_walls()
@@ -117,6 +129,7 @@ func _ready() -> void:
 	_create_loot_boxes()
 	_create_hiding_spot()
 	_create_doorway()
+	_create_darkness_overlay()
 	_setup_camera()
 	_restore_progress()
 
@@ -156,6 +169,12 @@ func _restore_progress() -> void:
 		_spawned = true
 	else:
 		_spawn()
+	# Dark loot boxes: reveal immediately if the lantern is already held
+	# (e.g. re-entering after a prior visit where it was picked up).
+	_dark_revealed = _has_lantern()
+	for box in _dark_loot_boxes:
+		if is_instance_valid(box):
+			box.visible = _dark_revealed
 	if _enemies_cleared and _rubble_cleared and _hatch_hacked:
 		_cleared = true
 		hint_label.text = ""
@@ -167,9 +186,10 @@ func _restore_progress() -> void:
 func _build_floor() -> void:
 	var tile_map := TileMap.new()
 	tile_map.name = "Floor"
-	tile_map.tile_set = PlaceholderArt.make_level_tileset(FLOOR_BASE_COLOR, FLOOR_ACCENT_COLOR)
+	tile_map.tile_set = PlaceholderArt.make_kenney_tileset()
 	add_child(tile_map)
 	move_child(tile_map, 0)
+	tile_map.position = Vector2(CAMERA_LIMIT_LEFT, CAMERA_LIMIT_TOP)
 	for x: int in range(FLOOR_COLS):
 		for y: int in range(FLOOR_ROWS):
 			var variant: Vector2i = FLOOR_TILE_ACCENT if (x + y) % FLOOR_ACCENT_PERIOD == 0 else FLOOR_TILE_PLAIN
@@ -218,30 +238,64 @@ func _create_hiding_spot() -> void:
 	add_child(spot)
 
 func _create_loot_boxes() -> void:
-	var key_box = LootBoxScript.new()
-	key_box.setup(RustyKeyItem, KEY_LOOT_POS, GameManager.get_level_flag(LOCATION_ID, LOOT_FLAG_KEYS[0], false))
-	add_child(key_box)
-	_loot_boxes.append(key_box)
-
-	var badge_box = LootBoxScript.new()
-	badge_box.setup(SecurityBadgeItem, BADGE_LOOT_POS, GameManager.get_level_flag(LOCATION_ID, LOOT_FLAG_KEYS[1], false))
-	add_child(badge_box)
-	_loot_boxes.append(badge_box)
-
+	# The pocket lantern is always visible -- placed in the lit junction chamber
+	# so the duo can find it without needing light first.
 	var lantern_box = LootBoxScript.new()
-	lantern_box.setup(PocketLanternItem, LANTERN_LOOT_POS, GameManager.get_level_flag(LOCATION_ID, LOOT_FLAG_KEYS[2], false))
+	lantern_box.setup(PocketLanternItem, LANTERN_LOOT_POS,
+			GameManager.get_level_flag(LOCATION_ID, LANTERN_LOOT_FLAG, false))
 	add_child(lantern_box)
 	_loot_boxes.append(lantern_box)
+
+	# The rusty key and security badge are hidden in the dark.  Visibility is set
+	# after _restore_progress() checks whether the lantern is held.
+	var key_box = LootBoxScript.new()
+	key_box.setup(RustyKeyItem, KEY_LOOT_POS,
+			GameManager.get_level_flag(LOCATION_ID, DARK_LOOT_FLAG_KEYS[0], false))
+	add_child(key_box)
+	_dark_loot_boxes.append(key_box)
+
+	var badge_box = LootBoxScript.new()
+	badge_box.setup(SecurityBadgeItem, BADGE_LOOT_POS,
+			GameManager.get_level_flag(LOCATION_ID, DARK_LOOT_FLAG_KEYS[1], false))
+	add_child(badge_box)
+	_dark_loot_boxes.append(badge_box)
+
+# Darkness overlay: world-space dark rect with a player-centered glow.
+# z_index = 50 puts it above all Node2D world content (floor/walls/enemies/
+# players at z=0) but below any CanvasLayer (HUD etc.).
+func _create_darkness_overlay() -> void:
+	_darkness = DarknessOverlayScript.new()
+	_darkness.z_index = 50
+	# Extend the rect 200px beyond the camera limits in every direction so
+	# the overlay still covers the full viewport when the camera is near an edge.
+	_darkness.world_rect = Rect2(
+			CAMERA_LIMIT_LEFT - 200, CAMERA_LIMIT_TOP - 200,
+			CAMERA_LIMIT_RIGHT - CAMERA_LIMIT_LEFT + 400,
+			CAMERA_LIMIT_BOTTOM - CAMERA_LIMIT_TOP + 400)
+	add_child(_darkness)
 
 func _create_doorway() -> void:
 	_doorway = DoorwayScript.new()
 	_doorway.setup(DOORWAY_POS)
 	add_child(_doorway)
 
-# Stealth: Evan's Special, used away from the rubble, sends Twinkle trotting
-# off to bark  --  a noise burst (GameManager.emit_noise) that lures patrolling
-# or investigating guards toward her racket and away from the duo's actual
-# position (cooldown-gated so it can't be spammed every frame).
+# Returns true if either member of the active duo is holding the pocket lantern.
+func _has_lantern() -> bool:
+	return GameManager.has_item("Evan", PocketLanternItem.id) or \
+			GameManager.has_item("Ethan", PocketLanternItem.id)
+
+# Called once when the lantern is first picked up: reveals the dark loot boxes
+# and plays a discovery cue.
+func _reveal_dark_boxes() -> void:
+	_dark_revealed = true
+	for box in _dark_loot_boxes:
+		if is_instance_valid(box):
+			box.visible = true
+	Audio.play("special")
+
+# Stealth: Evan's Special, used away from the rubble, sends Frosty charging at
+# the nearest enemy or (when the floor is clear) Twinkle off to bark as a
+# distraction  --  cooldown-gated (see CLAUDE.md "Evan's Animals").
 func _summon_frosty(target: Enemy) -> void:
 	var frosty = AnimalCompanionScript.new()
 	frosty.setup(evan, target, FROSTY_COLOR)
@@ -277,10 +331,17 @@ func _add(scene: PackedScene, pos: Vector2) -> void:
 
 func _on_special_used(char_name: String) -> void:
 	var p: Player = evan if char_name == "Evan" else ethan
+	# Always-visible loot boxes (pocket lantern).
 	for i in _loot_boxes.size():
 		if _loot_boxes[i].try_open(char_name, p.global_position):
-			GameManager.set_level_flag(LOCATION_ID, LOOT_FLAG_KEYS[i], true)
+			GameManager.set_level_flag(LOCATION_ID, LANTERN_LOOT_FLAG, true)
 			return
+	# Dark loot boxes (rusty key, security badge)  --  only openable once revealed.
+	if _dark_revealed:
+		for i in _dark_loot_boxes.size():
+			if _dark_loot_boxes[i].try_open(char_name, p.global_position):
+				GameManager.set_level_flag(LOCATION_ID, DARK_LOOT_FLAG_KEYS[i], true)
+				return
 	# Rusty key shortcut door  --  usable by either character in the duo
 	if p.global_position.distance_to(SHORTCUT_DOOR_POS) < SHORTCUT_DOOR_RADIUS:
 		if GameManager.has_item("Evan", RustyKeyItem.id) or GameManager.has_item("Ethan", RustyKeyItem.id):
@@ -325,6 +386,17 @@ func _process(delta: float) -> void:
 	_twinkle_cooldown_timer = maxf(_twinkle_cooldown_timer - delta, 0.0)
 	_frosty_cooldown_timer = maxf(_frosty_cooldown_timer - delta, 0.0)
 	queue_redraw()
+	# Darkness overlay: update position and light state each frame.
+	if is_instance_valid(_darkness):
+		var lit: bool = _has_lantern()
+		_darkness.has_light = lit
+		_darkness.darkness_alpha = 0.38 if lit else 0.82
+		if is_instance_valid(GameManager.active_player):
+			_darkness.light_pos = GameManager.active_player.global_position
+		_darkness.queue_redraw()
+		# Reveal dark loot boxes the first time the lantern is held.
+		if not _dark_revealed and lit:
+			_reveal_dark_boxes()
 	if is_instance_valid(GameManager.active_player):
 		var active_pos: Vector2 = GameManager.active_player.global_position
 		camera.global_position = active_pos
@@ -371,6 +443,10 @@ func _update_hint() -> void:
 		hint_label.text = ""
 	elif not _enemies_cleared:
 		hint_label.text = "Patrols haven't spotted you  --  sneak past or strike first  [ Evan: press G away from the rubble  --  sends Frosty charging at the nearest guard (enemies nearby) or Twinkle off barking to lure patrols away (no enemies in range) ]"
+	elif not _has_lantern():
+		hint_label.text = "It's dark in here  --  find the pocket lantern in the junction chamber to light the way and reveal what's hidden in the tunnels"
+	elif not _dark_revealed:
+		hint_label.text = "The lantern illuminates the tunnels  --  check the crates in the west and east passages"
 	elif not _rubble_cleared:
 		hint_label.text = "Evan: force the blocked passage open  --  west tunnel  [ approach the rubble, press G ]"
 	elif not _hatch_hacked:

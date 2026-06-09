@@ -106,6 +106,7 @@ var _name_label: Label
 var _status_label: Label
 
 func _ready() -> void:
+	Audio.play_music("overworld")
 	_font = ThemeDB.fallback_font
 	for i in LOCS.size():
 		_id_to_idx[LOCS[i]["id"]] = i
@@ -158,7 +159,7 @@ func _build_ui() -> void:
 	canvas.add_child(_status_label)
 
 	var hint := Label.new()
-	hint.text = "A / D  or  Arrow Keys  --  Navigate     Enter / F  --  Enter Location"
+	hint.text = "Navigate: A / D  |  Arrow Keys  |  D-Pad / Left Stick          Play: Enter / F  |  A Button"
 	hint.position = Vector2(0.0, 690.0)
 	hint.size = Vector2(1280.0, 24.0)
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -223,52 +224,192 @@ func _launch() -> void:
 	GameManager.preferred_active = loc.get("duo", [""])[0]
 	TransitionManager.change_scene("res://scenes/ui/CharacterSelect.tscn")
 
-func _draw() -> void:
-	draw_rect(Rect2(0.0, 0.0, 1280.0, 720.0), Color(0.05, 0.04, 0.13))
+const ROAD_SIDE: float = 26.0
+const ROAD_MAIN: float = 18.0
 
-	# Connection lines
+func _building_half(icon: String) -> Vector2:
+	match icon:
+		"film":     return Vector2(50, 36)
+		"clock":    return Vector2(20, 36)
+		"anchor":   return Vector2(44, 26)
+		"star":     return Vector2(44, 30)
+		"arch":     return Vector2(34, 28)
+		"gear":     return Vector2(38, 24)
+		"book":     return Vector2(38, 26)
+		"chevron":  return Vector2(38, 24)
+		"zipline":  return Vector2(40, 26)
+		_:          return Vector2(32, 22)
+
+func _building_color(icon: String, unlocked: bool, completed: bool) -> Color:
+	if not unlocked:
+		return Color(0.20, 0.19, 0.22)
+	var c: Color
+	match icon:
+		"gear":     c = Color(0.54, 0.36, 0.24)
+		"arch":     c = Color(0.86, 0.84, 0.74)
+		"dumbbell": c = Color(0.40, 0.46, 0.54)
+		"note":     c = Color(0.22, 0.19, 0.28)
+		"clock":    c = Color(0.72, 0.62, 0.42)
+		"anchor":   c = Color(0.30, 0.35, 0.42)
+		"book":     c = Color(0.72, 0.64, 0.50)
+		"star":     c = Color(0.70, 0.22, 0.40)
+		"tunnel":   c = Color(0.20, 0.20, 0.22)
+		"zipline":  c = Color(0.24, 0.52, 0.22)
+		"hex":      c = Color(0.18, 0.34, 0.62)
+		"chevron":  c = Color(0.55, 0.50, 0.36)
+		"film":     c = Color(0.58, 0.16, 0.20)
+		_:          c = Color(0.45, 0.45, 0.50)
+	return c.lightened(0.12) if completed else c
+
+func _draw() -> void:
+	# Grass base with mow stripes
+	draw_rect(Rect2(0.0, 0.0, 1280.0, 608.0), Color(0.30, 0.48, 0.20))
+	for row: int in range(0, 608, 64):
+		draw_rect(Rect2(0.0, float(row), 1280.0, 32.0), Color(0.27, 0.44, 0.18))
+
+	# Park zones
+	draw_rect(Rect2(770.0, 155.0, 140.0, 115.0), Color(0.25, 0.50, 0.18))  # Carnival
+	draw_rect(Rect2(932.0, 272.0, 125.0, 110.0), Color(0.25, 0.50, 0.18))  # Zip Line
+	draw_rect(Rect2(90.0,  390.0, 105.0, 100.0), Color(0.25, 0.50, 0.18))  # Organ Works
+
+	# Harbor water
+	draw_rect(Rect2(958.0, 426.0, 290.0, 155.0), Color(0.13, 0.28, 0.55))
+	for wi: int in 5:
+		draw_line(Vector2(968.0, 444.0 + wi * 24.0),
+				  Vector2(1220.0, 452.0 + wi * 24.0),
+				  Color(0.22, 0.44, 0.72), 2.0, true)
+
+	# Road network — sidewalk then surface then centerline
 	for conn: Array in CONNECTIONS:
 		var ai: int = _id_to_idx.get(conn[0], -1)
 		var bi: int = _id_to_idx.get(conn[1], -1)
 		if ai < 0 or bi < 0:
 			continue
-		var a_pos: Vector2 = LOCS[ai]["pos"]
-		var b_pos: Vector2 = LOCS[bi]["pos"]
-		var both_open: bool = _is_unlocked(ai) and _is_unlocked(bi)
-		var line_col: Color = Color(0.35, 0.4, 0.55) if both_open else Color(0.17, 0.17, 0.21)
-		draw_line(a_pos, b_pos, line_col, 1.5, true)
+		var a: Vector2 = LOCS[ai]["pos"]
+		var b: Vector2 = LOCS[bi]["pos"]
+		draw_line(a, b, Color(0.56, 0.53, 0.48), ROAD_SIDE, false)
+		draw_line(a, b, Color(0.27, 0.26, 0.25), ROAD_MAIN, false)
+		_draw_dashed_line(a, b, Color(0.88, 0.80, 0.10), 2.0, 8.0, 8.0)
+	# Intersection fill at each location to clean up road-end seams
+	for loc: Dictionary in LOCS:
+		draw_circle(loc["pos"], ROAD_MAIN * 0.5 + 1.0, Color(0.27, 0.26, 0.25))
 
-	# Location nodes
+	_draw_trees()
+
 	for i: int in LOCS.size():
-		var loc: Dictionary = LOCS[i]
-		var p: Vector2 = loc["pos"]
-		var dot_col: Color
-		if _is_completed(i):
-			dot_col = Color(0.22, 0.9, 0.38)
-		elif _is_unlocked(i):
-			dot_col = Color(0.65, 0.8, 1.0)
-		else:
-			dot_col = Color(0.2, 0.2, 0.26)
-		draw_circle(p, 11.0, dot_col)
-		_draw_icon(loc.get("icon", ""), p, Color(0.05, 0.04, 0.13))
-		var label_col: Color = dot_col if i != _cursor_idx else Color(1, 1, 1)
-		var short: String = loc["short"]
-		var lines: PackedStringArray = short.split("\n")
-		for li: int in lines.size():
-			var ly: float = p.y + 24.0 + li * 12.0
-			draw_string(_font, Vector2(p.x - 38.0, ly), lines[li],
-					HORIZONTAL_ALIGNMENT_CENTER, 76.0, 10, label_col)
+		_draw_building(i)
 
-	# Cursor ring
-	var cp: Vector2 = LOCS[_cursor_idx]["pos"]
-	var pulse_r: float = 15.5 + sin(_pulse_time * 5.0) * 1.8
-	draw_arc(cp, pulse_r, 0.0, TAU, 32, Color(1.0, 0.92, 0.3), 2.0, true)
+	_draw_cursor_ring()
+
+func _draw_building(idx: int) -> void:
+	var loc: Dictionary = LOCS[idx]
+	var p: Vector2 = loc["pos"]
+	var icon: String = loc.get("icon", "")
+	var h: Vector2 = _building_half(icon)
+	var unlocked: bool = _is_unlocked(idx)
+	var completed: bool = _is_completed(idx)
+	var wall: Color = _building_color(icon, unlocked, completed)
+	var roof: Color = wall.darkened(0.30)
+	var rect := Rect2(p.x - h.x, p.y - h.y, h.x * 2.0, h.y * 2.0)
+
+	# Drop shadow
+	draw_rect(Rect2(rect.position + Vector2(3.0, 3.0), rect.size), Color(0.0, 0.0, 0.0, 0.35))
+	# Wall fill
+	draw_rect(rect, wall)
+	# Roof strip
+	draw_rect(Rect2(rect.position, Vector2(rect.size.x, 7.0)), roof)
+	# Outline
+	draw_rect(rect, roof, false, 1.5)
+
+	# Windows (skip for locked / very dark buildings)
+	if unlocked:
+		var win: Color = Color(0.85, 0.90, 1.0, 0.70)
+		if icon == "note":   win = Color(0.65, 0.40, 0.90, 0.70)
+		if icon == "tunnel": win = Color(0.80, 0.55, 0.20, 0.60)
+		var wy: float = rect.position.y + 10.0
+		var wh: float = rect.size.y - 14.0
+		if wh > 5.0:
+			for wi: int in 2:
+				var wx: float = rect.position.x + 6.0 + wi * (h.x - 3.0)
+				draw_rect(Rect2(wx, wy, h.x - 8.0, wh), win)
+
+	# Icon
+	var icon_col: Color = Color(1.0, 1.0, 1.0, 0.85) if unlocked else Color(0.38, 0.36, 0.40)
+	_draw_icon(icon, p, icon_col)
+
+	# Label below building
+	var label_col: Color
+	if idx == _cursor_idx:     label_col = Color(1.0, 1.0, 1.0)
+	elif completed:            label_col = Color(0.40, 1.0, 0.50)
+	elif unlocked:             label_col = Color(0.90, 0.88, 0.82)
+	else:                      label_col = Color(0.38, 0.38, 0.42)
+	var lines: PackedStringArray = loc["short"].split("\n")
+	for li: int in lines.size():
+		draw_string(_font, Vector2(p.x - 48.0, p.y + h.y + 8.0 + li * 12.0),
+				lines[li], HORIZONTAL_ALIGNMENT_CENTER, 96.0, 9, label_col)
+
+func _draw_cursor_ring() -> void:
+	var p: Vector2 = LOCS[_cursor_idx]["pos"]
+	var h: Vector2 = _building_half(LOCS[_cursor_idx].get("icon", ""))
+	var pulse: float = sin(_pulse_time * 5.0) * 1.5
+	var rx: float = p.x - h.x - 5.0 - pulse
+	var ry: float = p.y - h.y - 5.0 - pulse
+	var rw: float = h.x * 2.0 + 10.0 + pulse * 2.0
+	var rh: float = h.y * 2.0 + 10.0 + pulse * 2.0
+	var ring := Rect2(rx, ry, rw, rh)
+	draw_rect(ring, Color(1.0, 0.92, 0.30), false, 2.0)
+	# Corner bracket ticks
+	var tick: float = 7.0
+	var corners: Array = [ring.position,
+		ring.position + Vector2(ring.size.x, 0.0),
+		ring.position + Vector2(0.0, ring.size.y),
+		ring.end]
+	for j: int in corners.size():
+		var cx: float = corners[j].x
+		var cy: float = corners[j].y
+		var dx: float = 1.0 if j in [0, 2] else -1.0
+		var dy: float = 1.0 if j in [0, 1] else -1.0
+		draw_line(corners[j], Vector2(cx + dx * tick, cy), Color(1.0, 0.92, 0.30), 2.0)
+		draw_line(corners[j], Vector2(cx, cy + dy * tick), Color(1.0, 0.92, 0.30), 2.0)
+
+func _draw_dashed_line(a: Vector2, b: Vector2, color: Color, width: float, dash: float, gap: float) -> void:
+	var dir: Vector2 = (b - a).normalized()
+	var dist: float = a.distance_to(b)
+	var pos: float = 0.0
+	while pos < dist:
+		var end: float = minf(pos + dash, dist)
+		draw_line(a + dir * pos, a + dir * end, color, width, true)
+		pos += dash + gap
+
+func _draw_trees() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 54321
+	var zones: Array[Rect2] = [
+		Rect2(780.0, 162.0, 120.0, 100.0),  # Carnival park
+		Rect2(942.0, 280.0, 108.0, 96.0),   # Zip Line Park
+		Rect2(96.0,  396.0,  90.0, 90.0),   # Organ Works area
+		Rect2(220.0,  60.0,  90.0, 70.0),   # Upper left scatter
+		Rect2(1060.0, 90.0, 110.0, 90.0),   # Upper right scatter
+		Rect2(1080.0,210.0,  80.0, 80.0),   # Right mid scatter
+		Rect2(80.0,  530.0, 160.0, 60.0),   # Bottom fringe
+	]
+	for zone: Rect2 in zones:
+		var count: int = int(zone.get_area() / 380.0)
+		for _t: int in count:
+			var tx: float = zone.position.x + rng.randf_range(0.0, zone.size.x)
+			var ty: float = zone.position.y + rng.randf_range(0.0, zone.size.y)
+			_draw_tree(Vector2(tx, ty))
+
+func _draw_tree(p: Vector2) -> void:
+	draw_circle(p, 8.0, Color(0.10, 0.26, 0.10))
+	draw_circle(p + Vector2(-1.0, -2.0), 7.0, Color(0.18, 0.48, 0.14))
+	draw_circle(p + Vector2(2.0, -3.0), 5.0, Color(0.26, 0.58, 0.20))
 
 func _draw_icon(kind: String, p: Vector2, color: Color) -> void:
 	match kind:
 		"gear":
 			draw_arc(p, 5.5, 0.0, TAU, 14, color, 2.0, true)
-			for i in 6:
+			for i: int in 6:
 				var a: float = TAU * float(i) / 6.0
 				var dir := Vector2(cos(a), sin(a))
 				draw_line(p + dir * 5.5, p + dir * 8.5, color, 2.0, true)
@@ -298,10 +439,10 @@ func _draw_icon(kind: String, p: Vector2, color: Color) -> void:
 			draw_line(p + Vector2(0.0, -4.5), p + Vector2(0.0, 4.5), color, 1.5)
 		"star":
 			var pts := PackedVector2Array()
-			for i in 5:
+			for i: int in 5:
 				var a: float = -PI / 2.0 + TAU * float(i) / 5.0
 				pts.append(p + Vector2(cos(a), sin(a)) * 6.5)
-			for i in 5:
+			for i: int in 5:
 				draw_line(pts[i], pts[(i + 2) % 5], color, 2.0, true)
 		"tunnel":
 			draw_arc(p + Vector2(0.0, 2.5), 5.5, PI, TAU, 12, color, 2.0, true)
@@ -312,7 +453,7 @@ func _draw_icon(kind: String, p: Vector2, color: Color) -> void:
 			draw_circle(p + Vector2(3.5, 2.5), 2.2, color)
 		"hex":
 			var hpts := PackedVector2Array()
-			for i in 6:
+			for i: int in 6:
 				var a2: float = TAU * float(i) / 6.0
 				hpts.append(p + Vector2(cos(a2), sin(a2)) * 6.0)
 			hpts.append(hpts[0])

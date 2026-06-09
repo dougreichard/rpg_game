@@ -44,10 +44,18 @@ func _on_bies_charge(charge: float) -> void:
 	bies_bar.value = charge
 
 func _on_swapped() -> void:
-	if GameManager.active_player == null:
+	if not is_instance_valid(GameManager.active_player):
 		return
 	bies_bar.value = GameManager.active_player.bies_charge
 	_update_active_labels()
+
+func _process(_delta: float) -> void:
+	if bies_bar.value >= 1.0:
+		var t: float = Time.get_ticks_msec() / 1000.0
+		var pulse: float = 0.55 + 0.45 * sin(t * 8.0)
+		bies_bar.modulate = Color(1.0, pulse, 0.2, 1.0)
+	else:
+		bies_bar.modulate = Color.WHITE
 
 func _update_active_labels() -> void:
 	var a_active: bool = GameManager.active_player == _a

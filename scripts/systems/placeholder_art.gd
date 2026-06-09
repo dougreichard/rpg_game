@@ -265,6 +265,33 @@ static func make_level_tileset(base: Color, accent: Color) -> TileSet:
 	tile_set.add_source(source, 0)
 	return tile_set
 
+# Kenney Tiny Dungeon tileset (CC0) — source tiles are 16×16; upscaled 2× at
+# runtime with nearest-neighbor so they fill the game's 32×32 tile grid cleanly.
+# Cached after first call; all 132 atlas positions registered so any tile index
+# can be addressed as Vector2i(col, row) in set_cell().
+static var _kenney_ts: TileSet = null
+
+static func make_kenney_tileset() -> TileSet:
+	if _kenney_ts != null:
+		return _kenney_ts
+	# Load the original 192×176 image and scale 2× with nearest-neighbor so
+	# every 16×16 source tile becomes a crisp 32×32 pixel-art tile.
+	var base: Texture2D = load("res://assets/art/tiles/kenney_tiny_dungeon_packed.png")
+	var img: Image = base.get_image()
+	img.resize(img.get_width() * 2, img.get_height() * 2, Image.INTERPOLATE_NEAREST)
+	var src := TileSetAtlasSource.new()
+	src.texture = ImageTexture.create_from_image(img)
+	src.texture_region_size = Vector2i(32, 32)
+	src.use_texture_padding = true
+	for row: int in 11:
+		for col: int in 12:
+			src.create_tile(Vector2i(col, row))
+	var ts := TileSet.new()
+	ts.tile_size = Vector2i(32, 32)
+	ts.add_source(src, 0)
+	_kenney_ts = ts
+	return ts
+
 # Generic prop/gate texture: a beveled panel with an outer black frame.
 # Works for any rectangular prop — wall gates, containers, doors, etc.
 # Thick props (w>16, h>16) get an inner bevel for a 3-D recessed panel look.

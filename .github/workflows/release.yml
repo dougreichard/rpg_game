@@ -1,0 +1,123 @@
+name: Release Builds
+
+# Triggers on any tag starting with 'v' (e.g. v1.0.0, v0.3.1-beta).
+# Can also be run manually from the Actions tab — provide a version string
+# when prompted (used as the release tag if there is no git tag).
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version label for artifacts (e.g. v1.0.0-test)'
+        required: true
+        default: 'v0.0.0-manual'
+
+# ── Edit these to match your setup ──────────────────────────────────────────
+env:
+  GODOT_VERSION: "4.3.0"      # Must match the version in your local Godot editor.
+  PROJECT_NAME: "HunkleBunkle"
+# ────────────────────────────────────────────────────────────────────────────
+
+permissions:
+  contents: write   # Required to create GitHub Releases and upload assets.
+
+jobs:
+  build:
+    name: Export desktop builds
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ── Godot install ──────────────────────────────────────────────────────
+      - name: Install Godot ${{ env.GODOT_VERSION }}
+        run: |
+          GODOT_ZIP="Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          wget -q "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/${GODOT_ZIP}" -O godot.zip
+          unzip -q godot.zip
+          sudo mv "Godot_v${GODOT_VERSION}-stable_linux.x86_64" /usr/local/bin/godot
+          sudo chmod +x /usr/local/bin/godot
+          godot --version
+
+      - name: Install export templates
+        run: |
+          TEMPLATES_DIR="$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
+          mkdir -p "$TEMPLATES_DIR"
+          wget -q "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz" -O /tmp/templates.tpz
+          cd /tmp && unzip -q templates.tpz
+          mv /tmp/templates/* "$TEMPLATES_DIR/"
+          echo "Templates installed to $TEMPLATES_DIR"
+
+      # ── Determine release version ──────────────────────────────────────────
+      - name: Set version string
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "tag=${{ github.event.inputs.version }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      # ── Exports ───────────────────────────────────────────────────────────
+      - name: Export Windows
+        run: |
+          mkdir -p build/windows
+          godot --headless --path . --export-release "Windows Desktop" \
+            "build/windows/${PROJECT_NAME}.exe" 2>&1
+
+      - name: Export Linux
+        run: |
+          mkdir -p build/linux
+          godot --headless --path . --export-release "Linux/X11" \
+            "build/linux/${PROJECT_NAME}.x86_64" 2>&1
+          chmod +x "build/linux/${PROJECT_NAME}.x86_64"
+
+      - name: Export macOS
+        run: |
+          mkdir -p build/macos
+          # Godot on Linux produces a .zip containing the .app bundle.
+          # Users on macOS will need to right-click → Open the first time
+          # because the build is not notarized.
+          godot --headless --path . --export-release "macOS" \
+            "build/macos/${PROJECT_NAME}.zip" 2>&1
+
+      # ── Package ───────────────────────────────────────────────────────────
+      - name: Package artifacts
+        id: package
+        run: |
+          TAG=${{ steps.version.outputs.tag }}
+
+          zip -j "${PROJECT_NAME}-${TAG}-Windows.zip"    build/windows/
+          zip -j "${PROJECT_NAME}-${TAG}-Linux.zip"      build/linux/
+          cp      "build/macos/${PROJECT_NAME}.zip"      "${PROJECT_NAME}-${TAG}-macOS.zip"
+
+          echo "windows=${PROJECT_NAME}-${TAG}-Windows.zip" >> "$GITHUB_OUTPUT"
+          echo "linux=${PROJECT_NAME}-${TAG}-Linux.zip"     >> "$GITHUB_OUTPUT"
+          echo "macos=${PROJECT_NAME}-${TAG}-macOS.zip"     >> "$GITHUB_OUTPUT"
+
+      # ── GitHub Release ────────────────────────────────────────────────────
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: "Hunkle Bunkle ${{ steps.version.outputs.tag }}"
+          # Treat tags containing a hyphen (e.g. v1.0.0-beta) as pre-releases.
+          prerelease: ${{ contains(steps.version.outputs.tag, '-') }}
+          generate_release_notes: true
+          body: |
+            ## Downloads
+
+            | Platform | Notes |
+            |----------|-------|
+            | **Windows** | Extract and run `HunkleBunkle.exe` |
+            | **Linux** | Extract and run `HunkleBunkle.x86_64` — mark executable with `chmod +x` if needed |
+            | **macOS** | Extract the `.zip` to get `HunkleBunkle.app`. First launch: right-click → Open (unsigned build) |
+
+            A web-playable build is deployed to [GitHub Pages](../../deployments/github-pages) on each release.
+          files: |
+            ${{ steps.package.outputs.windows }}
+            ${{ steps.package.outputs.linux }}
+            ${{ steps.package.outputs.macos }}
