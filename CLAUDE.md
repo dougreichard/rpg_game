@@ -1558,9 +1558,11 @@ available in `GameManager._ready()`) persists `completed_locations` and
 ### Audio (autoload `Audio`)
 `audio.gd` generates short SFX procedurally at runtime as `AudioStreamWAV`
 buffers (sine/square/noise tones and frequency sweeps), cached by name and
-played from a small `AudioStreamPlayer` pool — no external sound assets
-(keeps the original-IP guarantee). Covers: attack, dash, special, hit, hurt,
-defeat, swap, bies, ui_move, ui_select. Call `Audio.play("name")`.
+played from a small `AudioStreamPlayer` pool. Covers: attack, dash, special,
+hit, hurt, defeat, swap, bies, ui_move, ui_select. Call `Audio.play("name")`.
+Real audio files (OGG/WAV) may be dropped into `assets/sfx/` or `assets/music/`
+and loaded via `load()` — `Audio.play()` can be extended to fall back to a file
+if one exists before synthesising on the fly.
 
 ### GUT unit tests *(configured)*
 `addons/gut/` holds **GUT v9.6.0** (vendored from `bitwes/Gut` — pin to v9.6.0+;
@@ -1671,7 +1673,10 @@ with how the editor serializes, then reopen in the editor to confirm it's valid.
 
 ## Guardrails
 
-- Original IP only — no licensed names, music, or assets.
+- Original IP only — no licensed names, music, or assets. Imported assets are
+  allowed as long as they are original (created for this project) or from a
+  compatible open/free license (CC0, OFL, etc.). `PlaceholderArt` remains
+  available as a fallback for anything not yet replaced with real art.
 - Enemy attacks must be **telegraphed**; combat must stay **readable**.
 - Character abilities should feel distinct and be required by at least one puzzle
   or encounter — no ability should be purely cosmetic.

@@ -2,7 +2,7 @@ extends Node2D
 
 const LOCATION_ID: String = "underground"
 
-# Tile-mapped floor palette — dark, earthy maintenance-tunnel tones (see CLAUDE.md "Tile-mapped floors")
+# Tile-mapped floor palette  --  dark, earthy maintenance-tunnel tones (see CLAUDE.md "Tile-mapped floors")
 const FLOOR_BASE_COLOR: Color = Color(0.20, 0.20, 0.19)
 const FLOOR_ACCENT_COLOR: Color = Color(0.38, 0.35, 0.28)
 const FLOOR_COLS: int = 30
@@ -15,7 +15,7 @@ const GRUNT_SCENE: PackedScene = preload("res://scenes/enemies/Grunt.tscn")
 const RUNNER_SCENE: PackedScene = preload("res://scenes/enemies/Runner.tscn")
 const HidingSpotScript: Script = preload("res://scripts/systems/hiding_spot.gd")
 const TwinkleScript: Script = preload("res://scripts/systems/twinkle_companion.gd")
-# Frosty — Evan's general-purpose combat distractor (see CLAUDE.md "Evan's Animals").
+# Frosty  --  Evan's general-purpose combat distractor (see CLAUDE.md "Evan's Animals").
 # Priority over Twinkle: when enemies are still alive, Evan's away-from-rubble
 # Special sends Frosty to stagger; once the floor is clear, Twinkle's noise
 # burst is the useful tool for drawing any lingering investigators.
@@ -32,10 +32,10 @@ const HATCH_POS := Vector2(880.0, 288.0)
 const HATCH_RADIUS: float = 64.0
 const HATCH_PRESSES_REQUIRED: int = 3
 
-# Collectibles: rusty key (unlocks the junction shortcut door — see below),
-# security badge (pre-fills one hatch pip if held on entry — CLAUDE.md:
+# Collectibles: rusty key (unlocks the junction shortcut door  --  see below),
+# security badge (pre-fills one hatch pip if held on entry  --  CLAUDE.md:
 # "auto-fills one pip of Ethan's hatch hack"), pocket lantern (collectible-only
-# this pass) — see CLAUDE.md "Collectibles & Inventory".
+# this pass)  --  see CLAUDE.md "Collectibles & Inventory".
 const LootBoxScript: Script = preload("res://scripts/systems/loot_box.gd")
 const RustyKeyItem: ItemData     = preload("res://data/items/rusty_key.tres")
 const SecurityBadgeItem: ItemData = preload("res://data/items/security_badge.tres")
@@ -49,28 +49,28 @@ const PIP_SPACING: float = 16.0
 const PIP_OFFSET_Y: float = -38.0
 const PIP_FLASH_DURATION: float = 0.3
 
-# Doorway: the level's entrance/exit — see CLAUDE.md "Doorways, camera-follow
+# Doorway: the level's entrance/exit  --  see CLAUDE.md "Doorways, camera-follow
 # & multi-room levels". The duo spawns beside it in the south entry corridor;
 # walking away and back exits to the overworld at any time, cleared or not.
 const DoorwayScript: Script = preload("res://scripts/systems/doorway.gd")
-# Shortcut door — in the junction chamber, on the north wall. Opened once with
+# Shortcut door  --  in the junction chamber, on the north wall. Opened once with
 # the rusty_key (consumed on use); exits to the overworld immediately without
-# needing to clear enemies or hack the hatch — the "hidden route" payoff the
+# needing to clear enemies or hack the hatch  --  the "hidden route" payoff the
 # CLAUDE.md spec describes for this location.
 const SHORTCUT_DOOR_POS := Vector2(480.0, 238.0)
 const SHORTCUT_DOOR_RADIUS: float = 52.0
 
 const DOORWAY_POS := Vector2(480.0, 500.0)
 
-# Multi-room layout bounding box — a literal BRANCHING MAZE matching "dark
+# Multi-room layout bounding box  --  a literal BRANCHING MAZE matching "dark
 # maze of maintenance tunnels": a south entry corridor opens onto a central
 # junction chamber, which forks into a west tunnel (dead-ending at Evan's
 # rubble) and an east tunnel (dead-ending at Ethan's hatch). Feeds the
-# camera's pan limits — see CLAUDE.md "Doorways, camera-follow & multi-room
+# camera's pan limits  --  see CLAUDE.md "Doorways, camera-follow & multi-room
 # levels". Recompute if the wall layout changes. Note the unusually high
 # CAMERA_LIMIT_TOP (184, not the standard locations' 24): the maze's
 # northernmost wall (the junction chamber's north face) sits well below the
-# room's nominal top — there's no content above it, so the camera shouldn't
+# room's nominal top  --  there's no content above it, so the camera shouldn't
 # pan there.
 const CAMERA_LIMIT_LEFT: int = 24
 const CAMERA_LIMIT_TOP: int = 184
@@ -120,7 +120,7 @@ func _ready() -> void:
 	_setup_camera()
 	_restore_progress()
 
-# Camera follows the active character — see CLAUDE.md "Doorways,
+# Camera follows the active character  --  see CLAUDE.md "Doorways,
 # camera-follow & multi-room levels".
 func _setup_camera() -> void:
 	camera.position_smoothing_enabled = true
@@ -130,9 +130,9 @@ func _setup_camera() -> void:
 	camera.limit_right = CAMERA_LIMIT_RIGHT
 	camera.limit_bottom = CAMERA_LIMIT_BOTTOM
 
-# Mid-level progress restoration — see CLAUDE.md "Doorways, camera-follow &
+# Mid-level progress restoration  --  see CLAUDE.md "Doorways, camera-follow &
 # multi-room levels". Reads back exactly the booleans (and the hatch's
-# in-progress pip count — partial hacking progress is worth preserving for
+# in-progress pip count  --  partial hacking progress is worth preserving for
 # a multi-step gate, not just the final pass/fail) this level already tracks
 # locally, so re-entering after a Doorway exit picks up where the duo left
 # off: skip respawning a cleared floor and restore the rubble's cleared
@@ -143,7 +143,7 @@ func _restore_progress() -> void:
 	_hatch_hacked = GameManager.get_level_flag(LOCATION_ID, "hatch_hacked", false)
 	_hatch_progress = GameManager.get_level_flag(LOCATION_ID, "hatch_progress", 0)
 	# Security badge pre-fills the first hatch pip if either character holds one
-	# and no progress has been made yet — see CLAUDE.md "Collectibles & Inventory".
+	# and no progress has been made yet  --  see CLAUDE.md "Collectibles & Inventory".
 	if not _hatch_hacked and _hatch_progress == 0:
 		if GameManager.has_item("Evan", SecurityBadgeItem.id) or GameManager.has_item("Ethan", SecurityBadgeItem.id):
 			_hatch_progress = 1
@@ -163,7 +163,7 @@ func _restore_progress() -> void:
 		clear_label.visible = true
 
 # Tile-mapped retro floor (Zelda-style two-tone grid), generated at runtime
-# via PlaceholderArt to keep the original-IP guarantee — no imported tile art.
+# via PlaceholderArt to keep the original-IP guarantee  --  no imported tile art.
 func _build_floor() -> void:
 	var tile_map := TileMap.new()
 	tile_map.name = "Floor"
@@ -177,7 +177,7 @@ func _build_floor() -> void:
 
 # Wall art: a Sprite2D per StaticBody2D wall, sized to its exact
 # CollisionShape2D rect and textured via PlaceholderArt.make_wall_texture.
-# Iterates whatever StaticBody2D children it finds — the branching-maze
+# Iterates whatever StaticBody2D children it finds  --  the branching-maze
 # layout (16 wall segments forming a corridor/junction/two-tunnel network)
 # needed zero changes here, only more .tscn nodes.
 func _build_walls() -> void:
@@ -209,7 +209,7 @@ func _create_hatch() -> void:
 	_hatch_sprite.position = HATCH_POS
 	add_child(_hatch_sprite)
 
-# Stealth: a shadowed alcove sitting in the junction chamber — the crossroads
+# Stealth: a shadowed alcove sitting in the junction chamber  --  the crossroads
 # every patrol must pass through, so ducking in here to let one go by is
 # always a meaningful choice regardless of which tunnel the duo is heading for.
 func _create_hiding_spot() -> void:
@@ -239,7 +239,7 @@ func _create_doorway() -> void:
 	add_child(_doorway)
 
 # Stealth: Evan's Special, used away from the rubble, sends Twinkle trotting
-# off to bark — a noise burst (GameManager.emit_noise) that lures patrolling
+# off to bark  --  a noise burst (GameManager.emit_noise) that lures patrolling
 # or investigating guards toward her racket and away from the duo's actual
 # position (cooldown-gated so it can't be spammed every frame).
 func _summon_frosty(target: Enemy) -> void:
@@ -281,7 +281,7 @@ func _on_special_used(char_name: String) -> void:
 		if _loot_boxes[i].try_open(char_name, p.global_position):
 			GameManager.set_level_flag(LOCATION_ID, LOOT_FLAG_KEYS[i], true)
 			return
-	# Rusty key shortcut door — usable by either character in the duo
+	# Rusty key shortcut door  --  usable by either character in the duo
 	if p.global_position.distance_to(SHORTCUT_DOOR_POS) < SHORTCUT_DOOR_RADIUS:
 		if GameManager.has_item("Evan", RustyKeyItem.id) or GameManager.has_item("Ethan", RustyKeyItem.id):
 			var holder: String = "Evan" if GameManager.has_item("Evan", RustyKeyItem.id) else "Ethan"
@@ -291,7 +291,7 @@ func _on_special_used(char_name: String) -> void:
 			_exit_to_overworld()
 			return
 		else:
-			hint_label.text = "This door is locked — find the rusty key"
+			hint_label.text = "This door is locked  --  find the rusty key"
 			Audio.play("hit")
 			return
 	if char_name == "Evan":
@@ -342,16 +342,16 @@ func _process(delta: float) -> void:
 		clear_label.visible = true
 	if _cleared and Input.is_action_just_pressed("ui_accept"):
 		GameManager.complete_location(LOCATION_ID)
-		get_tree().change_scene_to_file("res://scenes/overworld/OverworldMap.tscn")
+		TransitionManager.change_scene("res://scenes/overworld/OverworldMap.tscn")
 
-# Doorway-triggered exit — distinct from the clear-overlay's "press ENTER"
+# Doorway-triggered exit  --  distinct from the clear-overlay's "press ENTER"
 # exit above. Per the established pattern, the duo can walk out at any time,
 # cleared or not; complete_location is idempotent, so calling it here when
 # already cleared never double-grants.
 func _exit_to_overworld() -> void:
 	if _cleared:
 		GameManager.complete_location(LOCATION_ID)
-	get_tree().change_scene_to_file("res://scenes/overworld/OverworldMap.tscn")
+	TransitionManager.change_scene("res://scenes/overworld/OverworldMap.tscn")
 
 func _draw() -> void:
 	if _hatch_hacked:
@@ -370,10 +370,10 @@ func _update_hint() -> void:
 	if _cleared:
 		hint_label.text = ""
 	elif not _enemies_cleared:
-		hint_label.text = "Patrols haven't spotted you — sneak past or strike first  [ Evan: press G away from the rubble — sends Frosty charging at the nearest guard (enemies nearby) or Twinkle off barking to lure patrols away (no enemies in range) ]"
+		hint_label.text = "Patrols haven't spotted you  --  sneak past or strike first  [ Evan: press G away from the rubble  --  sends Frosty charging at the nearest guard (enemies nearby) or Twinkle off barking to lure patrols away (no enemies in range) ]"
 	elif not _rubble_cleared:
-		hint_label.text = "Evan: force the blocked passage open — west tunnel  [ approach the rubble, press G ]"
+		hint_label.text = "Evan: force the blocked passage open  --  west tunnel  [ approach the rubble, press G ]"
 	elif not _hatch_hacked:
-		hint_label.text = "Ethan: the lock needs %d hacking passes — east tunnel, approach it and press G repeatedly (%d/%d so far)" % [HATCH_PRESSES_REQUIRED, _hatch_progress, HATCH_PRESSES_REQUIRED]
+		hint_label.text = "Ethan: the lock needs %d hacking passes  --  east tunnel, approach it and press G repeatedly (%d/%d so far)" % [HATCH_PRESSES_REQUIRED, _hatch_progress, HATCH_PRESSES_REQUIRED]
 	else:
 		hint_label.text = ""

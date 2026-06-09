@@ -129,6 +129,8 @@ const REVIVE_DECAY_RATE: float = 2.0
 var _bies_active: bool = false
 var _bies_timer: float = 0.0
 var _game_over_active: bool = false
+var _reloading: bool = false
+var _game_over_layer: CanvasLayer = null
 var _paused: bool = false
 var _pre_pause_time_scale: float = 1.0
 
@@ -196,7 +198,7 @@ func is_game_over() -> bool:
 	return _game_over_active
 
 func _trigger_game_over() -> void:
-	if _game_over_active:
+	if _game_over_active or _reloading:
 		return
 	_game_over_active = true
 	_bies_active = false
@@ -206,25 +208,29 @@ func _trigger_game_over() -> void:
 	_show_game_over_overlay()
 
 func _show_game_over_overlay() -> void:
-	var layer := CanvasLayer.new()
-	layer.layer = 30
+	_game_over_layer = CanvasLayer.new()
+	_game_over_layer.layer = 30
 	var label := Label.new()
 	label.text = "TEAM DOWN\n\nThe duo regroups and tries again...\n\nPress ENTER to retry"
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	label.add_theme_font_size_override("font_size", 28)
+	label.add_theme_font_size_override("font_size", 24)
 	label.offset_left = 340.0
 	label.offset_top = 280.0
 	label.offset_right = 940.0
 	label.offset_bottom = 440.0
-	layer.add_child(label)
-	get_tree().current_scene.add_child(layer)
+	_game_over_layer.add_child(label)
+	get_tree().current_scene.add_child(_game_over_layer)
 
 func _retry_level() -> void:
 	_game_over_active = false
+	_reloading = true
 	_paused = false
+	if is_instance_valid(_game_over_layer):
+		_game_over_layer.queue_free()
+		_game_over_layer = null
 	Engine.time_scale = 1.0
-	get_tree().reload_current_scene()
+	TransitionManager.reload_scene()
 
 # Stealth: a loud player action (attack/dash) ripples outward — patrolling
 # enemies within `radius` may hear it and go investigate, even without sight.
@@ -237,6 +243,7 @@ func calm_enemies(position: Vector2, radius: float) -> void:
 	enemies_calmed.emit(position, radius)
 
 func register_players(p1: Player, p2: Player) -> void:
+	_reloading = false
 	active_player = p1
 	standby_player = p2
 	active_player.is_active = true

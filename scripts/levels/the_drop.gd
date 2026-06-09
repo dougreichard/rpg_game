@@ -2,7 +2,7 @@ extends Node2D
 
 const LOCATION_ID: String = "the_drop"
 
-# Tile-mapped floor palette — sandy landing-site tones (see CLAUDE.md "Tile-mapped floors")
+# Tile-mapped floor palette  --  sandy landing-site tones (see CLAUDE.md "Tile-mapped floors")
 const FLOOR_BASE_COLOR: Color = Color(0.36, 0.34, 0.30)
 const FLOOR_ACCENT_COLOR: Color = Color(0.58, 0.40, 0.30)
 const FLOOR_COLS: int = 18
@@ -17,7 +17,7 @@ const BRUTE_SCENE: PackedScene = preload("res://scenes/enemies/Brute.tscn")
 const HidingSpotScript: Script = preload("res://scripts/systems/hiding_spot.gd")
 const HIDING_SPOT_POS := Vector2(460.0, 460.0)
 const ScoutPairScript: Script = preload("res://scripts/systems/scout_pair_companion.gd")
-# Frosty — Evan's general-purpose combat distractor (see CLAUDE.md "Evan's Animals").
+# Frosty  --  Evan's general-purpose combat distractor (see CLAUDE.md "Evan's Animals").
 # Priority over William & Mary: when the ground crew is still up, Evan's away-from-
 # landing Special sends Frosty to stagger; once the floor is clear, the puzzle
 # companion slot opens to William & Mary's two-point landing-brace move.
@@ -36,9 +36,9 @@ const WILLIAM_COLOR := Color(0.82, 0.78, 0.72)
 const MARY_COLOR := Color(0.70, 0.62, 0.56)
 const SCOUT_PAIR_COOLDOWN: float = 4.0
 
-# Collectibles: lucky rabbit's foot keychain (junk — "does nothing for the
+# Collectibles: lucky rabbit's foot keychain (junk  --  "does nothing for the
 # rabbits or anyone", an exact joke fit given William & Mary appear here) and
-# Evan's movie ticket — see CLAUDE.md "Collectibles & Inventory".
+# Evan's movie ticket  --  see CLAUDE.md "Collectibles & Inventory".
 const LootBoxScript: Script = preload("res://scripts/systems/loot_box.gd")
 const RabbitFootItem: ItemData  = preload("res://data/items/rabbits_foot_keychain.tres")
 const TicketEvanItem: ItemData  = preload("res://data/items/ticket_evan.tres")
@@ -46,24 +46,24 @@ const FOOT_LOOT_POS   := Vector2(430.0, 380.0)
 const TICKET_LOOT_POS := Vector2(200.0, 140.0)
 const LOOT_FLAG_KEYS  := ["foot_loot_open", "ticket_loot_open"]
 
-# Doorway: the level's entrance/exit — see CLAUDE.md "Doorways, camera-follow
+# Doorway: the level's entrance/exit  --  see CLAUDE.md "Doorways, camera-follow
 # & multi-room levels". The duo touches down right beside it in the Touchdown
 # Clearing; walking away and back exits to the overworld at any time, cleared
 # or not.
 const DoorwayScript: Script = preload("res://scripts/systems/doorway.gd")
 const DOORWAY_POS := Vector2(160.0, 490.0)
 
-# Multi-room layout bounding box — a literal AERIAL-DESCENT-TO-GROUND-PHASE
+# Multi-room layout bounding box  --  a literal AERIAL-DESCENT-TO-GROUND-PHASE
 # layout matching this location's two-phase spec ("a kinetic aerial descent,
 # then a standard brawler ground phase"): the duo touches down in a wide
-# Touchdown Clearing (south — Doorway, spawn, the wreckage Evan must clear or
+# Touchdown Clearing (south  --  Doorway, spawn, the wreckage Evan must clear or
 # send William & Mary to brace), a narrow Corridor (the very gap that wreckage
 # blocks) leads north to the Snag Grove (the parachute's jammed release,
-# tangled in branches — Ethan's hack). The wreckage physically gates the path
-# OUT of the clearing toward "a marquee in the distance" — the spec's intel
-# payoff — making "the landing zone is locked until the right character steers
+# tangled in branches  --  Ethan's hack). The wreckage physically gates the path
+# OUT of the clearing toward "a marquee in the distance"  --  the spec's intel
+# payoff  --  making "the landing zone is locked until the right character steers
 # to it" a literal chokepoint rather than a flavor line. Feeds the camera's
-# pan limits — see CLAUDE.md "Doorways, camera-follow & multi-room levels".
+# pan limits  --  see CLAUDE.md "Doorways, camera-follow & multi-room levels".
 # Recompute if the wall layout changes.
 const CAMERA_LIMIT_LEFT: int = 24
 const CAMERA_LIMIT_TOP: int = 24
@@ -111,7 +111,7 @@ func _ready() -> void:
 	_setup_camera()
 	_restore_progress()
 
-# Camera follows the active character — see CLAUDE.md "Doorways,
+# Camera follows the active character  --  see CLAUDE.md "Doorways,
 # camera-follow & multi-room levels".
 func _setup_camera() -> void:
 	camera.position_smoothing_enabled = true
@@ -121,11 +121,11 @@ func _setup_camera() -> void:
 	camera.limit_right = CAMERA_LIMIT_RIGHT
 	camera.limit_bottom = CAMERA_LIMIT_BOTTOM
 
-# Mid-level progress restoration — see CLAUDE.md "Doorways, camera-follow &
+# Mid-level progress restoration  --  see CLAUDE.md "Doorways, camera-follow &
 # multi-room levels". Reads back exactly the booleans this level already
 # tracks locally, so re-entering after a Doorway exit picks up where the duo
 # left off: skip respawning a cleared floor and restore both prop palettes
-# (the William & Mary scout pair is a transient mid-session aid — it doesn't
+# (the William & Mary scout pair is a transient mid-session aid  --  it doesn't
 # need to survive a re-entry, only the _landing_cleared outcome it produces).
 func _restore_progress() -> void:
 	_enemies_cleared = GameManager.get_level_flag(LOCATION_ID, "enemies_cleared", false)
@@ -142,17 +142,17 @@ func _restore_progress() -> void:
 	if _enemies_cleared and _chute_hacked and _landing_cleared:
 		_cleared = true
 		hint_label.text = ""
-		clear_label.text = "TOUCHDOWN!\n\nA hostile ground crew scatters — and a marquee\nin the distance bears Uncle Doug's name.\n\nPress ENTER for the Map"
+		clear_label.text = "TOUCHDOWN!\n\nA hostile ground crew scatters  --  and a marquee\nin the distance bears Uncle Doug's name.\n\nPress ENTER for the Map"
 		clear_label.visible = true
 
 # Tile-mapped retro floor (Zelda-style two-tone grid), generated at runtime
-# via PlaceholderArt to keep the original-IP guarantee — no imported tile art.
+# via PlaceholderArt to keep the original-IP guarantee  --  no imported tile art.
 # Wall art: a Sprite2D per StaticBody2D wall, sized to its exact
-# CollisionShape2D rect and textured via PlaceholderArt.make_wall_texture — a
+# CollisionShape2D rect and textured via PlaceholderArt.make_wall_texture  --  a
 # darker stone tone of the floor's base color, so the room reads as a bordered
 # space instead of walls-on-a-void (matches the tile-floor visual-style pass;
 # generated at runtime, no imported wall art, original-IP guarantee intact).
-# Iterates whatever StaticBody2D children it finds — the Touchdown Clearing +
+# Iterates whatever StaticBody2D children it finds  --  the Touchdown Clearing +
 # Corridor + Snag Grove layout (12 wall segments) needed zero changes here,
 # only more .tscn nodes.
 func _build_walls() -> void:
@@ -200,9 +200,9 @@ func _create_loot_boxes() -> void:
 	add_child(ticket_box)
 	_loot_boxes.append(ticket_box)
 
-# Stealth: a shadowed thicket in the Touchdown Clearing's far corner — the
+# Stealth: a shadowed thicket in the Touchdown Clearing's far corner  --  the
 # ground crew's patrol loop crosses right by it, so ducking in to let one pass
-# is a real option before committing to the brawl — see CLAUDE.md "Stealth &
+# is a real option before committing to the brawl  --  see CLAUDE.md "Stealth &
 # awareness".
 func _create_hiding_spot() -> void:
 	var spot = HidingSpotScript.new()
@@ -214,11 +214,11 @@ func _create_doorway() -> void:
 	_doorway.setup(DOORWAY_POS)
 	add_child(_doorway)
 
-# William & Mary — an alternate way to clear the landing site: Evan's Special,
+# William & Mary  --  an alternate way to clear the landing site: Evan's Special,
 # used away from the wreckage, calls in the rabbit pair instead of muscling it
 # himself (his "works with animals" strength, same as he flexes via Calvin &
-# Coolidge elsewhere). They scurry to flanking gaps either side of the wreck —
-# squeezing through where Evan can't fit — and brace it from both sides at
+# Coolidge elsewhere). They scurry to flanking gaps either side of the wreck  -- 
+# squeezing through where Evan can't fit  --  and brace it from both sides at
 # once; only holding BOTH points simultaneously frees the landing site, the
 # "two-point puzzle a single companion can't solve" from their CLAUDE.md spec.
 func _summon_scout_pair() -> void:
@@ -314,28 +314,28 @@ func _process(delta: float) -> void:
 	if _enemies_cleared and _chute_hacked and _landing_cleared and not _cleared:
 		_cleared = true
 		hint_label.text = ""
-		clear_label.text = "TOUCHDOWN!\n\nA hostile ground crew scatters — and a marquee\nin the distance bears Uncle Doug's name.\n\nPress ENTER for the Map"
+		clear_label.text = "TOUCHDOWN!\n\nA hostile ground crew scatters  --  and a marquee\nin the distance bears Uncle Doug's name.\n\nPress ENTER for the Map"
 		clear_label.visible = true
 	if _cleared and Input.is_action_just_pressed("ui_accept"):
 		GameManager.complete_location(LOCATION_ID)
-		get_tree().change_scene_to_file("res://scenes/overworld/OverworldMap.tscn")
+		TransitionManager.change_scene("res://scenes/overworld/OverworldMap.tscn")
 
-# Doorway-triggered exit — distinct from the clear-overlay's "press ENTER"
+# Doorway-triggered exit  --  distinct from the clear-overlay's "press ENTER"
 # exit above. Per the established pattern, the duo can walk out at any time,
 # cleared or not; complete_location is idempotent, so calling it here when
 # already cleared never double-grants.
 func _exit_to_overworld() -> void:
 	if _cleared:
 		GameManager.complete_location(LOCATION_ID)
-	get_tree().change_scene_to_file("res://scenes/overworld/OverworldMap.tscn")
+	TransitionManager.change_scene("res://scenes/overworld/OverworldMap.tscn")
 
 func _update_hint() -> void:
 	if _cleared:
 		hint_label.text = ""
 	elif not _enemies_cleared:
-		hint_label.text = "The landing was rough but quiet — the ground crew hasn't spotted you  [ Evan: press G to send Frosty charging at the nearest guard ]"
+		hint_label.text = "The landing was rough but quiet  --  the ground crew hasn't spotted you  [ Evan: press G to send Frosty charging at the nearest guard ]"
 	elif not _landing_cleared:
-		hint_label.text = "Evan: clear the wreckage blocking the way out  [ approach it, press G — or press G elsewhere to send William & Mary to brace it from both sides ]"
+		hint_label.text = "Evan: clear the wreckage blocking the way out  [ approach it, press G  --  or press G elsewhere to send William & Mary to brace it from both sides ]"
 	elif not _chute_hacked:
 		hint_label.text = "Ethan: in the snag grove, hack the jammed chute release  [ approach it, press G ]"
 	else:

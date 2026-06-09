@@ -2,7 +2,7 @@ extends Node2D
 
 const LOCATION_ID: String = "vr_room"
 
-# Tile-mapped floor palette — cool cyber-blue with glitchy cyan accents (see CLAUDE.md "Tile-mapped floors")
+# Tile-mapped floor palette  --  cool cyber-blue with glitchy cyan accents (see CLAUDE.md "Tile-mapped floors")
 const FLOOR_BASE_COLOR: Color = Color(0.21, 0.25, 0.32)
 const FLOOR_ACCENT_COLOR: Color = Color(0.30, 0.65, 0.70)
 const FLOOR_COLS: int = 25
@@ -11,11 +11,11 @@ const FLOOR_TILE_PLAIN: Vector2i = Vector2i(0, 0)
 const FLOOR_TILE_ACCENT: Vector2i = Vector2i(1, 0)
 const FLOOR_ACCENT_PERIOD: int = 4
 
-# Themed-stage floor overlays — each painted as its own TileMap, ON TOP of the
+# Themed-stage floor overlays  --  each painted as its own TileMap, ON TOP of the
 # base "Boot Chamber" cyber-blue grid, over only that stage's cell footprint
 # (see _paint_stage_floor). This makes "Each stage can have a distinct visual
-# theme (medieval, space, underwater, etc.)" — this location's CLAUDE.md
-# spec line — literally true at the tile level: stepping through the corridor
+# theme (medieval, space, underwater, etc.)"  --  this location's CLAUDE.md
+# spec line  --  literally true at the tile level: stepping through the corridor
 # threshold into a stage visibly recolors the floor underfoot, not just a prop.
 const STAGE_ALPHA_BASE_COLOR: Color = Color(0.34, 0.27, 0.17)
 const STAGE_ALPHA_ACCENT_COLOR: Color = Color(0.62, 0.50, 0.28)
@@ -32,7 +32,7 @@ const SENTRY_SCENE: PackedScene = preload("res://scenes/enemies/Sentry.tscn")
 const HidingSpotScript: Script = preload("res://scripts/systems/hiding_spot.gd")
 const HIDING_SPOT_POS := Vector2(470.0, 260.0)
 
-# Lizard — Evan's vertical-traversal scout (see CLAUDE.md "Evan's Animals"):
+# Lizard  --  Evan's vertical-traversal scout (see CLAUDE.md "Evan's Animals"):
 # climbs to the bypass panel above the system console and trips the circuit,
 # providing an alternate route to _system_hacked without standing at the
 # console directly. Summoned by Ethan when away from the console (mirrors the
@@ -46,9 +46,9 @@ const GLITCH_RADIUS: float = 64.0
 const SYSTEM_POS := Vector2(590.0, 110.0)
 const SYSTEM_RADIUS: float = 64.0
 
-# Collectibles: VR override chip (collectible-only this pass — stage-skip mechanic
-# is a future follow-up) and a Bies charm (collectible-only — stat buff hook not
-# yet implemented) — see CLAUDE.md "Collectibles & Inventory".
+# Collectibles: VR override chip (collectible-only this pass  --  stage-skip mechanic
+# is a future follow-up) and a Bies charm (collectible-only  --  stat buff hook not
+# yet implemented)  --  see CLAUDE.md "Collectibles & Inventory".
 const LootBoxScript: Script = preload("res://scripts/systems/loot_box.gd")
 const VrOverrideChipItem: ItemData = preload("res://data/items/vr_override_chip.tres")
 const BiesCharmItem: ItemData      = preload("res://data/items/bies_charm.tres")
@@ -56,21 +56,21 @@ const CHIP_LOOT_POS  := Vector2(160.0, 360.0)
 const CHARM_LOOT_POS := Vector2(680.0, 120.0)
 const LOOT_FLAG_KEYS := ["chip_loot_open", "charm_loot_open"]
 
-# Doorway: the level's entrance/exit — see CLAUDE.md "Doorways, camera-follow
+# Doorway: the level's entrance/exit  --  see CLAUDE.md "Doorways, camera-follow
 # & multi-room levels". The duo spawns beside it in the Boot Chamber; walking
 # away and back exits to the overworld at any time, cleared or not.
 const DoorwayScript: Script = preload("res://scripts/systems/doorway.gd")
 const DOORWAY_POS := Vector2(170.0, 490.0)
 
-# Multi-room layout bounding box — a literal chain of THEMED CORRUPTED-STAGE
+# Multi-room layout bounding box  --  a literal chain of THEMED CORRUPTED-STAGE
 # ZONES off a central "Boot Chamber": the duo spawns in a neutral cyber-blue
 # boot room, threads east through Corridor1 into Stage Alpha (a glitched
-# "medieval" simulation — warm stone/amber, Quinn's physics-glitch repair),
+# "medieval" simulation  --  warm stone/amber, Quinn's physics-glitch repair),
 # then north through Corridor2 into Stage Beta (a glitched "underwater"
-# simulation — teal/aqua, Ethan's system console). Each crossing is a literal
-# palette change underfoot — "distinct visual theme... without breaking the
+# simulation  --  teal/aqua, Ethan's system console). Each crossing is a literal
+# palette change underfoot  --  "distinct visual theme... without breaking the
 # overall aesthetic" (this location's CLAUDE.md spec line) made structural,
-# not just decorative. Feeds the camera's pan limits — see CLAUDE.md
+# not just decorative. Feeds the camera's pan limits  --  see CLAUDE.md
 # "Doorways, camera-follow & multi-room levels". Recompute if the wall layout
 # changes. CAMERA_LIMIT_TOP derives from Stage Beta's north wall (the
 # northernmost structure, so the binding constraint).
@@ -116,7 +116,7 @@ func _ready() -> void:
 	_setup_camera()
 	_restore_progress()
 
-# Camera follows the active character — see CLAUDE.md "Doorways,
+# Camera follows the active character  --  see CLAUDE.md "Doorways,
 # camera-follow & multi-room levels".
 func _setup_camera() -> void:
 	camera.position_smoothing_enabled = true
@@ -126,7 +126,7 @@ func _setup_camera() -> void:
 	camera.limit_right = CAMERA_LIMIT_RIGHT
 	camera.limit_bottom = CAMERA_LIMIT_BOTTOM
 
-# Mid-level progress restoration — see CLAUDE.md "Doorways, camera-follow &
+# Mid-level progress restoration  --  see CLAUDE.md "Doorways, camera-follow &
 # multi-room levels". Reads back exactly the booleans this level already
 # tracks locally, so re-entering after a Doorway exit picks up where the duo
 # left off: skip respawning a cleared floor and restore both stage props'
@@ -146,17 +146,17 @@ func _restore_progress() -> void:
 	if _enemies_cleared and _glitch_repaired and _system_hacked:
 		_cleared = true
 		hint_label.text = ""
-		clear_label.text = "SIMULATION EXITED!\n\nThe rules rewrite themselves — and a door opens.\n\nPress ENTER for the Map"
+		clear_label.text = "SIMULATION EXITED!\n\nThe rules rewrite themselves  --  and a door opens.\n\nPress ENTER for the Map"
 		clear_label.visible = true
 
 # Tile-mapped retro floor (Zelda-style two-tone grid), generated at runtime
-# via PlaceholderArt to keep the original-IP guarantee — no imported tile art.
+# via PlaceholderArt to keep the original-IP guarantee  --  no imported tile art.
 # Wall art: a Sprite2D per StaticBody2D wall, sized to its exact
-# CollisionShape2D rect and textured via PlaceholderArt.make_wall_texture — a
+# CollisionShape2D rect and textured via PlaceholderArt.make_wall_texture  --  a
 # darker stone tone of the floor's base color, so the room reads as a bordered
 # space instead of walls-on-a-void (matches the tile-floor visual-style pass;
 # generated at runtime, no imported wall art, original-IP guarantee intact).
-# Iterates whatever StaticBody2D children it finds — the Boot Chamber +
+# Iterates whatever StaticBody2D children it finds  --  the Boot Chamber +
 # two-corridor + two-stage layout (20 wall segments) needed zero changes here,
 # only more .tscn nodes.
 func _build_walls() -> void:
@@ -183,10 +183,10 @@ func _build_floor() -> void:
 	_paint_stage_floor("FloorStageAlpha", STAGE_ALPHA_BASE_COLOR, STAGE_ALPHA_ACCENT_COLOR, STAGE_ALPHA_COL_RANGE, STAGE_ALPHA_ROW_RANGE)
 	_paint_stage_floor("FloorStageBeta", STAGE_BETA_BASE_COLOR, STAGE_BETA_ACCENT_COLOR, STAGE_BETA_COL_RANGE, STAGE_BETA_ROW_RANGE)
 
-# A themed-stage floor patch — its own TileMap/TileSet pair (own palette),
+# A themed-stage floor patch  --  its own TileMap/TileSet pair (own palette),
 # painted only over its stage's cell footprint and added ON TOP of the base
 # Boot Chamber grid (added after `move_child(tile_map, 0)`, so it naturally
-# layers above). Where it paints nothing, the base grid shows through —
+# layers above). Where it paints nothing, the base grid shows through  -- 
 # exactly the "tiles outside room footprints simply sit behind walls,
 # invisible" precedent, just inverted to "patch on top" instead of "grid
 # underneath."
@@ -200,21 +200,21 @@ func _paint_stage_floor(map_name: String, base_color: Color, accent_color: Color
 			var variant: Vector2i = FLOOR_TILE_ACCENT if (x + y) % FLOOR_ACCENT_PERIOD == 0 else FLOOR_TILE_PLAIN
 			tile_map.set_cell(0, Vector2i(x, y), 0, variant)
 
-# Stage Alpha — the glitched "medieval" simulation. A castle-stone gate prop
+# Stage Alpha  --  the glitched "medieval" simulation. A castle-stone gate prop
 # whose physics keep misbehaving; Quinn comments on the mechanical logic and
 # repairs it (his established mechanical-repair angle, here applied to a
 # simulated rather than physical machine).
 func _create_glitch() -> void:
 	_glitch_sprite = Sprite2D.new()
-	_glitch_sprite.texture = PlaceholderArt.make_gate_texture(Color(0.4, 0.2, 0.5), 48, 48)
+	_glitch_sprite.texture = PlaceholderArt.make_gear_prop_texture(Color(0.4, 0.2, 0.5), 48, 48)
 	_glitch_sprite.position = GLITCH_POS
 	add_child(_glitch_sprite)
 
-# Stage Beta — the glitched "underwater" simulation. A corrupted control
+# Stage Beta  --  the glitched "underwater" simulation. A corrupted control
 # console Ethan reads the code underneath to hack and rewrite.
 func _create_system() -> void:
 	_system_sprite = Sprite2D.new()
-	_system_sprite.texture = PlaceholderArt.make_gate_texture(Color(0.18, 0.42, 0.46), 48, 44)
+	_system_sprite.texture = PlaceholderArt.make_console_texture(Color(0.18, 0.42, 0.46), 48, 44)
 	_system_sprite.position = SYSTEM_POS
 	add_child(_system_sprite)
 
@@ -229,10 +229,10 @@ func _create_loot_boxes() -> void:
 	add_child(charm_box)
 	_loot_boxes.append(charm_box)
 
-# Stealth: a shadowed alcove at the Stage Alpha junction — every patrol
+# Stealth: a shadowed alcove at the Stage Alpha junction  --  every patrol
 # crossing between the Boot Chamber and Stage Beta must pass through here, so
 # ducking in to let one go by is meaningful regardless of which stage the duo
-# is headed toward — see CLAUDE.md "Stealth & awareness".
+# is headed toward  --  see CLAUDE.md "Stealth & awareness".
 func _create_hiding_spot() -> void:
 	var spot = HidingSpotScript.new()
 	spot.position = HIDING_SPOT_POS
@@ -308,26 +308,26 @@ func _process(delta: float) -> void:
 	if _enemies_cleared and _glitch_repaired and _system_hacked and not _cleared:
 		_cleared = true
 		hint_label.text = ""
-		clear_label.text = "SIMULATION EXITED!\n\nThe rules rewrite themselves — and a door opens.\n\nPress ENTER for the Map"
+		clear_label.text = "SIMULATION EXITED!\n\nThe rules rewrite themselves  --  and a door opens.\n\nPress ENTER for the Map"
 		clear_label.visible = true
 	if _cleared and Input.is_action_just_pressed("ui_accept"):
 		GameManager.complete_location(LOCATION_ID)
-		get_tree().change_scene_to_file("res://scenes/overworld/OverworldMap.tscn")
+		TransitionManager.change_scene("res://scenes/overworld/OverworldMap.tscn")
 
-# Doorway-triggered exit — distinct from the clear-overlay's "press ENTER"
+# Doorway-triggered exit  --  distinct from the clear-overlay's "press ENTER"
 # exit above. Per the established pattern, the duo can walk out at any time,
 # cleared or not; complete_location is idempotent, so calling it here when
 # already cleared never double-grants.
 func _exit_to_overworld() -> void:
 	if _cleared:
 		GameManager.complete_location(LOCATION_ID)
-	get_tree().change_scene_to_file("res://scenes/overworld/OverworldMap.tscn")
+	TransitionManager.change_scene("res://scenes/overworld/OverworldMap.tscn")
 
 func _update_hint() -> void:
 	if _cleared:
 		hint_label.text = ""
 	elif not _enemies_cleared:
-		hint_label.text = "The glitched patrols loop their routes, unaware — slip through the gaps, or short them out before the system notices"
+		hint_label.text = "The glitched patrols loop their routes, unaware  --  slip through the gaps, or short them out before the system notices"
 	elif not _glitch_repaired:
 		hint_label.text = "Quinn: in the medieval-glitch stage, repair the broken physics  [ approach it, press G ]"
 	elif not _system_hacked:

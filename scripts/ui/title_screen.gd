@@ -55,7 +55,7 @@ func _build_ui() -> void:
 	sub.position = Vector2(0.0, 310.0)
 	sub.size = Vector2(1280.0, 40.0)
 	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	sub.add_theme_font_size_override("font_size", 26)
+	sub.add_theme_font_size_override("font_size", 24)
 	sub.add_theme_color_override("font_color", Color(0.65, 0.6, 0.9))
 	canvas.add_child(sub)
 
@@ -64,7 +64,7 @@ func _build_ui() -> void:
 	_press_label.position = Vector2(0.0, 460.0)
 	_press_label.size = Vector2(1280.0, 50.0)
 	_press_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_press_label.add_theme_font_size_override("font_size", 34)
+	_press_label.add_theme_font_size_override("font_size", 32)
 	_press_label.add_theme_color_override("font_color", Color(0.92, 0.92, 0.92))
 	canvas.add_child(_press_label)
 
@@ -73,7 +73,7 @@ func _build_ui() -> void:
 	controls.position = Vector2(0.0, 670.0)
 	controls.size = Vector2(1280.0, 30.0)
 	controls.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	controls.add_theme_font_size_override("font_size", 15)
+	controls.add_theme_font_size_override("font_size", 16)
 	controls.add_theme_color_override("font_color", Color(0.38, 0.38, 0.42))
 	canvas.add_child(controls)
 
@@ -96,7 +96,7 @@ func _process(delta: float) -> void:
 		_press_label.visible = _blink_visible
 	if Input.is_action_just_pressed("ui_accept") or Input.is_action_just_pressed("attack"):
 		Audio.play("ui_select")
-		get_tree().change_scene_to_file("res://scenes/overworld/OverworldMap.tscn")
+		TransitionManager.change_scene("res://scenes/overworld/OverworldMap.tscn")
 	queue_redraw()
 
 func _draw() -> void:

@@ -72,7 +72,7 @@ func _build_ui() -> void:
 	hint.position = PANEL_RECT.position + Vector2(0.0, PANEL_RECT.size.y - 30.0)
 	hint.size = Vector2(PANEL_RECT.size.x, 24.0)
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	hint.add_theme_font_size_override("font_size", 14)
+	hint.add_theme_font_size_override("font_size", 16)
 	hint.add_theme_color_override("font_color", HINT_COLOR)
 	add_child(hint)
 
@@ -93,15 +93,15 @@ func _unhandled_input(event: InputEvent) -> void:
 		_cursor = (_cursor - 1 + OPTIONS.size()) % OPTIONS.size()
 		_refresh_options()
 		Audio.play("ui_move")
-		accept_event()
+		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("move_down"):
 		_cursor = (_cursor + 1) % OPTIONS.size()
 		_refresh_options()
 		Audio.play("ui_move")
-		accept_event()
+		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("ui_accept"):
 		_select()
-		accept_event()
+		get_viewport().set_input_as_handled()
 
 func _select() -> void:
 	match _cursor:
@@ -109,10 +109,10 @@ func _select() -> void:
 			GameManager.toggle_pause()
 		1:
 			GameManager.toggle_pause()
-			get_tree().change_scene_to_file("res://scenes/overworld/OverworldMap.tscn")
+			TransitionManager.change_scene("res://scenes/overworld/OverworldMap.tscn")
 		2:
 			GameManager.toggle_pause()
-			get_tree().change_scene_to_file("res://scenes/ui/TitleScreen.tscn")
+			TransitionManager.change_scene("res://scenes/ui/TitleScreen.tscn")
 
 func _refresh_options() -> void:
 	for i in _option_labels.size():

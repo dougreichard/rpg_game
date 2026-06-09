@@ -2,7 +2,7 @@ extends Node2D
 
 const LOCATION_ID: String = "carnival"
 
-# Tile-mapped floor palette — festive midway purple with gold accents (see CLAUDE.md "Tile-mapped floors")
+# Tile-mapped floor palette  --  festive midway purple with gold accents (see CLAUDE.md "Tile-mapped floors")
 const FLOOR_BASE_COLOR: Color = Color(0.34, 0.29, 0.33)
 const FLOOR_ACCENT_COLOR: Color = Color(0.78, 0.55, 0.24)
 const FLOOR_COLS: int = 30
@@ -16,7 +16,7 @@ const BRUTE_SCENE: PackedScene = preload("res://scenes/enemies/Brute.tscn")
 const HidingSpotScript: Script = preload("res://scripts/systems/hiding_spot.gd")
 const HIDING_SPOT_POS := Vector2(150.0, 460.0)
 
-# Guinea pigs — Erin's crowd-cover companion (see CLAUDE.md "Evan's Animals"):
+# Guinea pigs  --  Erin's crowd-cover companion (see CLAUDE.md "Evan's Animals"):
 # floods the midway with scurrying creatures, drawing every carnie's gaze as
 # cover for the duo to slip through or set up a flanking attack.
 const GuineaPigSwarmScript: Script = preload("res://scripts/systems/guinea_pig_swarm.gd")
@@ -26,7 +26,7 @@ const RIDE_POS := Vector2(380.0, 340.0)
 const RIDE_RADIUS: float = 64.0
 
 # Collectibles: backstage pass (lets Quinn bypass the curtain guard instead of
-# requiring Erin), Erin's movie ticket, and a junk torn ticket stub — see
+# requiring Erin), Erin's movie ticket, and a junk torn ticket stub  --  see
 # CLAUDE.md "Collectibles & Inventory".
 const LootBoxScript: Script = preload("res://scripts/systems/loot_box.gd")
 const BackstagePassItem: ItemData  = preload("res://data/items/backstage_pass.tres")
@@ -39,16 +39,16 @@ const LOOT_FLAG_KEYS   := ["pass_loot_open", "ticket_loot_open", "stub_loot_open
 
 # The backstage gate: a curtain/rope barrier that graduated from a purely
 # cosmetic guard sprite-recolor to a literal StaticBody2D collider sealing the
-# only passage into the backstage alcove — the FIFTH cosmetic-to-collider
+# only passage into the backstage alcove  --  the FIFTH cosmetic-to-collider
 # upgrade of the rollout (Iron & Strings' barbell, Recording Studio's booth
 # door, Harbor & Docks' container, Library & Archive's librarian's desk). Erin
 # talks the guard down right at the curtain (`BACKSTAGE_POS` == the gate's own
-# position) — one Special press both solves "Erin talks her way into the
+# position)  --  one Special press both solves "Erin talks her way into the
 # restricted backstage" (this location's spec line) AND physically raises the
 # barrier, the same one-action-two-payoffs shape as the Recording Studio's
 # console/door and the Library's desk/passage. Its clear-animation is a FIFTH
-# distinct flavor — a parallel upward slide + vertical scale-to-near-zero via
-# create_tween(), reading as a stage curtain hoisted up into the rigging —
+# distinct flavor  --  a parallel upward slide + vertical scale-to-near-zero via
+# create_tween(), reading as a stage curtain hoisted up into the rigging  -- 
 # distinct from the gym's horizontal slide, the studio's vertical slide, the
 # docks' hoist-and-swing, and the library's scale-down+fade.
 const BACKSTAGE_POS := Vector2(670.0, 152.0)
@@ -59,14 +59,14 @@ const BACKSTAGE_GATE_COLOR := Color(0.5, 0.18, 0.4)
 const DOUG_POSTER_COLOR := Color(0.75, 0.65, 0.5)
 const DOUG_POSTER_POS := Vector2(670.0, 86.0)
 
-# Doorway: the level's entrance/exit — see CLAUDE.md "Doorways, camera-follow
+# Doorway: the level's entrance/exit  --  see CLAUDE.md "Doorways, camera-follow
 # & multi-room levels". The duo spawns beside it on the midway; walking away
 # and back exits to the overworld at any time, cleared or not.
 const DoorwayScript: Script = preload("res://scripts/systems/doorway.gd")
 const DOORWAY_POS := Vector2(140.0, 340.0)
 
 # Multi-room layout bounding box (open midway -> backstage alcove, sealed by
-# the curtain gate). Feeds the camera's pan limits — see CLAUDE.md "Doorways,
+# the curtain gate). Feeds the camera's pan limits  --  see CLAUDE.md "Doorways,
 # camera-follow & multi-room levels". Recompute if the wall layout changes.
 const CAMERA_LIMIT_LEFT: int = 24
 const CAMERA_LIMIT_TOP: int = 24
@@ -113,7 +113,7 @@ func _ready() -> void:
 	_setup_camera()
 	_restore_progress()
 
-# Camera follows the active character — see CLAUDE.md "Doorways,
+# Camera follows the active character  --  see CLAUDE.md "Doorways,
 # camera-follow & multi-room levels".
 func _setup_camera() -> void:
 	camera.position_smoothing_enabled = true
@@ -123,7 +123,7 @@ func _setup_camera() -> void:
 	camera.limit_right = CAMERA_LIMIT_RIGHT
 	camera.limit_bottom = CAMERA_LIMIT_BOTTOM
 
-# Mid-level progress restoration — see CLAUDE.md "Doorways, camera-follow &
+# Mid-level progress restoration  --  see CLAUDE.md "Doorways, camera-follow &
 # multi-room levels". Reads back exactly the booleans this level already
 # tracks locally, so re-entering after a Doorway exit picks up where the duo
 # left off: skip respawning a cleared floor and restore the ride's repaired
@@ -148,7 +148,7 @@ func _restore_progress() -> void:
 		clear_label.visible = true
 
 # Tile-mapped retro floor (Zelda-style two-tone grid), generated at runtime
-# via PlaceholderArt to keep the original-IP guarantee — no imported tile art.
+# via PlaceholderArt to keep the original-IP guarantee  --  no imported tile art.
 func _build_floor() -> void:
 	var tile_map := TileMap.new()
 	tile_map.name = "Floor"
@@ -162,7 +162,7 @@ func _build_floor() -> void:
 
 # Wall art: a Sprite2D per StaticBody2D wall, sized to its exact
 # CollisionShape2D rect and textured via PlaceholderArt.make_wall_texture.
-# Iterates whatever StaticBody2D children it finds — the midway/alcove layout
+# Iterates whatever StaticBody2D children it finds  --  the midway/alcove layout
 # needed zero changes here, only more .tscn nodes (the BackstageGate is a
 # sibling of $Walls, not a child, so it keeps its own bespoke curtain-purple
 # texture instead of the generic brick pattern).
@@ -184,10 +184,10 @@ func _create_ride() -> void:
 	add_child(_ride_sprite)
 
 # Grabs the .tscn-placed BackstageGate body's collider and dresses it with a
-# curtain-purple bordered-rectangle texture — visually distinct from the
+# curtain-purple bordered-rectangle texture  --  visually distinct from the
 # midway's walls (reads as a velvet rope/curtain barrier, not masonry). A
 # faded portrait poster sits behind it (always present, naturally hidden by
-# the opaque curtain sprite until it rises) — the literal "poster shows Uncle
+# the opaque curtain sprite until it rises)  --  the literal "poster shows Uncle
 # Doug's face" the clear message promises, mirroring how the Recording
 # Studio's booth door reveals an _ethan_prop on its slide.
 func _create_backstage_gate() -> void:
@@ -212,7 +212,7 @@ func _raise_curtain(animate: bool) -> void:
 		_gate_sprite.scale = BACKSTAGE_GATE_SCALE_TARGET
 
 # Stealth: a shadowed alcove the duo can duck into to let a patrol pass
-# rather than fight through it — see CLAUDE.md "Stealth & awareness".
+# rather than fight through it  --  see CLAUDE.md "Stealth & awareness".
 func _create_hiding_spot() -> void:
 	var spot = HidingSpotScript.new()
 	spot.position = HIDING_SPOT_POS
@@ -304,22 +304,22 @@ func _process(delta: float) -> void:
 		clear_label.visible = true
 	if _cleared and Input.is_action_just_pressed("ui_accept"):
 		GameManager.complete_location(LOCATION_ID)
-		get_tree().change_scene_to_file("res://scenes/overworld/OverworldMap.tscn")
+		TransitionManager.change_scene("res://scenes/overworld/OverworldMap.tscn")
 
-# Doorway-triggered exit — distinct from the clear-overlay's "press ENTER"
+# Doorway-triggered exit  --  distinct from the clear-overlay's "press ENTER"
 # exit above. Per the established pattern, the duo can walk out at any time,
 # cleared or not; complete_location is idempotent, so calling it here when
 # already cleared never double-grants.
 func _exit_to_overworld() -> void:
 	if _cleared:
 		GameManager.complete_location(LOCATION_ID)
-	get_tree().change_scene_to_file("res://scenes/overworld/OverworldMap.tscn")
+	TransitionManager.change_scene("res://scenes/overworld/OverworldMap.tscn")
 
 func _update_hint() -> void:
 	if _cleared:
 		hint_label.text = ""
 	elif not _enemies_cleared:
-		hint_label.text = "The carnies haven't noticed you yet — work the midway quietly  [ Erin: press G to release the guinea pigs and flood the midway with chaos ]"
+		hint_label.text = "The carnies haven't noticed you yet  --  work the midway quietly  [ Erin: press G to release the guinea pigs and flood the midway with chaos ]"
 	elif not _ride_repaired:
 		hint_label.text = "Quinn: repair the broken ride  [ approach it, press G ]"
 	elif not _backstage_talked:

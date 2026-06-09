@@ -2,7 +2,7 @@ extends Node2D
 
 const LOCATION_ID: String = "harbor_docks"
 
-# Tile-mapped floor palette — weathered dock planking with sea-blue accents (see CLAUDE.md "Tile-mapped floors")
+# Tile-mapped floor palette  --  weathered dock planking with sea-blue accents (see CLAUDE.md "Tile-mapped floors")
 const FLOOR_BASE_COLOR: Color = Color(0.28, 0.31, 0.33)
 const FLOOR_ACCENT_COLOR: Color = Color(0.45, 0.55, 0.50)
 const FLOOR_COLS: int = 30
@@ -18,12 +18,12 @@ const HIDING_SPOT_POS := Vector2(350.0, 460.0)
 const AnimalCompanionScript: Script = preload("res://scripts/systems/animal_companion.gd")
 
 # The cargo container: graduated from a purely cosmetic sprite-shift to a
-# literal StaticBody2D collider sealing the gap into the crane platform —
+# literal StaticBody2D collider sealing the gap into the crane platform  -- 
 # same cosmetic-to-literal upgrade as Iron & Strings' barbell and Recording
 # Studio's booth door, making "Evan moves heavy freight to clear paths or
 # trigger crane mechanisms" (this location's spec line) mechanically true.
-# Its clear-animation is a hoist-and-swing — position arcs up and sideways
-# while it rotates, reading as the crane winching it off and out of the way —
+# Its clear-animation is a hoist-and-swing  --  position arcs up and sideways
+# while it rotates, reading as the crane winching it off and out of the way  -- 
 # a third distinct flavor alongside Iron & Strings' horizontal slide and
 # Recording Studio's vertical slide (same disable-collider-then-animate shape).
 const CONTAINER_POS := Vector2(670.0, 152.0)
@@ -36,15 +36,15 @@ const COOLIDGE_COLOR := Color(0.90, 0.88, 0.80)
 const CALVIN_COOLDOWN: float = 2.5
 
 # Maze crates: purely cosmetic-but-collidable cargo crates scattered through
-# the yard — literalizes "cargo container maze is good brawler terrain" from
+# the yard  --  literalizes "cargo container maze is good brawler terrain" from
 # this location's spec as actual obstacles to route combat and movement
 # around, distinct from the wood-tone brick walls (their own bespoke crate
 # texture, siblings of $Walls so _build_walls()'s generic brick pass skips them).
 const MAZE_CRATE_COLOR := Color(0.5, 0.36, 0.16)
 
-# Collectibles: crowbar (Quinn's alternate route to shift the container — with
+# Collectibles: crowbar (Quinn's alternate route to shift the container  --  with
 # it she doesn't need Evan), crane crank handle (functional, future hookup),
-# and a faded treasure map (junk) — see CLAUDE.md "Collectibles & Inventory".
+# and a faded treasure map (junk)  --  see CLAUDE.md "Collectibles & Inventory".
 const LootBoxScript: Script = preload("res://scripts/systems/loot_box.gd")
 const CrowbarItem: ItemData       = preload("res://data/items/crowbar.tres")
 const CrankHandleItem: ItemData   = preload("res://data/items/crane_crank_handle.tres")
@@ -54,14 +54,14 @@ const CRANK_LOOT_POS    := Vector2(230.0, 200.0)
 const TREEMAP_LOOT_POS  := Vector2(450.0, 460.0)
 const LOOT_FLAG_KEYS    := ["crowbar_loot_open", "crank_loot_open", "treemap_loot_open"]
 
-# Doorway: the level's entrance/exit — see CLAUDE.md "Doorways, camera-follow
+# Doorway: the level's entrance/exit  --  see CLAUDE.md "Doorways, camera-follow
 # & multi-room levels". The duo spawns beside it on the pier; walking away and
 # back exits to the overworld at any time, cleared or not.
 const DoorwayScript: Script = preload("res://scripts/systems/doorway.gd")
 const DOORWAY_POS := Vector2(140.0, 340.0)
 
 # Multi-room layout bounding box (pier -> container-maze yard -> crane
-# platform, sealed by the cargo container). Feeds the camera's pan limits —
+# platform, sealed by the cargo container). Feeds the camera's pan limits  -- 
 # see CLAUDE.md "Doorways, camera-follow & multi-room levels". Recompute if
 # the wall layout changes.
 const CAMERA_LIMIT_LEFT: int = 24
@@ -107,7 +107,7 @@ func _ready() -> void:
 	_setup_camera()
 	_restore_progress()
 
-# Camera follows the active character — see CLAUDE.md "Doorways,
+# Camera follows the active character  --  see CLAUDE.md "Doorways,
 # camera-follow & multi-room levels".
 func _setup_camera() -> void:
 	camera.position_smoothing_enabled = true
@@ -117,7 +117,7 @@ func _setup_camera() -> void:
 	camera.limit_right = CAMERA_LIMIT_RIGHT
 	camera.limit_bottom = CAMERA_LIMIT_BOTTOM
 
-# Mid-level progress restoration — see CLAUDE.md "Doorways, camera-follow &
+# Mid-level progress restoration  --  see CLAUDE.md "Doorways, camera-follow &
 # multi-room levels". Reads back exactly the booleans this level already
 # tracks locally, so re-entering after a Doorway exit picks up where the duo
 # left off: skip respawning a cleared floor and restore the container's
@@ -138,7 +138,7 @@ func _restore_progress() -> void:
 		clear_label.visible = true
 
 # Tile-mapped retro floor (Zelda-style two-tone grid), generated at runtime
-# via PlaceholderArt to keep the original-IP guarantee — no imported tile art.
+# via PlaceholderArt to keep the original-IP guarantee  --  no imported tile art.
 func _build_floor() -> void:
 	var tile_map := TileMap.new()
 	tile_map.name = "Floor"
@@ -152,7 +152,7 @@ func _build_floor() -> void:
 
 # Wall art: a Sprite2D per StaticBody2D wall, sized to its exact
 # CollisionShape2D rect and textured via PlaceholderArt.make_wall_texture.
-# Iterates whatever StaticBody2D children it finds — the pier/yard/platform
+# Iterates whatever StaticBody2D children it finds  --  the pier/yard/platform
 # layout needed zero changes here, only more .tscn nodes (the Container and
 # maze crates are siblings of $Walls, not children, so they keep their own
 # bespoke cargo-brown textures instead of the generic brick pattern).
@@ -168,7 +168,7 @@ func _build_walls() -> void:
 		wall.add_child(sprite)
 
 # Grabs the .tscn-placed Container body's collider and dresses it with a
-# cargo-brown bordered-rectangle texture — visually distinct from the
+# cargo-brown bordered-rectangle texture  --  visually distinct from the
 # sea-stone walls (reads as freight blocking a doorway, not masonry).
 func _create_container() -> void:
 	_container_shape = _container.get_node("CollisionShape2D")
@@ -188,7 +188,7 @@ func _move_container(animate: bool) -> void:
 		_container_sprite.rotation = CONTAINER_HOIST_ROTATION
 
 # Grabs the .tscn-placed maze-crate bodies and dresses them with the same
-# cargo-brown texture as the container — they read as part of the same
+# cargo-brown texture as the container  --  they read as part of the same
 # shipment, scattered obstacles that turn the yard into the "container maze"
 # this location's spec calls for, distinct from the bordering brick walls.
 func _create_maze_crates() -> void:
@@ -201,7 +201,7 @@ func _create_maze_crates() -> void:
 		crate.add_child(sprite)
 
 # Stealth: a shadowed alcove the duo can duck into to let a patrol pass
-# rather than fight through it — see CLAUDE.md "Stealth & awareness".
+# rather than fight through it  --  see CLAUDE.md "Stealth & awareness".
 func _create_hiding_spot() -> void:
 	var spot = HidingSpotScript.new()
 	spot.position = HIDING_SPOT_POS
@@ -263,7 +263,7 @@ func _on_special_used(char_name: String) -> void:
 				GameManager.set_level_flag(LOCATION_ID, "container_moved", true)
 
 # Calvin and Coolidge are brothers who are always summoned and fight as a pair
-# (see CLAUDE.md's animal companion roster) — Calvin (combat charger) takes the
+# (see CLAUDE.md's animal companion roster)  --  Calvin (combat charger) takes the
 # nearest foe, Coolidge (puzzle mover, but happy to back his brother in a brawl)
 # takes the next-nearest, or doubles up on Calvin's target if there's only one.
 	elif GameManager.try_use_whistle():
@@ -307,22 +307,22 @@ func _process(delta: float) -> void:
 		clear_label.visible = true
 	if _cleared and Input.is_action_just_pressed("ui_accept"):
 		GameManager.complete_location(LOCATION_ID)
-		get_tree().change_scene_to_file("res://scenes/overworld/OverworldMap.tscn")
+		TransitionManager.change_scene("res://scenes/overworld/OverworldMap.tscn")
 
-# Doorway-triggered exit — distinct from the clear-overlay's "press ENTER"
+# Doorway-triggered exit  --  distinct from the clear-overlay's "press ENTER"
 # exit above. Per the established pattern, the duo can walk out at any time,
 # cleared or not; complete_location is idempotent, so calling it here when
 # already cleared never double-grants.
 func _exit_to_overworld() -> void:
 	if _cleared:
 		GameManager.complete_location(LOCATION_ID)
-	get_tree().change_scene_to_file("res://scenes/overworld/OverworldMap.tscn")
+	TransitionManager.change_scene("res://scenes/overworld/OverworldMap.tscn")
 
 func _update_hint() -> void:
 	if _cleared:
 		hint_label.text = ""
 	elif not _enemies_cleared:
-		hint_label.text = "Dock workers patrol the crate maze, unaware — slip through the gaps or strike before they spot you  [ Evan: press G to call Calvin & Coolidge to stagger foes ]"
+		hint_label.text = "Dock workers patrol the crate maze, unaware  --  slip through the gaps or strike before they spot you  [ Evan: press G to call Calvin & Coolidge to stagger foes ]"
 	elif not _container_moved:
 		hint_label.text = "Evan: shove the cargo container off the crane controls  [ approach it, press G ]"
 	else:

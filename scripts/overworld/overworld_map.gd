@@ -122,7 +122,7 @@ func _build_ui() -> void:
 	title.position = Vector2(0.0, 8.0)
 	title.size = Vector2(1280.0, 44.0)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 34)
+	title.add_theme_font_size_override("font_size", 32)
 	title.add_theme_color_override("font_color", Color(0.95, 0.85, 0.2))
 	canvas.add_child(title)
 
@@ -145,7 +145,7 @@ func _build_ui() -> void:
 	_name_label.position = Vector2(0.0, 614.0)
 	_name_label.size = Vector2(1280.0, 46.0)
 	_name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_name_label.add_theme_font_size_override("font_size", 28)
+	_name_label.add_theme_font_size_override("font_size", 24)
 	_name_label.add_theme_color_override("font_color", Color(1, 1, 1))
 	canvas.add_child(_name_label)
 
@@ -158,11 +158,11 @@ func _build_ui() -> void:
 	canvas.add_child(_status_label)
 
 	var hint := Label.new()
-	hint.text = "A / D  or  Arrow Keys — Navigate     Enter / F — Enter Location"
+	hint.text = "A / D  or  Arrow Keys  --  Navigate     Enter / F  --  Enter Location"
 	hint.position = Vector2(0.0, 690.0)
 	hint.size = Vector2(1280.0, 24.0)
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	hint.add_theme_font_size_override("font_size", 14)
+	hint.add_theme_font_size_override("font_size", 16)
 	hint.add_theme_color_override("font_color", Color(0.38, 0.38, 0.42))
 	canvas.add_child(hint)
 
@@ -174,15 +174,15 @@ func _update_info() -> void:
 		_name_label.add_theme_color_override("font_color", Color(0.35, 1.0, 0.45))
 	elif _is_unlocked(_cursor_idx):
 		if loc["scene"] == "":
-			_status_label.text = "Unlocked  —  Coming soon"
+			_status_label.text = "Unlocked   --   Coming soon"
 		else:
-			_status_label.text = "Unlocked  —  Press Enter to play"
+			_status_label.text = "Unlocked   --   Press Enter to play"
 		_name_label.add_theme_color_override("font_color", Color(1, 1, 1))
 	else:
 		var req: String = loc["requires"]
 		var req_idx: int = _id_to_idx.get(req, -1)
 		var req_name: String = LOCS[req_idx]["name"] if req_idx >= 0 else req
-		_status_label.text = "Locked  —  Complete \"" + req_name + "\" first"
+		_status_label.text = "Locked   --   Complete \"" + req_name + "\" first"
 		_name_label.add_theme_color_override("font_color", Color(0.45, 0.45, 0.5))
 
 func _is_unlocked(idx: int) -> bool:
@@ -211,7 +211,7 @@ func _process(delta: float) -> void:
 func _launch() -> void:
 	var loc: Dictionary = LOCS[_cursor_idx]
 	if not _is_unlocked(_cursor_idx):
-		_status_label.text = "Locked  —  Complete the previous location first"
+		_status_label.text = "Locked   --   Complete the previous location first"
 		return
 	if loc["scene"] == "":
 		_status_label.text = "Coming soon!"
@@ -221,7 +221,7 @@ func _launch() -> void:
 	GameManager.pending_level_name = loc["name"]
 	GameManager.pending_level_duo = loc.get("duo", [])
 	GameManager.preferred_active = loc.get("duo", [""])[0]
-	get_tree().change_scene_to_file("res://scenes/ui/CharacterSelect.tscn")
+	TransitionManager.change_scene("res://scenes/ui/CharacterSelect.tscn")
 
 func _draw() -> void:
 	draw_rect(Rect2(0.0, 0.0, 1280.0, 720.0), Color(0.05, 0.04, 0.13))

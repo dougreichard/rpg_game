@@ -22,6 +22,9 @@ SaveManager="*res://scripts/autoload/save_manager.gd"
 GameManager="*res://scripts/autoload/game_manager.gd"
 CombatFX="*res://scripts/autoload/combat_fx.gd"
 Audio="*res://scripts/autoload/audio.gd"
+TransitionManager="*res://scripts/autoload/transition_manager.gd"
+CRTOverlay="*res://scripts/autoload/crt_overlay.gd"
+ScreenshotHelper="*res://scripts/autoload/screenshot_helper.gd"
 
 [display]
 
@@ -32,6 +35,11 @@ window/stretch/mode="canvas_items"
 [editor_plugins]
 
 enabled=PackedStringArray("res://addons/gut/plugin.cfg")
+
+[gui]
+
+theme/custom_font="res://assets/fonts/PressStart2P-Regular.ttf"
+theme/default_font_size=16
 
 [input]
 

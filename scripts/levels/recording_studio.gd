@@ -2,7 +2,7 @@ extends Node2D
 
 const LOCATION_ID: String = "recording_studio"
 
-# Tile-mapped floor palette — warm wood/acoustic-foam tones (see CLAUDE.md "Tile-mapped floors")
+# Tile-mapped floor palette  --  warm wood/acoustic-foam tones (see CLAUDE.md "Tile-mapped floors")
 const FLOOR_BASE_COLOR: Color = Color(0.32, 0.27, 0.24)
 const FLOOR_ACCENT_COLOR: Color = Color(0.55, 0.40, 0.30)
 const FLOOR_COLS: int = 28
@@ -19,8 +19,8 @@ const HIDING_SPOT_POS := Vector2(340.0, 460.0)
 const CONSOLE_POS := Vector2(580.0, 340.0)
 const CONSOLE_RADIUS: float = 64.0
 
-# Collectibles: Ethan's ticket (found inside the booth where he's freed —
-# parallel to Ben/cage) and junk headphone cable — see CLAUDE.md "Collectibles
+# Collectibles: Ethan's ticket (found inside the booth where he's freed  -- 
+# parallel to Ben/cage) and junk headphone cable  --  see CLAUDE.md "Collectibles
 # & Inventory".
 const LootBoxScript: Script = preload("res://scripts/systems/loot_box.gd")
 const TicketEthanItem: ItemData    = preload("res://data/items/ticket_ethan.tres")
@@ -29,21 +29,21 @@ const TICKET_LOOT_POS  := Vector2(640.0, 100.0)
 const CABLE_LOOT_POS   := Vector2(160.0, 440.0)
 const LOOT_FLAG_KEYS   := ["ticket_loot_open", "cable_loot_open"]
 
-# Doorway: the level's entrance/exit — see CLAUDE.md "Doorways, camera-follow
+# Doorway: the level's entrance/exit  --  see CLAUDE.md "Doorways, camera-follow
 # & multi-room levels". The duo spawns beside it in the lobby; walking away
 # and back exits to the overworld at any time, cleared or not.
 const DoorwayScript: Script = preload("res://scripts/systems/doorway.gd")
 const DOORWAY_POS := Vector2(140.0, 340.0)
 
 # The booth door: a soundproof glass barrier sealing Ethan inside the
-# recording booth — "someone has scrambled the studio" played literally as a
+# recording booth  --  "someone has scrambled the studio" played literally as a
 # jammed access door. It's wired to the very soundboard Ben has to tune, so
 # tuning the console (his Special, in range) both solves the puzzle gate AND
-# slides the door up into the ceiling, freeing Ethan — one action, two
+# slides the door up into the ceiling, freeing Ethan  --  one action, two
 # payoffs, matching "Ben navigates the soundboard...to trigger doors and
 # mechanisms" from this location's spec line. Same disable-collider-then-
 # animate-sprite shape as Pipe Organ Works' secret passage and Iron & Strings'
-# barbell, sliding vertically rather than fading or sliding horizontally —
+# barbell, sliding vertically rather than fading or sliding horizontally  -- 
 # distinct flavor, same mechanism.
 const BOOTH_DOOR_POS := Vector2(580.0, 152.0)
 const BOOTH_DOOR_RADIUS: float = 64.0
@@ -51,7 +51,7 @@ const BOOTH_DOOR_SLIDE_OFFSET := Vector2(0.0, -120.0)
 const ETHAN_PROP_POS := Vector2(580.0, 100.0)
 
 # Multi-room layout bounding box (lobby -> control room -> sealed recording
-# booth). Feeds the camera's pan limits — see CLAUDE.md "Doorways,
+# booth). Feeds the camera's pan limits  --  see CLAUDE.md "Doorways,
 # camera-follow & multi-room levels". Recompute if the wall layout changes.
 const CAMERA_LIMIT_LEFT: int = 24
 const CAMERA_LIMIT_TOP: int = 24
@@ -94,7 +94,7 @@ func _ready() -> void:
 	_setup_camera()
 	_restore_progress()
 
-# Camera follows the active character — see CLAUDE.md "Doorways,
+# Camera follows the active character  --  see CLAUDE.md "Doorways,
 # camera-follow & multi-room levels".
 func _setup_camera() -> void:
 	camera.position_smoothing_enabled = true
@@ -104,7 +104,7 @@ func _setup_camera() -> void:
 	camera.limit_right = CAMERA_LIMIT_RIGHT
 	camera.limit_bottom = CAMERA_LIMIT_BOTTOM
 
-# Mid-level progress restoration — see CLAUDE.md "Doorways, camera-follow &
+# Mid-level progress restoration  --  see CLAUDE.md "Doorways, camera-follow &
 # multi-room levels". Reads back exactly the booleans this level already
 # tracks locally, so re-entering after a Doorway exit picks up where the duo
 # left off: skip respawning a cleared floor and restore the console's tuned
@@ -121,7 +121,7 @@ func _restore_progress() -> void:
 		_spawn()
 
 # Tile-mapped retro floor (Zelda-style two-tone grid), generated at runtime
-# via PlaceholderArt to keep the original-IP guarantee — no imported tile art.
+# via PlaceholderArt to keep the original-IP guarantee  --  no imported tile art.
 func _build_floor() -> void:
 	var tile_map := TileMap.new()
 	tile_map.name = "Floor"
@@ -135,7 +135,7 @@ func _build_floor() -> void:
 
 # Wall art: a Sprite2D per StaticBody2D wall, sized to its exact
 # CollisionShape2D rect and textured via PlaceholderArt.make_wall_texture.
-# Iterates whatever StaticBody2D children it finds — the lobby/control-room/
+# Iterates whatever StaticBody2D children it finds  --  the lobby/control-room/
 # booth layout needed zero changes here, only more .tscn nodes (the BoothDoor
 # is a sibling of $Walls, not a child, so it keeps its own bespoke glass-blue
 # texture instead of the generic brick pattern).
@@ -152,12 +152,12 @@ func _build_walls() -> void:
 
 func _create_console() -> void:
 	_console_sprite = Sprite2D.new()
-	_console_sprite.texture = PlaceholderArt.make_gate_texture(Color(0.28, 0.24, 0.42), 56, 36)
+	_console_sprite.texture = PlaceholderArt.make_console_texture(Color(0.28, 0.24, 0.42), 56, 36)
 	_console_sprite.position = CONSOLE_POS
 	add_child(_console_sprite)
 
 # Grabs the .tscn-placed BoothDoor body's collider and dresses it with a
-# glass-blue bordered-rectangle texture — visually distinct from the wood-tone
+# glass-blue bordered-rectangle texture  --  visually distinct from the wood-tone
 # walls (reads as a soundproof studio door, not masonry). Also drops in
 # Ethan's flavor prop, kept hidden behind the door until it's opened.
 func _create_booth_door() -> void:
@@ -181,7 +181,7 @@ func _open_booth_door(animate: bool) -> void:
 		_booth_door_sprite.position = BOOTH_DOOR_SLIDE_OFFSET
 
 # Stealth: a shadowed alcove the duo can duck into to let a patrol pass
-# rather than fight through it — see CLAUDE.md "Stealth & awareness".
+# rather than fight through it  --  see CLAUDE.md "Stealth & awareness".
 func _create_hiding_spot() -> void:
 	var spot = HidingSpotScript.new()
 	spot.position = HIDING_SPOT_POS
@@ -249,23 +249,23 @@ func _process(_delta: float) -> void:
 		clear_label.visible = true
 	if _cleared and Input.is_action_just_pressed("ui_accept"):
 		GameManager.complete_location(LOCATION_ID)
-		get_tree().change_scene_to_file("res://scenes/overworld/OverworldMap.tscn")
+		TransitionManager.change_scene("res://scenes/overworld/OverworldMap.tscn")
 
-# Doorway-triggered exit — distinct from the clear-overlay's "press ENTER"
+# Doorway-triggered exit  --  distinct from the clear-overlay's "press ENTER"
 # exit above. Per the established pattern, the duo can walk out at any time,
 # cleared or not; complete_location is idempotent, so calling it here when
 # already cleared never double-grants.
 func _exit_to_overworld() -> void:
 	if _cleared:
 		GameManager.complete_location(LOCATION_ID)
-	get_tree().change_scene_to_file("res://scenes/overworld/OverworldMap.tscn")
+	TransitionManager.change_scene("res://scenes/overworld/OverworldMap.tscn")
 
 func _update_hint() -> void:
 	if _cleared:
 		hint_label.text = ""
 	elif not _enemies_cleared:
-		hint_label.text = "The intruders are still patrolling, unaware — slip between their routes or take them down before they regroup"
+		hint_label.text = "The intruders are still patrolling, unaware  --  slip between their routes or take them down before they regroup"
 	elif not _console_tuned:
-		hint_label.text = "Ben: tune the soundboard by ear — it also runs the booth door  [ approach it, press G ]"
+		hint_label.text = "Ben: tune the soundboard by ear  --  it also runs the booth door  [ approach it, press G ]"
 	else:
 		hint_label.text = ""

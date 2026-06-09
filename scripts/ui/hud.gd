@@ -6,6 +6,7 @@ extends CanvasLayer
 @onready var bies_bar: ProgressBar = $Panel/BiasBar
 @onready var label_a: Label = $Panel/LabelA
 @onready var label_b: Label = $Panel/LabelB
+@onready var bies_label: Label = $Panel/BiasLabel
 @onready var duo_panel: Node = $DuoPanel
 @onready var inventory_panel: Node = $InventoryPanel
 
@@ -15,6 +16,9 @@ var _b: Player = null
 func setup(a: Player, b: Player) -> void:
 	_a = a
 	_b = b
+	label_a.add_theme_font_size_override("font_size", 8)
+	label_b.add_theme_font_size_override("font_size", 8)
+	bies_label.add_theme_font_size_override("font_size", 8)
 	a.hp_changed.connect(_on_a_hp)
 	b.hp_changed.connect(_on_b_hp)
 	a.bies_charge_changed.connect(_on_bies_charge)

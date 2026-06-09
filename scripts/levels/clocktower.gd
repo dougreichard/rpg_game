@@ -2,7 +2,7 @@ extends Node2D
 
 const LOCATION_ID: String = "clocktower"
 
-# Tile-mapped floor palette — aged stone with brass-gear accents (see CLAUDE.md "Tile-mapped floors")
+# Tile-mapped floor palette  --  aged stone with brass-gear accents (see CLAUDE.md "Tile-mapped floors")
 const FLOOR_BASE_COLOR: Color = Color(0.32, 0.30, 0.27)
 const FLOOR_ACCENT_COLOR: Color = Color(0.62, 0.52, 0.28)
 const FLOOR_COLS: int = 11
@@ -22,8 +22,8 @@ const BELL_POS := Vector2(440.0, 120.0)
 const BELL_RADIUS: float = 64.0
 
 # Collectibles: sheet music (needed to solve the bell sequence) and a tuning
-# fork — either one is sufficient to unlock the belfry gate; without both, Ben
-# has no way to identify the correct pitch sequence — see CLAUDE.md
+# fork  --  either one is sufficient to unlock the belfry gate; without both, Ben
+# has no way to identify the correct pitch sequence  --  see CLAUDE.md
 # "Collectibles & Inventory".
 const LootBoxScript: Script = preload("res://scripts/systems/loot_box.gd")
 const SheetMusicItem: ItemData = preload("res://data/items/sheet_music_page.tres")
@@ -32,15 +32,15 @@ const MUSIC_LOOT_POS := Vector2(360.0, 400.0)
 const FORK_LOOT_POS  := Vector2(510.0, 160.0)
 const LOOT_FLAG_KEYS := ["music_loot_open", "fork_loot_open"]
 
-# Doorway: the level's entrance/exit — see CLAUDE.md "Doorways, camera-follow
+# Doorway: the level's entrance/exit  --  see CLAUDE.md "Doorways, camera-follow
 # & multi-room levels". The duo spawns beside it on the ground-floor landing;
 # walking away and back exits to the overworld at any time, cleared or not.
 const DoorwayScript: Script = preload("res://scripts/systems/doorway.gd")
 const DOORWAY_POS := Vector2(440.0, 560.0)
 
-# Multi-room layout bounding box — a vertical shaft of three stacked floors
+# Multi-room layout bounding box  --  a vertical shaft of three stacked floors
 # (landing -> gear floor -> bell tower), connected by stairwell gaps. Feeds
-# the camera's pan limits — see CLAUDE.md "Doorways, camera-follow & multi-
+# the camera's pan limits  --  see CLAUDE.md "Doorways, camera-follow & multi-
 # room levels". Recompute if the wall layout changes.
 const CAMERA_LIMIT_LEFT: int = 264
 const CAMERA_LIMIT_TOP: int = 24
@@ -81,7 +81,7 @@ func _ready() -> void:
 	_setup_camera()
 	_restore_progress()
 
-# Camera follows the active character — see CLAUDE.md "Doorways,
+# Camera follows the active character  --  see CLAUDE.md "Doorways,
 # camera-follow & multi-room levels". Essential here: the tower's three
 # stacked floors span far more vertical space than the 720px viewport shows
 # at once, so the climb genuinely reveals itself floor by floor.
@@ -93,7 +93,7 @@ func _setup_camera() -> void:
 	camera.limit_right = CAMERA_LIMIT_RIGHT
 	camera.limit_bottom = CAMERA_LIMIT_BOTTOM
 
-# Mid-level progress restoration — see CLAUDE.md "Doorways, camera-follow &
+# Mid-level progress restoration  --  see CLAUDE.md "Doorways, camera-follow &
 # multi-room levels". Reads back exactly the booleans this level already
 # tracks locally, so re-entering after a Doorway exit picks up where the duo
 # left off: skip respawning a cleared floor and restore the gear/bell props'
@@ -117,7 +117,7 @@ func _restore_progress() -> void:
 		clear_label.visible = true
 
 # Tile-mapped retro floor (Zelda-style two-tone grid), generated at runtime
-# via PlaceholderArt to keep the original-IP guarantee — no imported tile art.
+# via PlaceholderArt to keep the original-IP guarantee  --  no imported tile art.
 func _build_floor() -> void:
 	var tile_map := TileMap.new()
 	tile_map.name = "Floor"
@@ -131,7 +131,7 @@ func _build_floor() -> void:
 
 # Wall art: a Sprite2D per StaticBody2D wall, sized to its exact
 # CollisionShape2D rect and textured via PlaceholderArt.make_wall_texture.
-# Iterates whatever StaticBody2D children it finds — the stacked-floor shaft
+# Iterates whatever StaticBody2D children it finds  --  the stacked-floor shaft
 # (landing/gear-floor/bell-tower, joined by stairwell-gap dividers) needed
 # zero changes here, only more .tscn nodes.
 func _build_walls() -> void:
@@ -147,18 +147,18 @@ func _build_walls() -> void:
 
 func _create_gear() -> void:
 	_gear_sprite = Sprite2D.new()
-	_gear_sprite.texture = PlaceholderArt.make_gate_texture(Color(0.4, 0.36, 0.22), 48, 48)
+	_gear_sprite.texture = PlaceholderArt.make_gear_prop_texture(Color(0.4, 0.36, 0.22), 48, 48)
 	_gear_sprite.position = GEAR_POS
 	add_child(_gear_sprite)
 
 func _create_bells() -> void:
 	_bell_sprite = Sprite2D.new()
-	_bell_sprite.texture = PlaceholderArt.make_gate_texture(Color(0.36, 0.3, 0.46), 40, 56)
+	_bell_sprite.texture = PlaceholderArt.make_bell_texture(Color(0.36, 0.3, 0.46), 40, 56)
 	_bell_sprite.position = BELL_POS
 	add_child(_bell_sprite)
 
 # Stealth: a shadowed alcove the duo can duck into to let a patrol pass
-# rather than fight through it — see CLAUDE.md "Stealth & awareness".
+# rather than fight through it  --  see CLAUDE.md "Stealth & awareness".
 func _create_hiding_spot() -> void:
 	var spot = HidingSpotScript.new()
 	spot.position = HIDING_SPOT_POS
@@ -235,22 +235,22 @@ func _process(_delta: float) -> void:
 		clear_label.visible = true
 	if _cleared and Input.is_action_just_pressed("ui_accept"):
 		GameManager.complete_location(LOCATION_ID)
-		get_tree().change_scene_to_file("res://scenes/overworld/OverworldMap.tscn")
+		TransitionManager.change_scene("res://scenes/overworld/OverworldMap.tscn")
 
-# Doorway-triggered exit — distinct from the clear-overlay's "press ENTER"
+# Doorway-triggered exit  --  distinct from the clear-overlay's "press ENTER"
 # exit above. Per the established pattern, the duo can walk out at any time,
 # cleared or not; complete_location is idempotent, so calling it here when
 # already cleared never double-grants.
 func _exit_to_overworld() -> void:
 	if _cleared:
 		GameManager.complete_location(LOCATION_ID)
-	get_tree().change_scene_to_file("res://scenes/overworld/OverworldMap.tscn")
+	TransitionManager.change_scene("res://scenes/overworld/OverworldMap.tscn")
 
 func _update_hint() -> void:
 	if _cleared:
 		hint_label.text = ""
 	elif not _enemies_cleared:
-		hint_label.text = "The clockwork guardian holds the stairs, flanked by patrols — find a gap or clear a path and bring it down!"
+		hint_label.text = "The clockwork guardian holds the stairs, flanked by patrols  --  find a gap or clear a path and bring it down!"
 	elif not _gear_repaired:
 		hint_label.text = "Quinn: repair the gear floor's mechanism  [ approach it, press G ]"
 	elif not _bells_played:
@@ -261,6 +261,6 @@ func _update_hint() -> void:
 		if has_sequence:
 			hint_label.text = "Ben: climb to the belfry and play the pitch sequence  [ approach it, press G ]"
 		else:
-			hint_label.text = "Ben: the correct bell sequence is unknown — find the sheet music or tuning fork first"
+			hint_label.text = "Ben: the correct bell sequence is unknown  --  find the sheet music or tuning fork first"
 	else:
 		hint_label.text = ""

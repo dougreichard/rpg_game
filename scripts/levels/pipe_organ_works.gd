@@ -7,16 +7,16 @@ const RUNNER_SCENE: PackedScene = preload("res://scenes/enemies/Runner.tscn")
 const HidingSpotScript: Script = preload("res://scripts/systems/hiding_spot.gd")
 const HIDING_SPOT_POS := Vector2(650.0, 460.0)
 
-# Doorway: the level's entrance/exit — see CLAUDE.md "Doorways, camera-follow
+# Doorway: the level's entrance/exit  --  see CLAUDE.md "Doorways, camera-follow
 # & multi-room levels". Spawned beside it; walking away and back exits to the
 # overworld at any time, cleared or not (see doorway.gd).
 const DoorwayScript: Script = preload("res://scripts/systems/doorway.gd")
 const DOORWAY_POS := Vector2(130.0, 300.0)
 
-# Collectibles: the organ repair needs a scattered part — see CLAUDE.md
+# Collectibles: the organ repair needs a scattered part  --  see CLAUDE.md
 # "Collectibles & Inventory" (this is the prototype slice for that system).
 # A third box (spare_clockwork_gear) waits in the secret parts closet behind
-# the secret passage — see _create_secret_passage / _reveal_secret_passage.
+# the secret passage  --  see _create_secret_passage / _reveal_secret_passage.
 const LootBoxScript: Script = preload("res://scripts/systems/loot_box.gd")
 const BrassPipeItem: ItemData = preload("res://data/items/brass_organ_pipe.tres")
 const BentSpoonItem: ItemData = preload("res://data/items/bent_spoon.tres")
@@ -32,13 +32,13 @@ const ORGAN_RADIUS: float = 64.0
 # The secret passage: a wall segment (Walls/SecretWall) that looks identical
 # to its neighbors but conceals the parts closet. Quinn presses Special near
 # the hidden lever to disable its collider and fade its sprite, revealing the
-# closet and its loot box — composes into the same proximity+Special gate
+# closet and its loot box  --  composes into the same proximity+Special gate
 # template as the organ (_on_special_used's if/elif ladder).
 const LEVER_POS := Vector2(1120.0, 260.0)
 const LEVER_RADIUS: float = 56.0
 
 # Multi-room layout bounding box (entry bay -> hallway -> main workshop ->
-# secret closet) — feeds the camera's pan limits (see CLAUDE.md "Doorways,
+# secret closet)  --  feeds the camera's pan limits (see CLAUDE.md "Doorways,
 # camera-follow & multi-room levels"). Recompute if the wall layout changes.
 const CAMERA_LIMIT_LEFT: int = 24
 const CAMERA_LIMIT_TOP: int = 24
@@ -89,7 +89,7 @@ func _ready() -> void:
 	_setup_camera()
 	_restore_progress()
 
-# Camera follows the active character — see CLAUDE.md "Doorways,
+# Camera follows the active character  --  see CLAUDE.md "Doorways,
 # camera-follow & multi-room levels". Smoothing makes the retarget on
 # characters_swapped feel natural without any extra signal wiring; the pan
 # limits keep the level's edges from ever showing past LEVEL_BOUNDS.
@@ -101,7 +101,7 @@ func _setup_camera() -> void:
 	camera.limit_right = CAMERA_LIMIT_RIGHT
 	camera.limit_bottom = CAMERA_LIMIT_BOTTOM
 
-# Mid-level progress restoration — see CLAUDE.md "Doorways, camera-follow &
+# Mid-level progress restoration  --  see CLAUDE.md "Doorways, camera-follow &
 # multi-room levels". Reads back exactly the booleans this level already
 # tracks locally, so re-entering after a Doorway exit picks up where the duo
 # left off: skip spawning a cleared floor, restore solved-state visuals, and
@@ -120,7 +120,7 @@ func _restore_progress() -> void:
 		_spawn()
 
 # Tile-mapped retro floor (Zelda-style two-tone grid), generated at runtime
-# via PlaceholderArt to keep the original-IP guarantee — no imported tile art.
+# via PlaceholderArt to keep the original-IP guarantee  --  no imported tile art.
 func _build_floor() -> void:
 	var tile_map := TileMap.new()
 	tile_map.name = "Floor"
@@ -133,12 +133,12 @@ func _build_floor() -> void:
 			tile_map.set_cell(0, Vector2i(x, y), 0, variant)
 
 # Wall art: a Sprite2D per StaticBody2D wall, sized to its exact
-# CollisionShape2D rect and textured via PlaceholderArt.make_wall_texture — a
+# CollisionShape2D rect and textured via PlaceholderArt.make_wall_texture  --  a
 # darker stone tone of the floor's base color, so the room reads as a bordered
 # space instead of walls-on-a-void (matches the tile-floor visual-style pass;
 # generated at runtime, no imported wall art, original-IP guarantee intact).
 # Reused as-is for the new multi-room layout (entry bay, hallway, workshop,
-# secret closet) — it iterates whatever StaticBody2D children it finds, so
+# secret closet)  --  it iterates whatever StaticBody2D children it finds, so
 # carving out more rooms needed zero changes here, only more .tscn nodes.
 func _build_walls() -> void:
 	var wall_color: Color = FLOOR_BASE_COLOR.darkened(0.35)
@@ -152,21 +152,21 @@ func _build_walls() -> void:
 		wall.add_child(sprite)
 
 # Stealth: a shadowed alcove the duo can duck into to let a patrol pass
-# rather than fight through it — see CLAUDE.md "Stealth & awareness".
+# rather than fight through it  --  see CLAUDE.md "Stealth & awareness".
 func _create_hiding_spot() -> void:
 	var spot = HidingSpotScript.new()
 	spot.position = HIDING_SPOT_POS
 	add_child(spot)
 
-# The broken pipe organ Quinn repairs — gated on having found its missing
+# The broken pipe organ Quinn repairs  --  gated on having found its missing
 # part (BrassPipeItem) in one of the workshop's loot boxes.
 func _create_organ() -> void:
 	_organ_sprite = Sprite2D.new()
-	_organ_sprite.texture = PlaceholderArt.make_gate_texture(Color(0.5, 0.4, 0.2), 52, 64)
+	_organ_sprite.texture = PlaceholderArt.make_organ_texture(Color(0.5, 0.4, 0.2), 52, 64)
 	_organ_sprite.position = ORGAN_POS
 	add_child(_organ_sprite)
 
-# The hidden lever and the wall segment it opens — grabs the references
+# The hidden lever and the wall segment it opens  --  grabs the references
 # _build_walls() already textured so _reveal_secret_passage can disable the
 # collider and fade the sprite, revealing the closet behind it.
 func _create_secret_passage() -> void:
@@ -199,7 +199,7 @@ func _reveal_secret_passage() -> void:
 
 # Collectibles vertical slice (see CLAUDE.md "Collectibles & Inventory"):
 # two workshop-floor boxes (the organ's missing brass pipe, a junk/lore bent
-# spoon) plus a third — spare_clockwork_gear — waiting in the secret closet,
+# spoon) plus a third  --  spare_clockwork_gear  --  waiting in the secret closet,
 # hidden (not just locked) until the passage is revealed so it can't be seen
 # through the wall it sits behind.
 func _create_loot_boxes() -> void:
@@ -269,13 +269,13 @@ func _process(_delta: float) -> void:
 	if _enemies_cleared and _organ_repaired and not _cleared:
 		_cleared = true
 		hint_label.text = ""
-		clear_label.text = "WORKSHOP CLEARED!\n\nThe organ breathes again — and somewhere\nbehind it, a door creaks open.\n\nPress ENTER for the Church"
+		clear_label.text = "WORKSHOP CLEARED!\n\nThe organ breathes again  --  and somewhere\nbehind it, a door creaks open.\n\nPress ENTER for the Church"
 		clear_label.visible = true
 	if _cleared and Input.is_action_just_pressed("ui_accept"):
 		GameManager.complete_location(LOCATION_ID)
-		get_tree().change_scene_to_file("res://scenes/overworld/OverworldMap.tscn")
+		TransitionManager.change_scene("res://scenes/overworld/OverworldMap.tscn")
 
-# Doorway-triggered exit — distinct from the clear-overlay's "press ENTER"
+# Doorway-triggered exit  --  distinct from the clear-overlay's "press ENTER"
 # exit above. Per the user's choice, the duo can walk out at any time, cleared
 # or not; complete_location is idempotent, so calling it here when _cleared is
 # already true (e.g. they cleared it, then walked out instead of pressing
@@ -283,14 +283,14 @@ func _process(_delta: float) -> void:
 func _exit_to_overworld() -> void:
 	if _cleared:
 		GameManager.complete_location(LOCATION_ID)
-	get_tree().change_scene_to_file("res://scenes/overworld/OverworldMap.tscn")
+	TransitionManager.change_scene("res://scenes/overworld/OverworldMap.tscn")
 
 func _update_hint() -> void:
 	if _cleared:
 		hint_label.text = ""
 	elif not _enemies_cleared:
-		hint_label.text = "Workshop hands haven't clocked you yet — clear them out, and check the crates for loose parts"
+		hint_label.text = "Workshop hands haven't clocked you yet  --  clear them out, and check the crates for loose parts"
 	elif not _organ_repaired:
-		hint_label.text = "Quinn: the organ is missing a part — find it in a crate, then approach the organ and press G to repair it"
+		hint_label.text = "Quinn: the organ is missing a part  --  find it in a crate, then approach the organ and press G to repair it"
 	else:
 		hint_label.text = ""

@@ -2,7 +2,7 @@ extends Node2D
 
 const LOCATION_ID: String = "old_parish_church"
 
-# Tile-mapped floor palette — cool stone with warm candlelight flecks (see CLAUDE.md "Tile-mapped floors")
+# Tile-mapped floor palette  --  cool stone with warm candlelight flecks (see CLAUDE.md "Tile-mapped floors")
 const FLOOR_BASE_COLOR: Color = Color(0.30, 0.32, 0.36)
 const FLOOR_ACCENT_COLOR: Color = Color(0.55, 0.50, 0.40)
 const FLOOR_COLS: int = 25
@@ -16,7 +16,7 @@ const QUINN_GATE_POS := Vector2(260.0, 300.0)
 const ERIN_GATE_POS  := Vector2(700.0, 300.0)
 
 # Collectibles: Quinn's movie ticket (needed for the Cinema finale) and a lore
-# photograph — see CLAUDE.md "Collectibles & Inventory". Both sit in the
+# photograph  --  see CLAUDE.md "Collectibles & Inventory". Both sit in the
 # vestibule so the duo finds them on the way in or out.
 const LootBoxScript: Script = preload("res://scripts/systems/loot_box.gd")
 const TicketQuinnItem: ItemData = preload("res://data/items/ticket_quinn.tres")
@@ -25,14 +25,14 @@ const TICKET_LOOT_POS := Vector2(280.0, 520.0)
 const PHOTO_LOOT_POS  := Vector2(680.0, 520.0)
 const LOOT_FLAG_KEYS  := ["ticket_loot_open", "photo_loot_open"]
 
-# Doorway: the level's entrance/exit — see CLAUDE.md "Doorways, camera-follow
+# Doorway: the level's entrance/exit  --  see CLAUDE.md "Doorways, camera-follow
 # & multi-room levels". The duo spawns beside it in the vestibule; walking
 # away and back exits to the overworld at any time, cleared or not.
 const DoorwayScript: Script = preload("res://scripts/systems/doorway.gd")
 const DOORWAY_POS := Vector2(480.0, 600.0)
 
 # Secret passage: a wall segment at the nave's altar end that looks identical
-# to its neighbors but conceals a small organ loft — this location's spec
+# to its neighbors but conceals a small organ loft  --  this location's spec
 # line "may contain a pipe organ echoing the starting location" played as a
 # quiet, optional lore discovery rather than a mechanical gate. Quinn presses
 # Special near the hidden lever to disable the wall's collider and fade its
@@ -41,8 +41,8 @@ const LEVER_POS := Vector2(480.0, 160.0)
 const LEVER_RADIUS: float = 56.0
 const ORGAN_PROP_POS := Vector2(480.0, 75.0)
 
-# Multi-room layout bounding box (vestibule -> nave -> hidden organ loft) —
-# a cross-shaped church floor plan. Feeds the camera's pan limits — see
+# Multi-room layout bounding box (vestibule -> nave -> hidden organ loft)  -- 
+# a cross-shaped church floor plan. Feeds the camera's pan limits  --  see
 # CLAUDE.md "Doorways, camera-follow & multi-room levels". Recompute if the
 # wall layout changes.
 const CAMERA_LIMIT_LEFT: int = 184
@@ -84,7 +84,7 @@ func _ready() -> void:
 	_setup_camera()
 	_restore_progress()
 
-# Camera follows the active character — see CLAUDE.md "Doorways,
+# Camera follows the active character  --  see CLAUDE.md "Doorways,
 # camera-follow & multi-room levels". Smoothing makes the retarget on
 # characters_swapped feel natural for free; the pan limits keep the church's
 # edges from ever showing past its bounding box.
@@ -96,7 +96,7 @@ func _setup_camera() -> void:
 	camera.limit_right = CAMERA_LIMIT_RIGHT
 	camera.limit_bottom = CAMERA_LIMIT_BOTTOM
 
-# Mid-level progress restoration — see CLAUDE.md "Doorways, camera-follow &
+# Mid-level progress restoration  --  see CLAUDE.md "Doorways, camera-follow &
 # multi-room levels". Reads back exactly the booleans this level already
 # tracks locally, so re-entering after a Doorway exit picks up where the duo
 # left off: restore both pillars' solved palettes, the secret passage's open
@@ -117,7 +117,7 @@ func _restore_progress() -> void:
 		clear_label.visible = true
 
 # Tile-mapped retro floor (Zelda-style two-tone grid), generated at runtime
-# via PlaceholderArt to keep the original-IP guarantee — no imported tile art.
+# via PlaceholderArt to keep the original-IP guarantee  --  no imported tile art.
 func _build_floor() -> void:
 	var tile_map := TileMap.new()
 	tile_map.name = "Floor"
@@ -131,7 +131,7 @@ func _build_floor() -> void:
 
 # Wall art: a Sprite2D per StaticBody2D wall, sized to its exact
 # CollisionShape2D rect and textured via PlaceholderArt.make_wall_texture.
-# Iterates whatever StaticBody2D children it finds — the cross-shaped
+# Iterates whatever StaticBody2D children it finds  --  the cross-shaped
 # vestibule/nave/loft layout needed zero changes here, only more .tscn nodes.
 func _build_walls() -> void:
 	var wall_color: Color = FLOOR_BASE_COLOR.darkened(0.35)
@@ -155,10 +155,10 @@ func _gate(color: Color, pos: Vector2) -> Sprite2D:
 	add_child(s)
 	return s
 
-# The hidden lever and the wall segment it opens — grabs the references
+# The hidden lever and the wall segment it opens  --  grabs the references
 # _build_walls() already textured so _reveal_secret_passage can disable the
 # collider and fade the sprite, revealing the loft and the quiet pipe organ
-# inside (pure lore/flavor here — no mechanical gate, just the spec's planted
+# inside (pure lore/flavor here  --  no mechanical gate, just the spec's planted
 # echo of the starting location).
 func _create_secret_passage() -> void:
 	_secret_wall_shape = _secret_wall.get_node("CollisionShape2D")
@@ -243,16 +243,16 @@ func _process(_delta: float) -> void:
 	_update_hint()
 	if _quinn_done and _erin_done and Input.is_action_just_pressed("ui_accept"):
 		GameManager.complete_location(LOCATION_ID)
-		get_tree().change_scene_to_file("res://scenes/overworld/OverworldMap.tscn")
+		TransitionManager.change_scene("res://scenes/overworld/OverworldMap.tscn")
 
-# Doorway-triggered exit — distinct from the clear-overlay's "press ENTER"
+# Doorway-triggered exit  --  distinct from the clear-overlay's "press ENTER"
 # exit above. Per the established pattern, the duo can walk out at any time,
 # cleared or not; complete_location is idempotent, so calling it here when
 # already cleared never double-grants.
 func _exit_to_overworld() -> void:
 	if _quinn_done and _erin_done:
 		GameManager.complete_location(LOCATION_ID)
-	get_tree().change_scene_to_file("res://scenes/overworld/OverworldMap.tscn")
+	TransitionManager.change_scene("res://scenes/overworld/OverworldMap.tscn")
 
 func _update_hint() -> void:
 	var active := GameManager.active_player
@@ -261,11 +261,11 @@ func _update_hint() -> void:
 		return
 	if active == quinn and not _quinn_done:
 		var d: float = quinn.global_position.distance_to(QUINN_GATE_POS)
-		hint_label.text = "Press G — Quinn's HA calms the congregation" if d < GATE_RADIUS + 48.0 \
+		hint_label.text = "Press G  --  Quinn's HA calms the congregation" if d < GATE_RADIUS + 48.0 \
 						else "Quinn: cross the nave to the BLUE pillar  [ G to use HA ]"
 	elif active == erin and not _erin_done:
 		var d: float = erin.global_position.distance_to(ERIN_GATE_POS)
-		hint_label.text = "Press G — Erin debates the gatekeeper" if d < GATE_RADIUS + 48.0 \
+		hint_label.text = "Press G  --  Erin debates the gatekeeper" if d < GATE_RADIUS + 48.0 \
 						else "Erin: cross the nave to the RED pillar  [ G to use Fast Talk ]"
 	elif _quinn_done and not _erin_done:
 		hint_label.text = "Swap to Erin [ TAB ]  →  cross to the RED pillar"

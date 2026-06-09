@@ -2,7 +2,7 @@ extends Node2D
 
 const LOCATION_ID: String = "zip_line"
 
-# Tile-mapped floor palette — outdoor park green with sun-bleached accents (see CLAUDE.md "Tile-mapped floors")
+# Tile-mapped floor palette  --  outdoor park green with sun-bleached accents (see CLAUDE.md "Tile-mapped floors")
 const FLOOR_BASE_COLOR: Color = Color(0.27, 0.33, 0.26)
 const FLOOR_ACCENT_COLOR: Color = Color(0.55, 0.50, 0.30)
 const FLOOR_COLS: int = 30
@@ -16,7 +16,7 @@ const RUNNER_SCENE: PackedScene = preload("res://scenes/enemies/Runner.tscn")
 const HidingSpotScript: Script = preload("res://scripts/systems/hiding_spot.gd")
 const HIDING_SPOT_POS := Vector2(540.0, 440.0)
 
-# Lizard — alternate route to _panel_hacked: climbs the support pylon to
+# Lizard  --  alternate route to _panel_hacked: climbs the support pylon to
 # the high-mounted access port, letting Ethan bypass standing at the panel
 # directly (same William-&-Mary pattern from The Drop).
 const LizardScript: Script = preload("res://scripts/systems/lizard_companion.gd")
@@ -33,9 +33,9 @@ const PULSE_GOOD_WINDOW: float = 0.28
 const RING_RADIUS: float = 30.0
 const MISS_LOCKOUT: float = 0.4
 
-# Collectibles: guard whistle (collectible-only this pass — usable-item distraction
-# mechanic is a future follow-up) and arcade token (junk — embossed with a defunct
-# arcade's logo, no arcade machine in the game) — see CLAUDE.md "Collectibles & Inventory".
+# Collectibles: guard whistle (collectible-only this pass  --  usable-item distraction
+# mechanic is a future follow-up) and arcade token (junk  --  embossed with a defunct
+# arcade's logo, no arcade machine in the game)  --  see CLAUDE.md "Collectibles & Inventory".
 const LootBoxScript: Script = preload("res://scripts/systems/loot_box.gd")
 const GuardWhistleItem: ItemData = preload("res://data/items/guard_whistle.tres")
 const ArcadeTokenItem: ItemData  = preload("res://data/items/arcade_token.tres")
@@ -43,21 +43,21 @@ const WHISTLE_LOOT_POS := Vector2(280.0, 460.0)
 const TOKEN_LOOT_POS   := Vector2(820.0, 200.0)
 const LOOT_FLAG_KEYS   := ["whistle_loot_open", "token_loot_open"]
 
-# Doorway: the level's entrance/exit — see CLAUDE.md "Doorways, camera-follow
+# Doorway: the level's entrance/exit  --  see CLAUDE.md "Doorways, camera-follow
 # & multi-room levels". The duo spawns beside it on the Landing platform;
 # walking away and back exits to the overworld at any time, cleared or not.
 const DoorwayScript: Script = preload("res://scripts/systems/doorway.gd")
 const DOORWAY_POS := Vector2(160.0, 490.0)
 
-# Multi-room layout bounding box — a literal chain of VERTICAL PLATFORMS
+# Multi-room layout bounding box  --  a literal chain of VERTICAL PLATFORMS
 # linked by zip-line crossings, matching "lines connect platforms at
 # different heights": a low Landing platform (entry) -> a mid-height
 # Mid Platform (Ethan's control panel) -> a tall High Platform (Ben's
-# release mechanism), each successive platform extending further north —
+# release mechanism), each successive platform extending further north  -- 
 # the "staircase" reads as ascension even in a top-down 2D frame. Two
 # narrow Bridge corridors (the zip-line crossings themselves) connect them
 # through a shared opening band (y: 390-470). Feeds the camera's pan limits
-# — see CLAUDE.md "Doorways, camera-follow & multi-room levels". Recompute
+#  --  see CLAUDE.md "Doorways, camera-follow & multi-room levels". Recompute
 # if the wall layout changes. CAMERA_LIMIT_TOP derives from the High
 # Platform's north wall (the tallest structure, so the binding constraint).
 const CAMERA_LIMIT_LEFT: int = 24
@@ -106,7 +106,7 @@ func _ready() -> void:
 	_setup_camera()
 	_restore_progress()
 
-# Camera follows the active character — see CLAUDE.md "Doorways,
+# Camera follows the active character  --  see CLAUDE.md "Doorways,
 # camera-follow & multi-room levels".
 func _setup_camera() -> void:
 	camera.position_smoothing_enabled = true
@@ -116,7 +116,7 @@ func _setup_camera() -> void:
 	camera.limit_right = CAMERA_LIMIT_RIGHT
 	camera.limit_bottom = CAMERA_LIMIT_BOTTOM
 
-# Mid-level progress restoration — see CLAUDE.md "Doorways, camera-follow &
+# Mid-level progress restoration  --  see CLAUDE.md "Doorways, camera-follow &
 # multi-room levels". Reads back exactly the booleans this level already
 # tracks locally, so re-entering after a Doorway exit picks up where the duo
 # left off: skip respawning a cleared floor and restore the panel/release
@@ -141,13 +141,13 @@ func _restore_progress() -> void:
 		clear_label.visible = true
 
 # Tile-mapped retro floor (Zelda-style two-tone grid), generated at runtime
-# via PlaceholderArt to keep the original-IP guarantee — no imported tile art.
+# via PlaceholderArt to keep the original-IP guarantee  --  no imported tile art.
 # Wall art: a Sprite2D per StaticBody2D wall, sized to its exact
-# CollisionShape2D rect and textured via PlaceholderArt.make_wall_texture — a
+# CollisionShape2D rect and textured via PlaceholderArt.make_wall_texture  --  a
 # darker stone tone of the floor's base color, so the room reads as a bordered
 # space instead of walls-on-a-void (matches the tile-floor visual-style pass;
 # generated at runtime, no imported wall art, original-IP guarantee intact).
-# Iterates whatever StaticBody2D children it finds — the three-platform,
+# Iterates whatever StaticBody2D children it finds  --  the three-platform,
 # two-bridge layout (20 wall segments) needed zero changes here, only more
 # .tscn nodes.
 func _build_walls() -> void:
@@ -195,10 +195,10 @@ func _create_loot_boxes() -> void:
 	add_child(token_box)
 	_loot_boxes.append(token_box)
 
-# Stealth: a shadowed alcove on the Mid Platform — the crossroads every
+# Stealth: a shadowed alcove on the Mid Platform  --  the crossroads every
 # patrol crossing between the lower and upper lines must pass through, so
 # ducking in here to let one go by is meaningful regardless of which
-# direction the duo is headed — see CLAUDE.md "Stealth & awareness".
+# direction the duo is headed  --  see CLAUDE.md "Stealth & awareness".
 func _create_hiding_spot() -> void:
 	var spot = HidingSpotScript.new()
 	spot.position = HIDING_SPOT_POS
@@ -288,16 +288,16 @@ func _process(delta: float) -> void:
 		clear_label.visible = true
 	if _cleared and Input.is_action_just_pressed("ui_accept"):
 		GameManager.complete_location(LOCATION_ID)
-		get_tree().change_scene_to_file("res://scenes/overworld/OverworldMap.tscn")
+		TransitionManager.change_scene("res://scenes/overworld/OverworldMap.tscn")
 
-# Doorway-triggered exit — distinct from the clear-overlay's "press ENTER"
+# Doorway-triggered exit  --  distinct from the clear-overlay's "press ENTER"
 # exit above. Per the established pattern, the duo can walk out at any time,
 # cleared or not; complete_location is idempotent, so calling it here when
 # already cleared never double-grants.
 func _exit_to_overworld() -> void:
 	if _cleared:
 		GameManager.complete_location(LOCATION_ID)
-	get_tree().change_scene_to_file("res://scenes/overworld/OverworldMap.tscn")
+	TransitionManager.change_scene("res://scenes/overworld/OverworldMap.tscn")
 
 func _draw() -> void:
 	if _release_timed:
@@ -315,10 +315,10 @@ func _update_hint() -> void:
 	if _cleared:
 		hint_label.text = ""
 	elif not _enemies_cleared:
-		hint_label.text = "The patrol hasn't clocked you yet — thread a path between their routes, or clear them before reactivating the lines"
+		hint_label.text = "The patrol hasn't clocked you yet  --  thread a path between their routes, or clear them before reactivating the lines"
 	elif not _panel_hacked:
 		hint_label.text = "Ethan: reactivate the broken zip line control panel on the Mid Platform  [ approach it, press G ]"
 	elif not _release_timed:
-		hint_label.text = "Ben: from the High Platform, watch the pulsing ring — press G when it glows green at its peak"
+		hint_label.text = "Ben: from the High Platform, watch the pulsing ring  --  press G when it glows green at its peak"
 	else:
 		hint_label.text = ""

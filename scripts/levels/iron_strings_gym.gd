@@ -2,7 +2,7 @@ extends Node2D
 
 const LOCATION_ID: String = "iron_strings_gym"
 
-# Tile-mapped floor palette — gym-floor grey with iron-red accents (see CLAUDE.md "Tile-mapped floors")
+# Tile-mapped floor palette  --  gym-floor grey with iron-red accents (see CLAUDE.md "Tile-mapped floors")
 const FLOOR_BASE_COLOR: Color = Color(0.28, 0.26, 0.26)
 const FLOOR_ACCENT_COLOR: Color = Color(0.62, 0.30, 0.26)
 const FLOOR_COLS: int = 30
@@ -16,16 +16,16 @@ const BRUTE_SCENE: PackedScene = preload("res://scenes/enemies/Brute.tscn")
 const HidingSpotScript: Script = preload("res://scripts/systems/hiding_spot.gd")
 const HIDING_SPOT_POS := Vector2(420.0, 460.0)
 
-# Frosty — Evan's Schnoodle, the general-purpose combat-distractor companion
+# Frosty  --  Evan's Schnoodle, the general-purpose combat-distractor companion
 # (see CLAUDE.md "Evan's Animals"): charges the nearest enemy, headbutts to
 # stagger it, then returns to Evan's side. Cooldown-gated so it can't be
-# spammed every frame — same summon pattern as Calvin & Coolidge at the docks.
+# spammed every frame  --  same summon pattern as Calvin & Coolidge at the docks.
 const AnimalCompanionScript: Script = preload("res://scripts/systems/animal_companion.gd")
 const FROSTY_COLOR := Color(0.95, 0.95, 0.95)
 const FROSTY_COOLDOWN: float = 3.0
 
-# Collectibles: Ben's ticket (found in the cage where he's freed — fitting) and
-# an animal treat — see CLAUDE.md "Collectibles & Inventory".
+# Collectibles: Ben's ticket (found in the cage where he's freed  --  fitting) and
+# an animal treat  --  see CLAUDE.md "Collectibles & Inventory".
 const LootBoxScript: Script = preload("res://scripts/systems/loot_box.gd")
 const TicketBenItem: ItemData    = preload("res://data/items/ticket_ben.tres")
 const AnimalTreatItem: ItemData  = preload("res://data/items/animal_treat.tres")
@@ -33,7 +33,7 @@ const TICKET_LOOT_POS    := Vector2(700.0, 100.0)
 const TREAT_LOOT_POS     := Vector2(130.0, 200.0)
 const LOOT_FLAG_KEYS     := ["ticket_loot_open", "treat_loot_open"]
 
-# Doorway: the level's entrance/exit — see CLAUDE.md "Doorways, camera-follow
+# Doorway: the level's entrance/exit  --  see CLAUDE.md "Doorways, camera-follow
 # & multi-room levels". The duo spawns beside it in the locker room; walking
 # away and back exits to the overworld at any time, cleared or not.
 const DoorwayScript: Script = preload("res://scripts/systems/doorway.gd")
@@ -41,17 +41,17 @@ const DOORWAY_POS := Vector2(140.0, 340.0)
 
 # The barbell: previously a purely cosmetic prop (a sprite that just changed
 # color and nudged up). It's now a literal StaticBody2D blocking the doorway
-# to Ben's cage alcove — Evan's Special disables its collider and slides the
+# to Ben's cage alcove  --  Evan's Special disables its collider and slides the
 # sprite aside, making "Evan's super strength moves heavy equipment to open
 # paths" (this location's spec line) physical instead of decorative. Same
 # disable-collider-then-animate-sprite shape as Pipe Organ Works' secret
-# passage, just sliding rather than fading — distinct flavor, same mechanism.
+# passage, just sliding rather than fading  --  distinct flavor, same mechanism.
 const BARBELL_POS := Vector2(660.0, 152.0)
 const BARBELL_RADIUS: float = 64.0
 const BARBELL_SLIDE_OFFSET := Vector2(160.0, 0.0)
 
 # Multi-room layout bounding box (locker room -> gym floor -> Ben's cage
-# alcove). Feeds the camera's pan limits — see CLAUDE.md "Doorways,
+# alcove). Feeds the camera's pan limits  --  see CLAUDE.md "Doorways,
 # camera-follow & multi-room levels". Recompute if the wall layout changes.
 const CAMERA_LIMIT_LEFT: int = 24
 const CAMERA_LIMIT_TOP: int = 24
@@ -94,7 +94,7 @@ func _ready() -> void:
 	_setup_camera()
 	_restore_progress()
 
-# Camera follows the active character — see CLAUDE.md "Doorways,
+# Camera follows the active character  --  see CLAUDE.md "Doorways,
 # camera-follow & multi-room levels".
 func _setup_camera() -> void:
 	camera.position_smoothing_enabled = true
@@ -104,7 +104,7 @@ func _setup_camera() -> void:
 	camera.limit_right = CAMERA_LIMIT_RIGHT
 	camera.limit_bottom = CAMERA_LIMIT_BOTTOM
 
-# Mid-level progress restoration — see CLAUDE.md "Doorways, camera-follow &
+# Mid-level progress restoration  --  see CLAUDE.md "Doorways, camera-follow &
 # multi-room levels". Reads back exactly the booleans this level already
 # tracks locally, so re-entering after a Doorway exit picks up where the duo
 # left off: skip respawning a cleared floor and restore the barbell's moved
@@ -120,7 +120,7 @@ func _restore_progress() -> void:
 		_spawn()
 
 # Tile-mapped retro floor (Zelda-style two-tone grid), generated at runtime
-# via PlaceholderArt to keep the original-IP guarantee — no imported tile art.
+# via PlaceholderArt to keep the original-IP guarantee  --  no imported tile art.
 func _build_floor() -> void:
 	var tile_map := TileMap.new()
 	tile_map.name = "Floor"
@@ -134,7 +134,7 @@ func _build_floor() -> void:
 
 # Wall art: a Sprite2D per StaticBody2D wall, sized to its exact
 # CollisionShape2D rect and textured via PlaceholderArt.make_wall_texture.
-# Iterates whatever StaticBody2D children it finds — the locker-room/gym-
+# Iterates whatever StaticBody2D children it finds  --  the locker-room/gym-
 # floor/cage-alcove layout needed zero changes here, only more .tscn nodes
 # (the Barbell is a sibling of $Walls, not a child, so it keeps its own
 # bespoke gym-equipment texture instead of the generic brick pattern).
@@ -150,12 +150,12 @@ func _build_walls() -> void:
 		wall.add_child(sprite)
 
 # Grabs the .tscn-placed Barbell body's collider and dresses it with an
-# iron-red bordered-rectangle texture — visually distinct from the brick
+# iron-red bordered-rectangle texture  --  visually distinct from the brick
 # walls (it reads as stacked gym equipment jammed in a doorway, not masonry).
 func _create_barbell() -> void:
 	_barbell_shape = _barbell.get_node("CollisionShape2D")
 	_barbell_sprite = Sprite2D.new()
-	_barbell_sprite.texture = PlaceholderArt.make_gate_texture(FLOOR_ACCENT_COLOR, 200, 16)
+	_barbell_sprite.texture = PlaceholderArt.make_barbell_texture(FLOOR_ACCENT_COLOR, 200, 16)
 	_barbell.add_child(_barbell_sprite)
 
 func _move_barbell(animate: bool) -> void:
@@ -167,7 +167,7 @@ func _move_barbell(animate: bool) -> void:
 		_barbell_sprite.position = BARBELL_SLIDE_OFFSET
 
 # Stealth: a shadowed alcove the duo can duck into to let a patrol pass
-# rather than fight through it — see CLAUDE.md "Stealth & awareness".
+# rather than fight through it  --  see CLAUDE.md "Stealth & awareness".
 func _create_hiding_spot() -> void:
 	var spot = HidingSpotScript.new()
 	spot.position = HIDING_SPOT_POS
@@ -255,22 +255,22 @@ func _process(delta: float) -> void:
 		clear_label.visible = true
 	if _cleared and Input.is_action_just_pressed("ui_accept"):
 		GameManager.complete_location(LOCATION_ID)
-		get_tree().change_scene_to_file("res://scenes/overworld/OverworldMap.tscn")
+		TransitionManager.change_scene("res://scenes/overworld/OverworldMap.tscn")
 
-# Doorway-triggered exit — distinct from the clear-overlay's "press ENTER"
+# Doorway-triggered exit  --  distinct from the clear-overlay's "press ENTER"
 # exit above. Per the established pattern, the duo can walk out at any time,
 # cleared or not; complete_location is idempotent, so calling it here when
 # already cleared never double-grants.
 func _exit_to_overworld() -> void:
 	if _cleared:
 		GameManager.complete_location(LOCATION_ID)
-	get_tree().change_scene_to_file("res://scenes/overworld/OverworldMap.tscn")
+	TransitionManager.change_scene("res://scenes/overworld/OverworldMap.tscn")
 
 func _update_hint() -> void:
 	if _cleared:
 		hint_label.text = ""
 	elif not _enemies_cleared:
-		hint_label.text = "The bruisers haven't clocked you yet — pick them off (Evan: press G to send Frosty charging), or slip past to free Ben first"
+		hint_label.text = "The bruisers haven't clocked you yet  --  pick them off (Evan: press G to send Frosty charging), or slip past to free Ben first"
 	elif not _barbell_moved:
 		hint_label.text = "Evan: shove the barbell rack off Ben's cage doorway  [ approach it, press G ]"
 	else:

@@ -2,7 +2,7 @@ extends Node2D
 
 const LOCATION_ID: String = "grand_marquee"
 
-# Tile-mapped floor palette — rich theater red with gold accents (see CLAUDE.md "Tile-mapped floors")
+# Tile-mapped floor palette  --  rich theater red with gold accents (see CLAUDE.md "Tile-mapped floors")
 const FLOOR_BASE_COLOR: Color = Color(0.30, 0.21, 0.23)
 const FLOOR_ACCENT_COLOR: Color = Color(0.72, 0.55, 0.28)
 const FLOOR_COLS: int = 20
@@ -22,11 +22,11 @@ const ORGAN_POS := Vector2(400.0, 92.0)
 const ORGAN_RADIUS: float = 64.0
 
 # Collectibles: film reel is the "second item needed with the projector
-# repair" per CLAUDE.md — wired as a hard gate on Quinn's projector puzzle
+# repair" per CLAUDE.md  --  wired as a hard gate on Quinn's projector puzzle
 # (proximity + Special succeeds only if either character holds the reel).
 # The 5-ticket check is the headline use case for the whole ticket system:
 # all five character movie tickets must be held (across either duo member)
-# for the level to be completable — see _has_all_tickets().
+# for the level to be completable  --  see _has_all_tickets().
 # See CLAUDE.md "Collectibles & Inventory".
 const LootBoxScript: Script = preload("res://scripts/systems/loot_box.gd")
 const FilmReelItem: ItemData   = preload("res://data/items/film_reel.tres")
@@ -38,26 +38,26 @@ const TicketEvanItem: ItemData  = preload("res://data/items/ticket_evan.tres")
 const TicketBenItem: ItemData   = preload("res://data/items/ticket_ben.tres")
 const TicketEthanItem: ItemData = preload("res://data/items/ticket_ethan.tres")
 
-# Doorway: the level's entrance/exit — see CLAUDE.md "Doorways, camera-follow
+# Doorway: the level's entrance/exit  --  see CLAUDE.md "Doorways, camera-follow
 # & multi-room levels". The duo arrives through the lobby; walking away and
-# back exits at any time, cleared or not — see _exit_to_overworld for this
+# back exits at any time, cleared or not  --  see _exit_to_overworld for this
 # finale location's destination branch (cleared -> ResultScreen, the endgame
 # trigger; not yet cleared -> OverworldMap, the standard early-exit path).
 const DoorwayScript: Script = preload("res://scripts/systems/doorway.gd")
 const DOORWAY_POS := Vector2(400.0, 490.0)
 
-# Multi-room layout bounding box — a literal HUB-AND-WINGS layout matching
+# Multi-room layout bounding box  --  a literal HUB-AND-WINGS layout matching
 # this location's spec ("Backstage, projection booth, balcony, and lobby are
-# distinct zones"): a Lobby (south, entry — the duo's arrival point) opens
+# distinct zones"): a Lobby (south, entry  --  the duo's arrival point) opens
 # north into the Backstage, the central combat floor where the cinema's
-# guardian Boss "holds the aisle" squarely across the only path forward —
+# guardian Boss "holds the aisle" squarely across the only path forward  -- 
 # which in turn opens west into the Projection Booth (Quinn's repair) and
 # north into the Balcony (Ben's house organ, literally elevated above the
 # stage it overlooks, the way the spec frames it as a place that "manipulates
 # the crowd" from above). All three connections between zones are open
-# passages — gaps in shared walls, not corridors — so the hub-and-spoke shape
+# passages  --  gaps in shared walls, not corridors  --  so the hub-and-spoke shape
 # mirrors how the spec singles out Backstage as the throughline the other
-# three named zones branch from. Feeds the camera's pan limits — see
+# three named zones branch from. Feeds the camera's pan limits  --  see
 # CLAUDE.md "Doorways, camera-follow & multi-room levels". Recompute if the
 # wall layout changes.
 const CAMERA_LIMIT_LEFT: int = 24
@@ -99,7 +99,7 @@ func _ready() -> void:
 	_setup_camera()
 	_restore_progress()
 
-# Camera follows the active character — see CLAUDE.md "Doorways,
+# Camera follows the active character  --  see CLAUDE.md "Doorways,
 # camera-follow & multi-room levels".
 func _setup_camera() -> void:
 	camera.position_smoothing_enabled = true
@@ -109,7 +109,7 @@ func _setup_camera() -> void:
 	camera.limit_right = CAMERA_LIMIT_RIGHT
 	camera.limit_bottom = CAMERA_LIMIT_BOTTOM
 
-# Mid-level progress restoration — see CLAUDE.md "Doorways, camera-follow &
+# Mid-level progress restoration  --  see CLAUDE.md "Doorways, camera-follow &
 # multi-room levels". Reads back exactly the booleans this level already
 # tracks locally, so re-entering after a Doorway exit (before the duo has
 # found Uncle Doug) picks up where they left off: skip respawning a cleared
@@ -129,17 +129,17 @@ func _restore_progress() -> void:
 	if _enemies_cleared and _projector_repaired and _organ_played and _has_all_tickets():
 		_cleared = true
 		hint_label.text = ""
-		clear_label.text = "THE FINAL REEL!\n\nThe house lights rise — and there, in the\nprojection booth, stands Uncle Doug.\n\nPress ENTER to continue"
+		clear_label.text = "THE FINAL REEL!\n\nThe house lights rise  --  and there, in the\nprojection booth, stands Uncle Doug.\n\nPress ENTER to continue"
 		clear_label.visible = true
 
 # Tile-mapped retro floor (Zelda-style two-tone grid), generated at runtime
-# via PlaceholderArt to keep the original-IP guarantee — no imported tile art.
+# via PlaceholderArt to keep the original-IP guarantee  --  no imported tile art.
 # Wall art: a Sprite2D per StaticBody2D wall, sized to its exact
-# CollisionShape2D rect and textured via PlaceholderArt.make_wall_texture — a
+# CollisionShape2D rect and textured via PlaceholderArt.make_wall_texture  --  a
 # darker stone tone of the floor's base color, so the room reads as a bordered
 # space instead of walls-on-a-void (matches the tile-floor visual-style pass;
 # generated at runtime, no imported wall art, original-IP guarantee intact).
-# Iterates whatever StaticBody2D children it finds — the Lobby + Backstage +
+# Iterates whatever StaticBody2D children it finds  --  the Lobby + Backstage +
 # Booth + Balcony hub-and-wings layout (12 wall segments) needed zero changes
 # here, only more .tscn nodes.
 func _build_walls() -> void:
@@ -176,10 +176,10 @@ func _create_organ() -> void:
 	_organ_sprite.position = ORGAN_POS
 	add_child(_organ_sprite)
 
-# Stealth: a shadowed alcove tucked in the Backstage's far corner — clear of
+# Stealth: a shadowed alcove tucked in the Backstage's far corner  --  clear of
 # both puzzle-prop gate radii and the Boss's guard position, along the
 # stagehands' patrol loop, so ducking in to let one pass before committing to
-# the climactic fight is a real option — see CLAUDE.md "Stealth & awareness".
+# the climactic fight is a real option  --  see CLAUDE.md "Stealth & awareness".
 func _create_hiding_spot() -> void:
 	var spot = HidingSpotScript.new()
 	spot.position = HIDING_SPOT_POS
@@ -191,8 +191,8 @@ func _create_loot_boxes() -> void:
 	add_child(reel_box)
 	_loot_boxes.append(reel_box)
 
-# The headline ticket gate — all five character movie tickets must be held
-# (across the active duo) to complete the Cinema — see CLAUDE.md
+# The headline ticket gate  --  all five character movie tickets must be held
+# (across the active duo) to complete the Cinema  --  see CLAUDE.md
 # "Collectibles & Inventory" for the full ticket system.
 func _has_all_tickets() -> bool:
 	var characters: Array = ["Quinn", "Erin", "Evan", "Ben", "Ethan"]
@@ -259,15 +259,15 @@ func _process(_delta: float) -> void:
 	if _enemies_cleared and _projector_repaired and _organ_played and _has_all_tickets() and not _cleared:
 		_cleared = true
 		hint_label.text = ""
-		clear_label.text = "THE FINAL REEL!\n\nThe house lights rise — and there, in the\nprojection booth, stands Uncle Doug.\n\nPress ENTER to continue"
+		clear_label.text = "THE FINAL REEL!\n\nThe house lights rise  --  and there, in the\nprojection booth, stands Uncle Doug.\n\nPress ENTER to continue"
 		clear_label.visible = true
 	if _cleared and Input.is_action_just_pressed("ui_accept"):
 		GameManager.complete_location(LOCATION_ID)
-		get_tree().change_scene_to_file("res://scenes/ui/ResultScreen.tscn")
+		TransitionManager.change_scene("res://scenes/ui/ResultScreen.tscn")
 
-# Doorway-triggered exit — distinct from the clear-overlay's "press ENTER"
+# Doorway-triggered exit  --  distinct from the clear-overlay's "press ENTER"
 # exit above, and adapted for this finale location: a CLEARED exit must lead
-# to the same endgame ResultScreen the overlay does (this is the climax —
+# to the same endgame ResultScreen the overlay does (this is the climax  -- 
 # there's no "back to the overworld" once Uncle Doug is found in the booth),
 # while an early exit (not yet cleared) returns to the overworld exactly like
 # every other location's Doorway. complete_location is idempotent, so calling
@@ -275,24 +275,24 @@ func _process(_delta: float) -> void:
 func _exit_to_overworld() -> void:
 	if _cleared:
 		GameManager.complete_location(LOCATION_ID)
-		get_tree().change_scene_to_file("res://scenes/ui/ResultScreen.tscn")
+		TransitionManager.change_scene("res://scenes/ui/ResultScreen.tscn")
 	else:
-		get_tree().change_scene_to_file("res://scenes/overworld/OverworldMap.tscn")
+		TransitionManager.change_scene("res://scenes/overworld/OverworldMap.tscn")
 
 func _update_hint() -> void:
 	if _cleared:
 		hint_label.text = ""
 	elif not _enemies_cleared:
-		hint_label.text = "A guardian holds the aisle, flanked by patrolling stagehands — find your opening and fight through!"
+		hint_label.text = "A guardian holds the aisle, flanked by patrolling stagehands  --  find your opening and fight through!"
 	elif not _projector_repaired:
 		var has_reel: bool = GameManager.has_item("Quinn", FilmReelItem.id) or GameManager.has_item("Ben", FilmReelItem.id)
 		if has_reel:
 			hint_label.text = "Quinn: in the projection booth, repair the equipment  [ approach it, press G ]"
 		else:
-			hint_label.text = "Quinn: the projector is missing its film reel — check the crates in the projection booth"
+			hint_label.text = "Quinn: the projector is missing its film reel  --  check the crates in the projection booth"
 	elif not _organ_played:
 		hint_label.text = "Ben: up on the balcony, play the house organ to calm the crowd  [ approach it, press G ]"
 	elif not _has_all_tickets():
-		hint_label.text = "The box office won't open without all five tickets — the whole team's admissions are required"
+		hint_label.text = "The box office won't open without all five tickets  --  the whole team's admissions are required"
 	else:
 		hint_label.text = ""

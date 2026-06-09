@@ -2,7 +2,7 @@ extends Node2D
 
 const LOCATION_ID: String = "library"
 
-# Tile-mapped floor palette — parchment and old-wood tones (see CLAUDE.md "Tile-mapped floors")
+# Tile-mapped floor palette  --  parchment and old-wood tones (see CLAUDE.md "Tile-mapped floors")
 const FLOOR_BASE_COLOR: Color = Color(0.34, 0.30, 0.25)
 const FLOOR_ACCENT_COLOR: Color = Color(0.58, 0.48, 0.32)
 const FLOOR_COLS: int = 30
@@ -16,7 +16,7 @@ const SENTRY_SCENE: PackedScene = preload("res://scenes/enemies/Sentry.tscn")
 const HidingSpotScript: Script = preload("res://scripts/systems/hiding_spot.gd")
 const HIDING_SPOT_POS := Vector2(120.0, 470.0)
 
-# Guinea pigs — Erin's crowd-cover companion (see CLAUDE.md "Evan's Animals"):
+# Guinea pigs  --  Erin's crowd-cover companion (see CLAUDE.md "Evan's Animals"):
 # a skittish herd that scatters from her position and floods the reading room,
 # drawing every guard's gaze toward the chaos. Cooldown-gated summon.
 const GuineaPigSwarmScript: Script = preload("res://scripts/systems/guinea_pig_swarm.gd")
@@ -24,12 +24,12 @@ const GUINEA_PIG_COOLDOWN: float = 5.0
 
 # The librarian's desk: graduated from a purely cosmetic sprite-recolor to a
 # literal StaticBody2D collider sealing the narrow checkpoint into the
-# Restricted Stacks — the FOURTH cosmetic-to-collider upgrade of the rollout
+# Restricted Stacks  --  the FOURTH cosmetic-to-collider upgrade of the rollout
 # (Iron & Strings' barbell, Recording Studio's booth door, Harbor & Docks'
 # container), making "Erin...talks her way past a strict librarian to access
 # restricted stacks" (this location's own spec line) mechanically true: the
 # stacks are physically inaccessible until Erin handles the desk. Its
-# clear-animation is a fourth distinct flavor — a parallel scale-down + fade
+# clear-animation is a fourth distinct flavor  --  a parallel scale-down + fade
 # (`create_tween()`), reading as "she packs up her desk and steps aside",
 # distinct from the gym's horizontal slide, the studio's vertical slide, and
 # the docks' hoist-and-swing.
@@ -41,8 +41,8 @@ const TERMINAL_POS := Vector2(700.0, 340.0)
 const TERMINAL_RADIUS: float = 64.0
 
 # Collectibles: library card (lets Ethan bypass the librarian desk that normally
-# only Erin can handle) and a skeleton key (junk — "doesn't fit anything I've
-# tried") — see CLAUDE.md "Collectibles & Inventory".
+# only Erin can handle) and a skeleton key (junk  --  "doesn't fit anything I've
+# tried")  --  see CLAUDE.md "Collectibles & Inventory".
 const LootBoxScript: Script = preload("res://scripts/systems/loot_box.gd")
 const LibraryCardItem: ItemData = preload("res://data/items/library_card.tres")
 const SkeletonKeyItem: ItemData = preload("res://data/items/skeleton_key.tres")
@@ -50,14 +50,14 @@ const CARD_LOOT_POS   := Vector2(240.0, 250.0)
 const KEY_LOOT_POS    := Vector2(780.0, 250.0)
 const LOOT_FLAG_KEYS  := ["card_loot_open", "key_loot_open"]
 
-# Doorway: the level's entrance/exit — see CLAUDE.md "Doorways, camera-follow
+# Doorway: the level's entrance/exit  --  see CLAUDE.md "Doorways, camera-follow
 # & multi-room levels". The duo spawns beside it in the reading room; walking
 # away and back exits to the overworld at any time, cleared or not.
 const DoorwayScript: Script = preload("res://scripts/systems/doorway.gd")
 const DOORWAY_POS := Vector2(120.0, 340.0)
 
 # Multi-room layout bounding box (reading room -> checkpoint -> Restricted
-# Stacks). Feeds the camera's pan limits — see CLAUDE.md "Doorways,
+# Stacks). Feeds the camera's pan limits  --  see CLAUDE.md "Doorways,
 # camera-follow & multi-room levels". Recompute if the wall layout changes.
 const CAMERA_LIMIT_LEFT: int = 24
 const CAMERA_LIMIT_TOP: int = 144
@@ -103,7 +103,7 @@ func _ready() -> void:
 	_setup_camera()
 	_restore_progress()
 
-# Camera follows the active character — see CLAUDE.md "Doorways,
+# Camera follows the active character  --  see CLAUDE.md "Doorways,
 # camera-follow & multi-room levels".
 func _setup_camera() -> void:
 	camera.position_smoothing_enabled = true
@@ -113,7 +113,7 @@ func _setup_camera() -> void:
 	camera.limit_right = CAMERA_LIMIT_RIGHT
 	camera.limit_bottom = CAMERA_LIMIT_BOTTOM
 
-# Mid-level progress restoration — see CLAUDE.md "Doorways, camera-follow &
+# Mid-level progress restoration  --  see CLAUDE.md "Doorways, camera-follow &
 # multi-room levels". Reads back exactly the booleans this level already
 # tracks locally, so re-entering after a Doorway exit picks up where the duo
 # left off: skip respawning a cleared floor and restore the desk's
@@ -137,7 +137,7 @@ func _restore_progress() -> void:
 		clear_label.visible = true
 
 # Tile-mapped retro floor (Zelda-style two-tone grid), generated at runtime
-# via PlaceholderArt to keep the original-IP guarantee — no imported tile art.
+# via PlaceholderArt to keep the original-IP guarantee  --  no imported tile art.
 func _build_floor() -> void:
 	var tile_map := TileMap.new()
 	tile_map.name = "Floor"
@@ -151,7 +151,7 @@ func _build_floor() -> void:
 
 # Wall art: a Sprite2D per StaticBody2D wall, sized to its exact
 # CollisionShape2D rect and textured via PlaceholderArt.make_wall_texture.
-# Iterates whatever StaticBody2D children it finds — the reading-room/
+# Iterates whatever StaticBody2D children it finds  --  the reading-room/
 # checkpoint/stacks layout needed zero changes here, only more .tscn nodes
 # (the LibrarianDesk is a sibling of $Walls, not a child, so it keeps its own
 # bespoke maroon-leather texture instead of the generic brick pattern).
@@ -167,7 +167,7 @@ func _build_walls() -> void:
 		wall.add_child(sprite)
 
 # Grabs the .tscn-placed LibrarianDesk body's collider and dresses it with a
-# maroon-leather bordered-rectangle texture — visually distinct from the
+# maroon-leather bordered-rectangle texture  --  visually distinct from the
 # parchment-toned walls (reads as a checkpoint counter, not masonry).
 func _create_librarian_desk() -> void:
 	_desk_shape = _librarian_desk.get_node("CollisionShape2D")
@@ -193,7 +193,7 @@ func _create_terminal() -> void:
 	add_child(_terminal_sprite)
 
 # Stealth: a shadowed alcove the duo can duck into to let a patrol pass
-# rather than fight through it — see CLAUDE.md "Stealth & awareness".
+# rather than fight through it  --  see CLAUDE.md "Stealth & awareness".
 func _create_hiding_spot() -> void:
 	var spot = HidingSpotScript.new()
 	spot.position = HIDING_SPOT_POS
@@ -280,22 +280,22 @@ func _process(delta: float) -> void:
 		clear_label.visible = true
 	if _cleared and Input.is_action_just_pressed("ui_accept"):
 		GameManager.complete_location(LOCATION_ID)
-		get_tree().change_scene_to_file("res://scenes/overworld/OverworldMap.tscn")
+		TransitionManager.change_scene("res://scenes/overworld/OverworldMap.tscn")
 
-# Doorway-triggered exit — distinct from the clear-overlay's "press ENTER"
+# Doorway-triggered exit  --  distinct from the clear-overlay's "press ENTER"
 # exit above. Per the established pattern, the duo can walk out at any time,
 # cleared or not; complete_location is idempotent, so calling it here when
 # already cleared never double-grants.
 func _exit_to_overworld() -> void:
 	if _cleared:
 		GameManager.complete_location(LOCATION_ID)
-	get_tree().change_scene_to_file("res://scenes/overworld/OverworldMap.tscn")
+	TransitionManager.change_scene("res://scenes/overworld/OverworldMap.tscn")
 
 func _update_hint() -> void:
 	if _cleared:
 		hint_label.text = ""
 	elif not _enemies_cleared:
-		hint_label.text = "Quiet but dangerous — read their patrol routes, duck into shadow  [ Erin: press G to release the guinea pigs — they'll flood the room and draw every guard's attention ]"
+		hint_label.text = "Quiet but dangerous  --  read their patrol routes, duck into shadow  [ Erin: press G to release the guinea pigs  --  they'll flood the room and draw every guard's attention ]"
 	elif not _librarian_talked:
 		hint_label.text = "Erin: talk your way past the librarian's desk to reach the Restricted Stacks  [ approach it, press G ]"
 	elif not _archive_hacked:

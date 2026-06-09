@@ -74,7 +74,7 @@ func _ready() -> void:
 	hitbox.monitoring = false
 	hurtbox.hit.connect(_on_hurtbox_hit)
 	if sprite.sprite_frames == null:
-		sprite.sprite_frames = PlaceholderArt.make_enemy_frames(data.sprite_color, data.is_stocky)
+		sprite.sprite_frames = PlaceholderArt.make_enemy_frames(data.sprite_color, data.enemy_name, data.is_stocky)
 	sprite.play("walk")
 	GameManager.noise_emitted.connect(_on_noise_emitted)
 	GameManager.enemies_calmed.connect(_on_enemies_calmed)
