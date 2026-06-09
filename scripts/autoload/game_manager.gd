@@ -281,6 +281,11 @@ func swap_characters() -> void:
 	standby_player = prev
 	active_player.is_active = true
 	standby_player.is_active = false
+	# In single-player the keyboard must follow whoever is active.
+	# Co-op keeps each player bound to their own hardware prefix.
+	if not is_coop:
+		active_player.action_prefix = ""
+		standby_player.action_prefix = "p2_"
 	Audio.play("swap")
 	characters_swapped.emit()
 

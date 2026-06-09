@@ -44,12 +44,18 @@ const DarknessOverlayScript: Script = preload("res://scripts/systems/dark_overla
 const RustyKeyItem: ItemData      = preload("res://data/items/rusty_key.tres")
 const SecurityBadgeItem: ItemData = preload("res://data/items/security_badge.tres")
 const PocketLanternItem: ItemData = preload("res://data/items/pocket_lantern.tres")
+const FannysBottleItem: ItemData  = preload("res://data/items/fannys_bottle.tres")
 const KEY_LOOT_POS    := Vector2(560.0, 330.0)
 const BADGE_LOOT_POS  := Vector2(820.0, 350.0)
 const LANTERN_LOOT_POS := Vector2(300.0, 240.0)
+# Fanny's bottle: hidden at the very tip of the west-tunnel dead end, behind
+# Evan's rubble. Dark AND gated by rubble being cleared -- no hint is ever
+# shown for it. Both conditions must be met before it becomes visible.
+const FANNY_LOOT_POS  := Vector2(52.0, 288.0)
 # Persistence flags  --  kept separate so the restore logic stays readable.
 const LANTERN_LOOT_FLAG: String  = "lantern_loot_open"
 const DARK_LOOT_FLAG_KEYS := ["key_loot_open", "badge_loot_open"]
+const FANNY_LOOT_FLAG: String    = "fanny_loot_open"
 const PIP_RADIUS: float = 5.0
 const PIP_SPACING: float = 16.0
 const PIP_OFFSET_Y: float = -38.0
@@ -105,6 +111,9 @@ var _loot_boxes: Array = []
 # Dark loot boxes: hidden until the pocket lantern is held.
 var _dark_loot_boxes: Array = []
 var _dark_revealed: bool = false
+# Fanny's bottle: dark AND gated by rubble_cleared -- its own reveal flag.
+var _fanny_loot_box = null
+var _fanny_revealed: bool = false
 var _darkness: Node2D = null
 var _doorway = null
 
@@ -175,6 +184,10 @@ func _restore_progress() -> void:
 	for box in _dark_loot_boxes:
 		if is_instance_valid(box):
 			box.visible = _dark_revealed
+	# Fanny's bottle: needs lantern AND rubble cleared.
+	_fanny_revealed = _has_lantern() and _rubble_cleared
+	if is_instance_valid(_fanny_loot_box):
+		_fanny_loot_box.visible = _fanny_revealed
 	if _enemies_cleared and _rubble_cleared and _hatch_hacked:
 		_cleared = true
 		hint_label.text = ""
@@ -260,6 +273,14 @@ func _create_loot_boxes() -> void:
 	add_child(badge_box)
 	_dark_loot_boxes.append(badge_box)
 
+	# Fanny's bottle: kept out of _dark_loot_boxes so _reveal_dark_boxes() doesn't
+	# expose it prematurely -- it needs BOTH lantern AND rubble cleared.
+	_fanny_loot_box = LootBoxScript.new()
+	_fanny_loot_box.setup(FannysBottleItem, FANNY_LOOT_POS,
+			GameManager.get_level_flag(LOCATION_ID, FANNY_LOOT_FLAG, false))
+	_fanny_loot_box.visible = false
+	add_child(_fanny_loot_box)
+
 # Darkness overlay: world-space dark rect with a player-centered glow.
 # z_index = 50 puts it above all Node2D world content (floor/walls/enemies/
 # players at z=0) but below any CanvasLayer (HUD etc.).
@@ -342,6 +363,11 @@ func _on_special_used(char_name: String) -> void:
 			if _dark_loot_boxes[i].try_open(char_name, p.global_position):
 				GameManager.set_level_flag(LOCATION_ID, DARK_LOOT_FLAG_KEYS[i], true)
 				return
+	# Fanny's bottle  --  only openable when both lantern is held and rubble cleared.
+	if _fanny_revealed and is_instance_valid(_fanny_loot_box):
+		if _fanny_loot_box.try_open(char_name, p.global_position):
+			GameManager.set_level_flag(LOCATION_ID, FANNY_LOOT_FLAG, true)
+			return
 	# Rusty key shortcut door  --  usable by either character in the duo
 	if p.global_position.distance_to(SHORTCUT_DOOR_POS) < SHORTCUT_DOOR_RADIUS:
 		if GameManager.has_item("Evan", RustyKeyItem.id) or GameManager.has_item("Ethan", RustyKeyItem.id):
@@ -397,6 +423,11 @@ func _process(delta: float) -> void:
 		# Reveal dark loot boxes the first time the lantern is held.
 		if not _dark_revealed and lit:
 			_reveal_dark_boxes()
+		# Fanny's bottle: reveal the moment BOTH conditions are first met.
+		if not _fanny_revealed and lit and _rubble_cleared:
+			_fanny_revealed = true
+			if is_instance_valid(_fanny_loot_box):
+				_fanny_loot_box.visible = true
 	if is_instance_valid(GameManager.active_player):
 		var active_pos: Vector2 = GameManager.active_player.global_position
 		camera.global_position = active_pos

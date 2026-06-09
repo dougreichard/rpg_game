@@ -269,7 +269,7 @@ static func make_level_tileset(base: Color, accent: Color) -> TileSet:
 # runtime with nearest-neighbor so they fill the game's 32×32 tile grid cleanly.
 # Cached after first call; all 132 atlas positions registered so any tile index
 # can be addressed as Vector2i(col, row) in set_cell().
-static var _kenney_ts: TileSet = null
+static var _kenney_ts: TileSet = null  # invalidate if use_texture_padding changes
 
 static func make_kenney_tileset() -> TileSet:
 	if _kenney_ts != null:
@@ -282,7 +282,7 @@ static func make_kenney_tileset() -> TileSet:
 	var src := TileSetAtlasSource.new()
 	src.texture = ImageTexture.create_from_image(img)
 	src.texture_region_size = Vector2i(32, 32)
-	src.use_texture_padding = true
+	src.use_texture_padding = false
 	for row: int in 11:
 		for col: int in 12:
 			src.create_tile(Vector2i(col, row))

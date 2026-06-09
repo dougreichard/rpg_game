@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="ItemData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/systems/item_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "fannys_bottle"
+display_name = "Fanny's Bottle"
+description = "A small dark bottle wrapped in cloth, wedged behind loose stones at the very end of the tunnel. Initials scratched into the base: F.B. Someone hid this here deliberately. It smells faintly of lavender and something you can't quite place."
+icon_color = Color(0.42, 0.18, 0.62, 1)
+owner_character = ""
+is_junk = false
