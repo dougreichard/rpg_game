@@ -74,7 +74,9 @@ func _ready() -> void:
 	hitbox.monitoring = false
 	hurtbox.hit.connect(_on_hurtbox_hit)
 	if sprite.sprite_frames == null:
-		sprite.sprite_frames = PlaceholderArt.make_enemy_frames(data.sprite_color, data.enemy_name, data.is_stocky)
+		var loaded: SpriteFrames = SpriteLoader.try_load_enemy(data.enemy_name)
+		sprite.sprite_frames = loaded if loaded != null \
+			else PlaceholderArt.make_enemy_frames(data.sprite_color, data.enemy_name, data.is_stocky)
 	sprite.play("walk")
 	GameManager.noise_emitted.connect(_on_noise_emitted)
 	GameManager.enemies_calmed.connect(_on_enemies_calmed)
@@ -336,10 +338,10 @@ func _set_state(new_state: State) -> void:
 	match _state:
 		State.PATROL:        sprite.play("walk")
 		State.INVESTIGATE:   sprite.play("walk")
-		State.CHASE:         sprite.play("walk")
+		State.CHASE:         sprite.play("chase")
 		State.WINDUP:        sprite.play("windup")
 		State.STRIKE:        sprite.play("attack")
-		State.RECOVER:       sprite.play("walk")
+		State.RECOVER:       sprite.play("recover")
 		State.HIT:           sprite.play("hurt")
 		State.AOE_TELEGRAPH: sprite.play("windup")
 		State.AOE_SLAM:      sprite.play("attack")

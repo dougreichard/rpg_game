@@ -6,16 +6,32 @@ static func make_player_frames(color: Color, character_name: String = "") -> Spr
 	frames.remove_animation("default")
 	var skin := color.lightened(0.25)
 	var limb := color.darkened(0.2)
-	_add(frames, "idle",   [_humanoid(skin, color, limb, Color.WHITE, 0, character_name)])
-	_add(frames, "walk",   [_humanoid(skin, color, limb, Color.WHITE, 0, character_name),
-							_humanoid(skin, color, limb, Color.WHITE, 1, character_name),
-							_humanoid(skin, color, limb, Color.WHITE, 0, character_name),
-							_humanoid(skin, color, limb, Color.WHITE, 2, character_name)])
-	_add(frames, "attack", [_humanoid(skin, color.lightened(0.45), limb, Color.WHITE, 0, character_name, true),
-							_humanoid(skin, color.lightened(0.45), limb, Color.WHITE, 2, character_name, true)])
-	_add(frames, "dash",   [_humanoid(skin, color.lightened(0.2), limb, Color.WHITE, 0, character_name)])
-	_add(frames, "hurt",   [_humanoid(skin, Color(1.0, 0.3, 0.3), Color(0.8, 0.2, 0.2), Color.WHITE, 0, character_name)])
-	_add(frames, "down",   [_humanoid(color.darkened(0.4), color.darkened(0.55), color.darkened(0.55), Color.TRANSPARENT, 0, character_name)])
+	var idle_f: Array  = [_humanoid(skin, color, limb, Color.WHITE, 0, character_name)]
+	var walk_f: Array  = [_humanoid(skin, color, limb, Color.WHITE, 0, character_name),
+						   _humanoid(skin, color, limb, Color.WHITE, 1, character_name),
+						   _humanoid(skin, color, limb, Color.WHITE, 0, character_name),
+						   _humanoid(skin, color, limb, Color.WHITE, 2, character_name)]
+	var atk_f: Array   = [_humanoid(skin, color.lightened(0.45), limb, Color.WHITE, 0, character_name, true),
+						   _humanoid(skin, color.lightened(0.45), limb, Color.WHITE, 2, character_name, true)]
+	var hurt_f: Array  = [_humanoid(skin, Color(1.0, 0.3, 0.3), Color(0.8, 0.2, 0.2), Color.WHITE, 0, character_name)]
+	var down_f: Array  = [_humanoid(color.darkened(0.4), color.darkened(0.55), color.darkened(0.55), Color.TRANSPARENT, 0, character_name)]
+	_add(frames, "idle",         idle_f)
+	_add(frames, "walk",         walk_f)
+	# Directional aliases — same frames; real sprites will have distinct rows.
+	_add(frames, "walk_down",    walk_f)
+	_add(frames, "walk_up",      walk_f)
+	_add(frames, "walk_right",   walk_f)
+	_add(frames, "run_down",     walk_f)
+	_add(frames, "run_up",       walk_f)
+	_add(frames, "run_right",    walk_f)
+	_add(frames, "attack",       atk_f)
+	_add(frames, "special",      atk_f)
+	_add(frames, "dash",         idle_f)
+	_add(frames, "hurt",         hurt_f)
+	_add(frames, "down",         down_f)
+	_add(frames, "revive",       idle_f)
+	_add(frames, "interact",     idle_f)
+	_add(frames, "doorway",      walk_f)
 	return frames
 
 static func make_enemy_frames(color: Color, enemy_name: String = "", stocky: bool = false) -> SpriteFrames:
@@ -24,10 +40,17 @@ static func make_enemy_frames(color: Color, enemy_name: String = "", stocky: boo
 	var limb := color.darkened(0.25)
 	var windup := Color(1.0, 0.65, 0.0)
 	var e_name: String = enemy_name if not enemy_name.is_empty() else ("Grunt" if stocky else "Runner")
-	_add(frames, "walk",   [_enemy_type(color, limb, e_name, 0), _enemy_type(color, limb, e_name, 1)])
-	_add(frames, "windup", [_enemy_type(windup, windup.darkened(0.3), e_name, 0)])
-	_add(frames, "attack", [_enemy_type(color.lightened(0.5), limb.lightened(0.3), e_name, 0)])
-	_add(frames, "hurt",   [_enemy_type(Color(1.0, 0.3, 0.3), Color(0.7, 0.15, 0.15), e_name, 0)])
+	var walk_f: Array  = [_enemy_type(color, limb, e_name, 0), _enemy_type(color, limb, e_name, 1)]
+	var atk_f: Array   = [_enemy_type(color.lightened(0.5), limb.lightened(0.3), e_name, 0)]
+	var hurt_f: Array  = [_enemy_type(Color(1.0, 0.3, 0.3), Color(0.7, 0.15, 0.15), e_name, 0)]
+	_add(frames, "walk",    walk_f)
+	_add(frames, "chase",   walk_f)   # distinct row in real sheets; alias here
+	_add(frames, "windup",  [_enemy_type(windup, windup.darkened(0.3), e_name, 0)])
+	_add(frames, "attack",  atk_f)
+	_add(frames, "recover", walk_f)   # distinct row in real sheets; alias here
+	_add(frames, "hurt",    hurt_f)
+	_add(frames, "death",   hurt_f)   # distinct row in real sheets; alias here
+	_add(frames, "alert",   walk_f)   # distinct row in real sheets; alias here
 	return frames
 
 static func _add(frames: SpriteFrames, anim: String, textures: Array) -> void:

@@ -66,7 +66,9 @@ func _ready() -> void:
 	hurtbox.hit.connect(_on_hurtbox_hit)
 	hitbox.hit_landed.connect(register_hit_landed)
 	if sprite.sprite_frames == null:
-		sprite.sprite_frames = PlaceholderArt.make_player_frames(data.sprite_color, data.character_name)
+		var loaded: SpriteFrames = SpriteLoader.try_load_player(data.character_name)
+		sprite.sprite_frames = loaded if loaded != null \
+			else PlaceholderArt.make_player_frames(data.sprite_color, data.character_name)
 	sprite.play("idle")
 
 func _physics_process(delta: float) -> void:
@@ -108,6 +110,7 @@ func _tick_walk(delta: float) -> void:
 		return
 	facing = move.normalized()
 	sprite.flip_h = facing.x < 0.0
+	_play_directional("walk")
 	velocity = Vector2(facing.x * data.move_speed, facing.y * data.move_speed * 0.6)
 	move_and_slide()
 	if Input.is_action_just_pressed(action_prefix + "attack"):
@@ -163,11 +166,26 @@ func _set_state(new_state: State) -> void:
 	_state = new_state
 	match _state:
 		State.IDLE:   sprite.play("idle")
-		State.WALK:   sprite.play("walk")
+		State.WALK:   _play_directional("walk")
 		State.ATTACK: sprite.play("attack")
 		State.DASH:   sprite.play("dash")
 		State.HURT:   sprite.play("hurt")
 		State.DOWN:   sprite.play("down")
+
+# Picks walk_down / walk_up / walk_right (or run_*) based on facing.
+# Flipping for left-facing is handled by sprite.flip_h in _tick_walk.
+# Falls back to `base` if the directional variant is not in the sheet
+# (e.g. PlaceholderArt fallback which only has "walk" / "run").
+func _play_directional(base: String) -> void:
+	var anim: String
+	if abs(facing.y) > abs(facing.x):
+		anim = (base + "_down") if facing.y > 0.0 else (base + "_up")
+	else:
+		anim = base + "_right"
+	if not sprite.sprite_frames.has_animation(anim):
+		anim = base
+	if sprite.animation != anim:
+		sprite.play(anim)
 
 func _use_special() -> void:
 	Audio.play("special")
