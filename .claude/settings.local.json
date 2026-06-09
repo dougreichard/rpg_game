@@ -71,7 +71,8 @@
       "Bash(sips -z 640 1920 /tmp/screenshots/chars2.png --out /tmp/screenshots/chars2_big.png)",
       "Bash(python3)",
       "Bash(sips --cropToHeightWidth 90 80 --cropOffset 490 750 /tmp/screenshots/full2.png --out /tmp/screenshots/quinn_tight.png)",
-      "Bash(sips -z 630 560 /tmp/screenshots/quinn_tight.png --out /tmp/screenshots/quinn_7x.png)"
+      "Bash(sips -z 630 560 /tmp/screenshots/quinn_tight.png --out /tmp/screenshots/quinn_7x.png)",
+      "Bash('/Users/dougreichard/Library/Application Support/Steam/steamapps/common/Godot Engine/Godot.app/Contents/MacOS/Godot' --headless --path . -s addons/gut/gut_cmdln.gd -gdir=res://tests/unit -gexit)"
     ],
     "additionalDirectories": [
       "/tmp",

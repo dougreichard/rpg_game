@@ -288,31 +288,29 @@ static func make_level_tileset(base: Color, accent: Color) -> TileSet:
 	tile_set.add_source(source, 0)
 	return tile_set
 
-# Kenney Tiny Dungeon tileset (CC0) — source tiles are 16×16; upscaled 2× at
-# runtime with nearest-neighbor so they fill the game's 32×32 tile grid cleanly.
-# Cached after first call; all 132 atlas positions registered so any tile index
-# can be addressed as Vector2i(col, row) in set_cell().
-static var _kenney_ts: TileSet = null  # invalidate if use_texture_padding changes
+# Hunkle Bunkle custom tileset — 8 terrain rows × 12 variants at 16×16 px source,
+# upscaled 2× to 32×32 at runtime. Single shared instance; address tiles as
+# Vector2i(col, terrain_row) in set_cell().
+# Terrain rows: 0=STONE  1=WORKSHOP  2=WOOD  3=OUTDOOR  4=TUNNEL  5=DOCK  6=CARPET  7=CYBER
+static var _hb_ts: TileSet = null
 
-static func make_kenney_tileset() -> TileSet:
-	if _kenney_ts != null:
-		return _kenney_ts
-	# Load the original 192×176 image and scale 2× with nearest-neighbor so
-	# every 16×16 source tile becomes a crisp 32×32 pixel-art tile.
-	var base: Texture2D = load("res://assets/art/tiles/kenney_tiny_dungeon_packed.png")
+static func make_hb_tileset() -> TileSet:
+	if _hb_ts != null:
+		return _hb_ts
+	var base: Texture2D = load("res://assets/art/tiles/hb_tiles.png")
 	var img: Image = base.get_image()
 	img.resize(img.get_width() * 2, img.get_height() * 2, Image.INTERPOLATE_NEAREST)
 	var src := TileSetAtlasSource.new()
 	src.texture = ImageTexture.create_from_image(img)
 	src.texture_region_size = Vector2i(32, 32)
 	src.use_texture_padding = false
-	for row: int in 11:
+	for row: int in 8:
 		for col: int in 12:
 			src.create_tile(Vector2i(col, row))
 	var ts := TileSet.new()
 	ts.tile_size = Vector2i(32, 32)
 	ts.add_source(src, 0)
-	_kenney_ts = ts
+	_hb_ts = ts
 	return ts
 
 # Generic prop/gate texture: a beveled panel with an outer black frame.

@@ -303,8 +303,35 @@ detailed home elsewhere:
   (`set_physics_process` pause, real-time timer)
 - **Title screen** (`scenes/ui/TitleScreen.tscn`) — programmatic UI, blink
   animation, transitions to OverworldMap
-- **Overworld map** (`scenes/overworld/OverworldMap.tscn`) — all 13 locations
-  drawn via `Node2D._draw()`, unlock chain, cursor navigation, info panel
+- **Overworld map** (`scenes/overworld/OverworldMap.tscn`,
+  `scripts/overworld/overworld_map.gd`) — *(rebuilt to match the 13 location
+  interiors — see `locations/00_overworld_map.md` for the design doc)* a 40x19
+  `TileMap` (`PlaceholderArt.make_hb_tileset()`, same atlas as every level) with
+  three layers: grass (layer 0, OUTDOOR row with sparse-tuft variety), roads
+  (layer 1, orthogonal L-shaped routes between each `CONNECTIONS` pair's door
+  tile via `_paint_road()`), and buildings (layer 2, each location's footprint
+  painted with its own terrain row from the `LOCS` table — roads running under
+  a building are simply covered, no avoidance logic needed). Each building gets
+  a `StaticBody2D`/`RectangleShape2D` collider sized to its footprint
+  (`_build_building_colliders()`), with a clear "door" tile one row below for
+  entry. The unlock chain, lock-overlay tint, and per-location `_draw_icon()`
+  flourishes (gear, arch, dumbbell, etc.) are unchanged. **Cursor-based
+  selection is gone**: the active/standby duo (first two of
+  `GameManager.unlocked_characters`, via `overworld_player.gd` — `Mode.ACTIVE`
+  driven by `move_*`, `Mode.FOLLOW` trailing the active character, same
+  teleport-if-too-far rule as in-level standbys) walks the town from a spawn
+  beside Pipe Organ Works; `swap` toggles which is active/follow, exactly as in
+  a level. A handful of `town_npc.gd` wanderers (no `class_name`, same
+  preload()+untyped-var pattern as `HidingSpot`/`LootBox`) amble around a home
+  point on open grass for atmosphere. Walking the active character within
+  `INTERACT_RADIUS` of a building's door tile shows that location's name/status
+  in the info panel (locked/unlocked/completed, mirroring the old cursor info
+  panel) and `ui_accept`/`attack` calls `_launch()` for it — refused with a
+  "locked" message if its `requires` location isn't yet completed. Verified via
+  a temp-autoload functional check (3 TileMap layers populated correctly,
+  13 colliders, road/building tile spot-checks, duo spawn + swap, NPC wander,
+  proximity detection for completed/unlocked/locked locations) plus a headless
+  boot check and GUT 16/16.
 - **Full game flow**: TitleScreen → OverworldMap → Level → (on clear) →
   OverworldMap
 - **DuoPanel swap-preview UI** (`scripts/ui/duo_panel.gd`, child of `HUD.tscn`)

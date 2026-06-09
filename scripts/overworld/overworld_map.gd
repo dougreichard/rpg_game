@@ -1,83 +1,125 @@
 extends Node2D
 
+# Overworld map — see locations/00_overworld_map.md for the full design doc.
+# A 40x19 tile grid (1280x608px, matching the playable area above the UI
+# band) rendered with the shared PlaceholderArt.make_hb_tileset() across
+# three TileMap layers: grass, roads, buildings. The active/standby duo
+# walks the town with overworld_player.gd; a few town_npc.gd wanderers add
+# life. Walking up to a building's door tile and pressing interact launches
+# that location (replacing the old cursor-based selection).
+
+const TILE: int = 32
+const GRID_COLS: int = 40
+const GRID_ROWS: int = 19
+const INTERACT_RADIUS: float = 48.0
+
+const PlayerScript: Script = preload("res://scripts/overworld/overworld_player.gd")
+const NpcScript: Script = preload("res://scripts/overworld/town_npc.gd")
+
+const CHAR_DATA: Dictionary = {
+	"Quinn": preload("res://data/characters/quinn.tres"),
+	"Erin": preload("res://data/characters/erin.tres"),
+	"Evan": preload("res://data/characters/evan.tres"),
+	"Ben": preload("res://data/characters/ben.tres"),
+	"Ethan": preload("res://data/characters/ethan.tres"),
+}
+
+# Terrain rows in PlaceholderArt.make_hb_tileset() (8 rows x 12 cols, 32x32)
+const T_STONE: int = 0
+const T_WORKSHOP: int = 1
+const T_WOOD: int = 2
+const T_OUTDOOR: int = 3
+const T_TUNNEL: int = 4
+const T_DOCK: int = 5
+const T_CARPET: int = 6
+const T_CYBER: int = 7
+
+const GRASS_TILE: Vector2i = Vector2i(4, T_OUTDOOR)
+const GRASS_ACCENT_TILE: Vector2i = Vector2i(2, T_OUTDOOR)
+const GRASS_ACCENT_PERIOD: int = 5
+const ROAD_TILE: Vector2i = Vector2i(0, T_STONE)
+# zip_line / the_drop share the OUTDOOR row with grass — use distinct columns
+# so their building footprints read as built structures, not more lawn.
+const OUTDOOR_BUILDING_TILES: Array = [Vector2i(5, T_OUTDOOR), Vector2i(8, T_OUTDOOR)]
+
 const LOCS: Array = [
 	{
 		"id": "pipe_organ_works", "name": "Bellows & Sons Pipe Organ Works",
 		"short": "Organ\nWorks", "scene": "res://scenes/levels/PipeOrganWorks.tscn",
-		"pos": Vector2(165, 450), "requires": "", "icon": "gear",
-		"duo": ["Quinn", "Erin"],
+		"anchor": Vector2i(3, 15), "size": Vector2i(4, 3), "terrain_row": T_WORKSHOP,
+		"requires": "", "icon": "gear", "duo": ["Quinn", "Erin"],
 	},
 	{
 		"id": "old_parish_church", "name": "The Old Parish Church",
 		"short": "Parish\nChurch", "scene": "res://scenes/levels/OldParishChurch.tscn",
-		"pos": Vector2(325, 375), "requires": "pipe_organ_works", "icon": "arch",
-		"duo": ["Quinn", "Erin"],
+		"anchor": Vector2i(9, 12), "size": Vector2i(4, 3), "terrain_row": T_STONE,
+		"requires": "pipe_organ_works", "icon": "arch", "duo": ["Quinn", "Erin"],
 	},
 	{
 		"id": "iron_strings_gym", "name": "Iron & Strings Gym",
 		"short": "Gym", "scene": "res://scenes/levels/IronStringsGym.tscn",
-		"pos": Vector2(490, 340), "requires": "old_parish_church", "icon": "dumbbell",
-		"duo": ["Quinn", "Evan"],
+		"anchor": Vector2i(15, 11), "size": Vector2i(4, 3), "terrain_row": T_WORKSHOP,
+		"requires": "old_parish_church", "icon": "dumbbell", "duo": ["Quinn", "Evan"],
 	},
 	{
 		"id": "recording_studio", "name": "The Recording Studio",
 		"short": "Studio", "scene": "res://scenes/levels/RecordingStudio.tscn",
-		"pos": Vector2(665, 375), "requires": "iron_strings_gym", "icon": "note",
-		"duo": ["Quinn", "Ben"],
+		"anchor": Vector2i(21, 12), "size": Vector2i(4, 3), "terrain_row": T_WOOD,
+		"requires": "iron_strings_gym", "icon": "note", "duo": ["Quinn", "Ben"],
 	},
 	{
 		"id": "clocktower", "name": "The Clocktower",
 		"short": "Clock-\ntower", "scene": "res://scenes/levels/Clocktower.tscn",
-		"pos": Vector2(595, 205), "requires": "recording_studio", "icon": "clock",
-		"duo": ["Quinn", "Ben"],
+		"anchor": Vector2i(19, 4), "size": Vector2i(3, 4), "terrain_row": T_STONE,
+		"requires": "recording_studio", "icon": "clock", "duo": ["Quinn", "Ben"],
 	},
 	{
 		"id": "harbor_docks", "name": "The Harbor & Docks",
 		"short": "Harbor\n& Docks", "scene": "res://scenes/levels/HarborDocks.tscn",
-		"pos": Vector2(900, 470), "requires": "recording_studio", "icon": "anchor",
-		"duo": ["Quinn", "Evan"],
+		"anchor": Vector2i(27, 14), "size": Vector2i(5, 3), "terrain_row": T_DOCK,
+		"requires": "recording_studio", "icon": "anchor", "duo": ["Quinn", "Evan"],
 	},
 	{
 		"id": "library", "name": "The Public Library & Archive",
 		"short": "Library", "scene": "res://scenes/levels/LibraryArchive.tscn",
-		"pos": Vector2(455, 200), "requires": "recording_studio", "icon": "book",
-		"duo": ["Erin", "Ethan"],
+		"anchor": Vector2i(12, 4), "size": Vector2i(4, 3), "terrain_row": T_STONE,
+		"requires": "recording_studio", "icon": "book", "duo": ["Erin", "Ethan"],
 	},
 	{
 		"id": "carnival", "name": "The Carnival & Fairground",
 		"short": "Carnival", "scene": "res://scenes/levels/Carnival.tscn",
-		"pos": Vector2(840, 225), "requires": "recording_studio", "icon": "star",
-		"duo": ["Quinn", "Erin"],
+		"anchor": Vector2i(25, 6), "size": Vector2i(5, 4), "terrain_row": T_WOOD,
+		"requires": "recording_studio", "icon": "star", "duo": ["Quinn", "Erin"],
 	},
 	{
 		"id": "underground", "name": "The Underground Tunnels",
 		"short": "Tunnels", "scene": "res://scenes/levels/UndergroundTunnels.tscn",
-		"pos": Vector2(630, 490), "requires": "recording_studio", "icon": "tunnel",
-		"duo": ["Evan", "Ethan"],
+		"anchor": Vector2i(20, 15), "size": Vector2i(4, 3), "terrain_row": T_TUNNEL,
+		"requires": "recording_studio", "icon": "tunnel", "duo": ["Evan", "Ethan"],
 	},
 	{
 		"id": "zip_line", "name": "Zip Line Park",
 		"short": "Zip Line\nPark", "scene": "res://scenes/levels/ZipLinePark.tscn",
-		"pos": Vector2(975, 330), "requires": "recording_studio", "icon": "zipline",
-		"duo": ["Ethan", "Ben"],
+		"anchor": Vector2i(30, 8), "size": Vector2i(4, 3), "terrain_row": T_OUTDOOR,
+		"requires": "recording_studio", "icon": "zipline", "duo": ["Ethan", "Ben"],
 	},
 	{
 		"id": "vr_room", "name": "VR Escape Room",
 		"short": "VR Room", "scene": "res://scenes/levels/VrEscapeRoom.tscn",
-		"pos": Vector2(795, 155), "requires": "recording_studio", "icon": "hex",
-		"duo": ["Quinn", "Ethan"],
+		"anchor": Vector2i(24, 3), "size": Vector2i(4, 3), "terrain_row": T_CYBER,
+		"requires": "recording_studio", "icon": "hex", "duo": ["Quinn", "Ethan"],
 	},
 	{
 		"id": "the_drop", "name": "The Drop",
 		"short": "The\nDrop", "scene": "res://scenes/levels/TheDrop.tscn",
-		"pos": Vector2(385, 155), "requires": "vr_room", "icon": "chevron",
-		"duo": ["Evan", "Ethan"],
+		"anchor": Vector2i(8, 3), "size": Vector2i(4, 3), "terrain_row": T_OUTDOOR,
+		"requires": "vr_room", "icon": "chevron", "duo": ["Evan", "Ethan"],
 	},
 	{
 		"id": "grand_marquee", "name": "The Grand Marquee Cinema",
 		"short": "Grand\nMarquee", "scene": "res://scenes/levels/GrandMarqueeCinema.tscn",
-		"pos": Vector2(595, 100), "requires": "the_drop", "icon": "film",
-		"duo": ["Quinn", "Ben"],
+		"anchor": Vector2i(17, 0), "size": Vector2i(5, 4), "terrain_row": T_CARPET,
+		"requires": "the_drop", "icon": "film", "duo": ["Quinn", "Ben"],
 	},
 ]
 
@@ -98,20 +140,144 @@ const CONNECTIONS: Array = [
 	["vr_room", "grand_marquee"],
 ]
 
+# A few cosmetic townsfolk, homed on open grass between the buildings
+# (verified clear of every footprint in LOCS above).
+const NPC_HOME_TILES: Array = [Vector2i(5, 10), Vector2i(16, 5), Vector2i(28, 11), Vector2i(14, 16)]
+const NPC_COLORS: Array = [
+	Color(0.60, 0.55, 0.48), Color(0.50, 0.58, 0.55),
+	Color(0.58, 0.50, 0.60), Color(0.62, 0.60, 0.45),
+]
+
 var _id_to_idx: Dictionary = {}
-var _cursor_idx: int = 0
-var _pulse_time: float = 0.0
+var _loc_pos: Array = []   # Vector2 pixel center per location, parallel to LOCS
+var _loc_door: Array = []  # Vector2i door tile per location, parallel to LOCS
+var _nearby_idx: int = -1
 var _font: Font
 var _name_label: Label
 var _status_label: Label
+var _active_player = null
+var _standby_player = null
+
 
 func _ready() -> void:
 	Audio.play_music("overworld")
 	_font = ThemeDB.fallback_font
 	for i in LOCS.size():
-		_id_to_idx[LOCS[i]["id"]] = i
+		var loc: Dictionary = LOCS[i]
+		_id_to_idx[loc["id"]] = i
+		var anchor: Vector2i = loc["anchor"]
+		var size: Vector2i = loc["size"]
+		_loc_pos.append(Vector2((anchor.x + size.x / 2.0) * TILE, (anchor.y + size.y / 2.0) * TILE))
+		_loc_door.append(Vector2i(anchor.x + size.x / 2, mini(anchor.y + size.y, GRID_ROWS - 1)))
+	_build_floor()
+	_build_building_colliders()
 	_build_ui()
+	_spawn_duo()
+	_spawn_npcs()
 	_update_info()
+
+# Three-layer TileMap: grass (0), roads (1), buildings (2) — all drawn from
+# the shared PlaceholderArt.make_hb_tileset() atlas, source_id 0.
+func _build_floor() -> void:
+	var tile_map := TileMap.new()
+	tile_map.name = "Floor"
+	tile_map.tile_set = PlaceholderArt.make_hb_tileset()
+	add_child(tile_map)
+	move_child(tile_map, 0)
+	tile_map.add_layer(1)
+	tile_map.add_layer(2)
+
+	for x: int in GRID_COLS:
+		for y: int in GRID_ROWS:
+			var tile: Vector2i = GRASS_ACCENT_TILE if (x * 7 + y * 13) % GRASS_ACCENT_PERIOD == 0 else GRASS_TILE
+			tile_map.set_cell(0, Vector2i(x, y), 0, tile)
+
+	for conn: Array in CONNECTIONS:
+		var ai: int = _id_to_idx.get(conn[0], -1)
+		var bi: int = _id_to_idx.get(conn[1], -1)
+		if ai < 0 or bi < 0:
+			continue
+		_paint_road(tile_map, _loc_door[ai], _loc_door[bi])
+
+	for i: int in LOCS.size():
+		_paint_building(tile_map, i)
+
+# Orthogonal L-shaped road: horizontal run from a along a's row to b's column,
+# then vertical run down/up b's column to b. Roads sit on layer 1, buildings
+# on layer 2 painted afterward, so any road tile under a building footprint
+# is simply covered — no routing-around-buildings logic needed.
+func _paint_road(tile_map: TileMap, a: Vector2i, b: Vector2i) -> void:
+	var x: int = a.x
+	while true:
+		tile_map.set_cell(1, Vector2i(x, a.y), 0, ROAD_TILE)
+		if x == b.x:
+			break
+		x += signi(b.x - a.x)
+	var y: int = a.y
+	while true:
+		tile_map.set_cell(1, Vector2i(b.x, y), 0, ROAD_TILE)
+		if y == b.y:
+			break
+		y += signi(b.y - a.y)
+
+func _paint_building(tile_map: TileMap, idx: int) -> void:
+	var loc: Dictionary = LOCS[idx]
+	var anchor: Vector2i = loc["anchor"]
+	var size: Vector2i = loc["size"]
+	var tiles: Array = OUTDOOR_BUILDING_TILES if loc["terrain_row"] == T_OUTDOOR else \
+			[Vector2i(0, loc["terrain_row"]), Vector2i(1, loc["terrain_row"])]
+	for x: int in range(anchor.x, anchor.x + size.x):
+		for y: int in range(anchor.y, anchor.y + size.y):
+			var tile: Vector2i = tiles[1] if (x + y) % 3 == 0 else tiles[0]
+			tile_map.set_cell(2, Vector2i(x, y), 0, tile)
+
+# One StaticBody2D per building footprint so the duo can't walk through them —
+# the door tile (one row below the footprint) is left clear for entry.
+func _build_building_colliders() -> void:
+	var holder := Node2D.new()
+	holder.name = "BuildingColliders"
+	add_child(holder)
+	for loc: Dictionary in LOCS:
+		var anchor: Vector2i = loc["anchor"]
+		var size: Vector2i = loc["size"]
+		var body := StaticBody2D.new()
+		var shape := CollisionShape2D.new()
+		var rect := RectangleShape2D.new()
+		rect.size = Vector2(size.x * TILE, size.y * TILE)
+		shape.shape = rect
+		body.add_child(shape)
+		body.position = Vector2((anchor.x + size.x / 2.0) * TILE, (anchor.y + size.y / 2.0) * TILE)
+		holder.add_child(body)
+
+# Active character is player-controlled (move_* inputs); standby follows a
+# short distance behind, mirroring the in-level standby's "follow / hold"
+# behavior. The pair is the first two of GameManager.unlocked_characters —
+# the same roster order a fresh level would default to.
+func _spawn_duo() -> void:
+	var names: Array = GameManager.unlocked_characters
+	var active_name: String = String(names[0]).capitalize() if names.size() > 0 else "Quinn"
+	var standby_name: String = String(names[1]).capitalize() if names.size() > 1 else "Erin"
+	var spawn: Vector2 = _loc_pos[_id_to_idx["pipe_organ_works"]] + Vector2(0.0, TILE * 1.5)
+
+	_active_player = PlayerScript.new()
+	add_child(_active_player)
+	_active_player.setup(PlaceholderArt.make_player_frames(CHAR_DATA[active_name].sprite_color, active_name))
+	_active_player.global_position = spawn
+	_active_player.mode = PlayerScript.Mode.ACTIVE
+
+	_standby_player = PlayerScript.new()
+	add_child(_standby_player)
+	_standby_player.setup(PlaceholderArt.make_player_frames(CHAR_DATA[standby_name].sprite_color, standby_name))
+	_standby_player.global_position = spawn + Vector2(-TILE, 0.0)
+	_standby_player.mode = PlayerScript.Mode.FOLLOW
+
+func _spawn_npcs() -> void:
+	for i: int in NPC_HOME_TILES.size():
+		var npc = NpcScript.new()
+		add_child(npc)
+		var color: Color = NPC_COLORS[i % NPC_COLORS.size()]
+		var home: Vector2 = Vector2(NPC_HOME_TILES[i]) * TILE + Vector2(TILE / 2.0, TILE / 2.0)
+		npc.setup(PlaceholderArt.make_player_frames(color, ""), home)
 
 func _build_ui() -> void:
 	var canvas := CanvasLayer.new()
@@ -128,7 +294,7 @@ func _build_ui() -> void:
 	canvas.add_child(title)
 
 	var map_sub := Label.new()
-	map_sub.text = "WORLD MAP"
+	map_sub.text = "TOWN"
 	map_sub.position = Vector2(0.0, 50.0)
 	map_sub.size = Vector2(1280.0, 26.0)
 	map_sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -159,7 +325,7 @@ func _build_ui() -> void:
 	canvas.add_child(_status_label)
 
 	var hint := Label.new()
-	hint.text = "Navigate: A / D  |  Arrow Keys  |  D-Pad / Left Stick          Play: Enter / F  |  A Button"
+	hint.text = "Move: WASD / Arrows / Stick     Swap duo: Tab     Enter a building: Enter / F"
 	hint.position = Vector2(0.0, 690.0)
 	hint.size = Vector2(1280.0, 24.0)
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -168,12 +334,17 @@ func _build_ui() -> void:
 	canvas.add_child(hint)
 
 func _update_info() -> void:
-	var loc: Dictionary = LOCS[_cursor_idx]
+	if _nearby_idx < 0:
+		_name_label.text = "Hunkle Bunkle"
+		_name_label.add_theme_color_override("font_color", Color(0.6, 0.6, 0.65))
+		_status_label.text = "Walk up to a building and press Enter / F to enter"
+		return
+	var loc: Dictionary = LOCS[_nearby_idx]
 	_name_label.text = loc["name"]
-	if _is_completed(_cursor_idx):
-		_status_label.text = "Completed"
+	if _is_completed(_nearby_idx):
+		_status_label.text = "Completed   --   Press Enter to revisit"
 		_name_label.add_theme_color_override("font_color", Color(0.35, 1.0, 0.45))
-	elif _is_unlocked(_cursor_idx):
+	elif _is_unlocked(_nearby_idx):
 		if loc["scene"] == "":
 			_status_label.text = "Unlocked   --   Coming soon"
 		else:
@@ -193,25 +364,47 @@ func _is_unlocked(idx: int) -> bool:
 func _is_completed(idx: int) -> bool:
 	return LOCS[idx]["id"] in GameManager.completed_locations
 
-func _process(delta: float) -> void:
-	_pulse_time += delta
-	var moved: bool = false
-	if Input.is_action_just_pressed("ui_left") or Input.is_action_just_pressed("move_left"):
-		_cursor_idx = (_cursor_idx - 1 + LOCS.size()) % LOCS.size()
-		moved = true
-	elif Input.is_action_just_pressed("ui_right") or Input.is_action_just_pressed("move_right"):
-		_cursor_idx = (_cursor_idx + 1) % LOCS.size()
-		moved = true
-	if moved:
-		Audio.play("ui_move")
-		_update_info()
+func _process(_delta: float) -> void:
+	if is_instance_valid(_standby_player):
+		_standby_player.follow_target = _active_player.global_position - _active_player.facing * (TILE * 0.9)
+	_update_nearby()
+	if Input.is_action_just_pressed("swap"):
+		_swap_duo()
 	if Input.is_action_just_pressed("ui_accept") or Input.is_action_just_pressed("attack"):
 		_launch()
 	queue_redraw()
 
+# Whichever building's door tile the active character is standing closest to
+# (within INTERACT_RADIUS) becomes the "nearby" location — replaces the old
+# cursor-based selection entirely.
+func _update_nearby() -> void:
+	var prev: int = _nearby_idx
+	_nearby_idx = -1
+	var best_dist: float = INTERACT_RADIUS
+	for i: int in LOCS.size():
+		var door_px: Vector2 = Vector2(_loc_door[i]) * TILE + Vector2(TILE / 2.0, TILE / 2.0)
+		var d: float = _active_player.global_position.distance_to(door_px)
+		if d < best_dist:
+			best_dist = d
+			_nearby_idx = i
+	if _nearby_idx != prev:
+		_update_info()
+
+func _swap_duo() -> void:
+	if not is_instance_valid(_standby_player):
+		return
+	var tmp = _active_player
+	_active_player = _standby_player
+	_standby_player = tmp
+	_active_player.mode = PlayerScript.Mode.ACTIVE
+	_standby_player.mode = PlayerScript.Mode.FOLLOW
+	Audio.play("swap")
+
 func _launch() -> void:
-	var loc: Dictionary = LOCS[_cursor_idx]
-	if not _is_unlocked(_cursor_idx):
+	if _nearby_idx < 0:
+		return
+	var loc: Dictionary = LOCS[_nearby_idx]
+	if not _is_unlocked(_nearby_idx):
 		_status_label.text = "Locked   --   Complete the previous location first"
 		return
 	if loc["scene"] == "":
@@ -224,186 +417,44 @@ func _launch() -> void:
 	GameManager.preferred_active = loc.get("duo", [""])[0]
 	TransitionManager.change_scene("res://scenes/ui/CharacterSelect.tscn")
 
-const ROAD_SIDE: float = 26.0
-const ROAD_MAIN: float = 18.0
-
-func _building_half(icon: String) -> Vector2:
-	match icon:
-		"film":     return Vector2(50, 36)
-		"clock":    return Vector2(20, 36)
-		"anchor":   return Vector2(44, 26)
-		"star":     return Vector2(44, 30)
-		"arch":     return Vector2(34, 28)
-		"gear":     return Vector2(38, 24)
-		"book":     return Vector2(38, 26)
-		"chevron":  return Vector2(38, 24)
-		"zipline":  return Vector2(40, 26)
-		_:          return Vector2(32, 22)
-
-func _building_color(icon: String, unlocked: bool, completed: bool) -> Color:
-	if not unlocked:
-		return Color(0.20, 0.19, 0.22)
-	var c: Color
-	match icon:
-		"gear":     c = Color(0.54, 0.36, 0.24)
-		"arch":     c = Color(0.86, 0.84, 0.74)
-		"dumbbell": c = Color(0.40, 0.46, 0.54)
-		"note":     c = Color(0.22, 0.19, 0.28)
-		"clock":    c = Color(0.72, 0.62, 0.42)
-		"anchor":   c = Color(0.30, 0.35, 0.42)
-		"book":     c = Color(0.72, 0.64, 0.50)
-		"star":     c = Color(0.70, 0.22, 0.40)
-		"tunnel":   c = Color(0.20, 0.20, 0.22)
-		"zipline":  c = Color(0.24, 0.52, 0.22)
-		"hex":      c = Color(0.18, 0.34, 0.62)
-		"chevron":  c = Color(0.55, 0.50, 0.36)
-		"film":     c = Color(0.58, 0.16, 0.20)
-		_:          c = Color(0.45, 0.45, 0.50)
-	return c.lightened(0.12) if completed else c
-
 func _draw() -> void:
-	# Grass base with mow stripes
-	draw_rect(Rect2(0.0, 0.0, 1280.0, 608.0), Color(0.30, 0.48, 0.20))
-	for row: int in range(0, 608, 64):
-		draw_rect(Rect2(0.0, float(row), 1280.0, 32.0), Color(0.27, 0.44, 0.18))
-
-	# Park zones
-	draw_rect(Rect2(770.0, 155.0, 140.0, 115.0), Color(0.25, 0.50, 0.18))  # Carnival
-	draw_rect(Rect2(932.0, 272.0, 125.0, 110.0), Color(0.25, 0.50, 0.18))  # Zip Line
-	draw_rect(Rect2(90.0,  390.0, 105.0, 100.0), Color(0.25, 0.50, 0.18))  # Organ Works
-
-	# Harbor water
-	draw_rect(Rect2(958.0, 426.0, 290.0, 155.0), Color(0.13, 0.28, 0.55))
-	for wi: int in 5:
-		draw_line(Vector2(968.0, 444.0 + wi * 24.0),
-				  Vector2(1220.0, 452.0 + wi * 24.0),
-				  Color(0.22, 0.44, 0.72), 2.0, true)
-
-	# Road network — sidewalk then surface then centerline
-	for conn: Array in CONNECTIONS:
-		var ai: int = _id_to_idx.get(conn[0], -1)
-		var bi: int = _id_to_idx.get(conn[1], -1)
-		if ai < 0 or bi < 0:
-			continue
-		var a: Vector2 = LOCS[ai]["pos"]
-		var b: Vector2 = LOCS[bi]["pos"]
-		draw_line(a, b, Color(0.56, 0.53, 0.48), ROAD_SIDE, false)
-		draw_line(a, b, Color(0.27, 0.26, 0.25), ROAD_MAIN, false)
-		_draw_dashed_line(a, b, Color(0.88, 0.80, 0.10), 2.0, 8.0, 8.0)
-	# Intersection fill at each location to clean up road-end seams
-	for loc: Dictionary in LOCS:
-		draw_circle(loc["pos"], ROAD_MAIN * 0.5 + 1.0, Color(0.27, 0.26, 0.25))
-
-	_draw_trees()
-
 	for i: int in LOCS.size():
-		_draw_building(i)
+		_draw_building_overlay(i)
+	if _nearby_idx >= 0:
+		_draw_interact_ring(_nearby_idx)
 
-	_draw_cursor_ring()
-
-func _draw_building(idx: int) -> void:
+func _draw_building_overlay(idx: int) -> void:
 	var loc: Dictionary = LOCS[idx]
-	var p: Vector2 = loc["pos"]
+	var p: Vector2 = _loc_pos[idx]
 	var icon: String = loc.get("icon", "")
-	var h: Vector2 = _building_half(icon)
 	var unlocked: bool = _is_unlocked(idx)
 	var completed: bool = _is_completed(idx)
-	var wall: Color = _building_color(icon, unlocked, completed)
-	var roof: Color = wall.darkened(0.30)
-	var rect := Rect2(p.x - h.x, p.y - h.y, h.x * 2.0, h.y * 2.0)
+	var anchor: Vector2i = loc["anchor"]
+	var size: Vector2i = loc["size"]
+	var rect := Rect2(Vector2(anchor) * TILE, Vector2(size) * TILE)
 
-	# Drop shadow
-	draw_rect(Rect2(rect.position + Vector2(3.0, 3.0), rect.size), Color(0.0, 0.0, 0.0, 0.35))
-	# Wall fill
-	draw_rect(rect, wall)
-	# Roof strip
-	draw_rect(Rect2(rect.position, Vector2(rect.size.x, 7.0)), roof)
-	# Outline
-	draw_rect(rect, roof, false, 1.5)
+	if not unlocked:
+		draw_rect(rect, Color(0.0, 0.0, 0.0, 0.55))
+	elif completed:
+		draw_rect(rect, Color(0.3, 1.0, 0.4, 0.10))
 
-	# Windows (skip for locked / very dark buildings)
-	if unlocked:
-		var win: Color = Color(0.85, 0.90, 1.0, 0.70)
-		if icon == "note":   win = Color(0.65, 0.40, 0.90, 0.70)
-		if icon == "tunnel": win = Color(0.80, 0.55, 0.20, 0.60)
-		var wy: float = rect.position.y + 10.0
-		var wh: float = rect.size.y - 14.0
-		if wh > 5.0:
-			for wi: int in 2:
-				var wx: float = rect.position.x + 6.0 + wi * (h.x - 3.0)
-				draw_rect(Rect2(wx, wy, h.x - 8.0, wh), win)
-
-	# Icon
-	var icon_col: Color = Color(1.0, 1.0, 1.0, 0.85) if unlocked else Color(0.38, 0.36, 0.40)
+	var icon_col: Color = Color(1.0, 1.0, 1.0, 0.9) if unlocked else Color(0.5, 0.5, 0.55, 0.6)
 	_draw_icon(icon, p, icon_col)
 
-	# Label below building
 	var label_col: Color
-	if idx == _cursor_idx:     label_col = Color(1.0, 1.0, 1.0)
-	elif completed:            label_col = Color(0.40, 1.0, 0.50)
-	elif unlocked:             label_col = Color(0.90, 0.88, 0.82)
-	else:                      label_col = Color(0.38, 0.38, 0.42)
+	if idx == _nearby_idx:  label_col = Color(1.0, 1.0, 0.4)
+	elif completed:         label_col = Color(0.40, 1.0, 0.50)
+	elif unlocked:          label_col = Color(0.90, 0.88, 0.82)
+	else:                   label_col = Color(0.42, 0.42, 0.46)
 	var lines: PackedStringArray = loc["short"].split("\n")
 	for li: int in lines.size():
-		draw_string(_font, Vector2(p.x - 48.0, p.y + h.y + 8.0 + li * 12.0),
+		draw_string(_font, Vector2(p.x - 48.0, rect.end.y + 12.0 + li * 12.0),
 				lines[li], HORIZONTAL_ALIGNMENT_CENTER, 96.0, 9, label_col)
 
-func _draw_cursor_ring() -> void:
-	var p: Vector2 = LOCS[_cursor_idx]["pos"]
-	var h: Vector2 = _building_half(LOCS[_cursor_idx].get("icon", ""))
-	var pulse: float = sin(_pulse_time * 5.0) * 1.5
-	var rx: float = p.x - h.x - 5.0 - pulse
-	var ry: float = p.y - h.y - 5.0 - pulse
-	var rw: float = h.x * 2.0 + 10.0 + pulse * 2.0
-	var rh: float = h.y * 2.0 + 10.0 + pulse * 2.0
-	var ring := Rect2(rx, ry, rw, rh)
-	draw_rect(ring, Color(1.0, 0.92, 0.30), false, 2.0)
-	# Corner bracket ticks
-	var tick: float = 7.0
-	var corners: Array = [ring.position,
-		ring.position + Vector2(ring.size.x, 0.0),
-		ring.position + Vector2(0.0, ring.size.y),
-		ring.end]
-	for j: int in corners.size():
-		var cx: float = corners[j].x
-		var cy: float = corners[j].y
-		var dx: float = 1.0 if j in [0, 2] else -1.0
-		var dy: float = 1.0 if j in [0, 1] else -1.0
-		draw_line(corners[j], Vector2(cx + dx * tick, cy), Color(1.0, 0.92, 0.30), 2.0)
-		draw_line(corners[j], Vector2(cx, cy + dy * tick), Color(1.0, 0.92, 0.30), 2.0)
-
-func _draw_dashed_line(a: Vector2, b: Vector2, color: Color, width: float, dash: float, gap: float) -> void:
-	var dir: Vector2 = (b - a).normalized()
-	var dist: float = a.distance_to(b)
-	var pos: float = 0.0
-	while pos < dist:
-		var end: float = minf(pos + dash, dist)
-		draw_line(a + dir * pos, a + dir * end, color, width, true)
-		pos += dash + gap
-
-func _draw_trees() -> void:
-	var rng := RandomNumberGenerator.new()
-	rng.seed = 54321
-	var zones: Array[Rect2] = [
-		Rect2(780.0, 162.0, 120.0, 100.0),  # Carnival park
-		Rect2(942.0, 280.0, 108.0, 96.0),   # Zip Line Park
-		Rect2(96.0,  396.0,  90.0, 90.0),   # Organ Works area
-		Rect2(220.0,  60.0,  90.0, 70.0),   # Upper left scatter
-		Rect2(1060.0, 90.0, 110.0, 90.0),   # Upper right scatter
-		Rect2(1080.0,210.0,  80.0, 80.0),   # Right mid scatter
-		Rect2(80.0,  530.0, 160.0, 60.0),   # Bottom fringe
-	]
-	for zone: Rect2 in zones:
-		var count: int = int(zone.get_area() / 380.0)
-		for _t: int in count:
-			var tx: float = zone.position.x + rng.randf_range(0.0, zone.size.x)
-			var ty: float = zone.position.y + rng.randf_range(0.0, zone.size.y)
-			_draw_tree(Vector2(tx, ty))
-
-func _draw_tree(p: Vector2) -> void:
-	draw_circle(p, 8.0, Color(0.10, 0.26, 0.10))
-	draw_circle(p + Vector2(-1.0, -2.0), 7.0, Color(0.18, 0.48, 0.14))
-	draw_circle(p + Vector2(2.0, -3.0), 5.0, Color(0.26, 0.58, 0.20))
+func _draw_interact_ring(idx: int) -> void:
+	var door_px: Vector2 = Vector2(_loc_door[idx]) * TILE + Vector2(TILE / 2.0, TILE / 2.0)
+	var pulse: float = (sin(Time.get_ticks_msec() / 200.0) + 1.0) * 0.5
+	draw_arc(door_px, 14.0 + pulse * 3.0, 0.0, TAU, 20, Color(1.0, 0.92, 0.30), 2.0, true)
 
 func _draw_icon(kind: String, p: Vector2, color: Color) -> void:
 	match kind:

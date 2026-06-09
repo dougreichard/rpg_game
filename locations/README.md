@@ -11,6 +11,7 @@ functions one at a time, then place them in the scene script.
 
 | # | File | Script | Entering Duo |
 |---|------|--------|--------------|
+| 0 | [00_overworld_map.md](00_overworld_map.md) | `overworld_map.gd` | n/a (hub) |
 | 1 | [01_pipe_organ_works.md](01_pipe_organ_works.md) | `pipe_organ_works.gd` | Quinn + Erin |
 | 2 | [02_old_parish_church.md](02_old_parish_church.md) | `old_parish_church.gd` | Quinn + Erin |
 | 3 | [03_iron_strings_gym.md](03_iron_strings_gym.md) | `iron_strings_gym.gd` | Quinn + Evan |

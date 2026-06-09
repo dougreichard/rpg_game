@@ -173,13 +173,13 @@ func _build_walls() -> void:
 func _build_floor() -> void:
 	var tile_map := TileMap.new()
 	tile_map.name = "Floor"
-	tile_map.tile_set = PlaceholderArt.make_level_tileset(FLOOR_BASE_COLOR, FLOOR_ACCENT_COLOR)
+	tile_map.tile_set = PlaceholderArt.make_hb_tileset()
 	add_child(tile_map)
 	move_child(tile_map, 0)
 	tile_map.position = Vector2(CAMERA_LIMIT_LEFT, CAMERA_LIMIT_TOP)
 	for x: int in range(FLOOR_COLS):
 		for y: int in range(FLOOR_ROWS):
-			var variant: Vector2i = FLOOR_TILE_ACCENT if (x + y) % FLOOR_ACCENT_PERIOD == 0 else FLOOR_TILE_PLAIN
+			var variant: Vector2i = Vector2i(1, 7) if (x + y) % FLOOR_ACCENT_PERIOD == 0 else Vector2i(0, 7)
 			tile_map.set_cell(0, Vector2i(x, y), 0, variant)
 	_paint_stage_floor("FloorStageAlpha", STAGE_ALPHA_BASE_COLOR, STAGE_ALPHA_ACCENT_COLOR, STAGE_ALPHA_COL_RANGE, STAGE_ALPHA_ROW_RANGE)
 	_paint_stage_floor("FloorStageBeta", STAGE_BETA_BASE_COLOR, STAGE_BETA_ACCENT_COLOR, STAGE_BETA_COL_RANGE, STAGE_BETA_ROW_RANGE)
