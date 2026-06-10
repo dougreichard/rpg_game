@@ -274,6 +274,7 @@ func _process(_delta: float) -> void:
 		clear_label.visible = true
 	if _cleared and Input.is_action_just_pressed("ui_accept"):
 		GameManager.complete_location(LOCATION_ID)
+		GameManager.last_location_id = LOCATION_ID
 		TransitionManager.change_scene("res://scenes/overworld/OverworldMap.tscn")
 
 # Doorway-triggered exit  --  distinct from the clear-overlay's "press ENTER"
@@ -284,6 +285,7 @@ func _process(_delta: float) -> void:
 func _exit_to_overworld() -> void:
 	if _cleared:
 		GameManager.complete_location(LOCATION_ID)
+	GameManager.last_location_id = LOCATION_ID
 	TransitionManager.change_scene("res://scenes/overworld/OverworldMap.tscn")
 
 func _update_hint() -> void:

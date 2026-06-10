@@ -195,17 +195,22 @@ GUT 16/16 unaffected.
 | Film reel | Second item needed (with the projector repair) to restore the Grand Marquee projector |
 | Animal treat | Reduces an animal companion's summon cooldown for the rest of the level |
 | Bies charm | Adds +10% starting Bies Mode charge at the start of a level |
+| Fanny's Bottle | Quest item for Fanny (see "NPC dialog & quests") — a keepsake Doug gave her "the day before he disappeared" |
 
 ### Junk / lore collectibles (look load-bearing, do nothing — comedic red herrings)
 | Item | Why it seems useful | What it actually does |
 |------|---------------------|------------------------|
-| Skeleton key | Looks like it should open every locked door | Opens nothing — a note reads "Doesn't fit anything I've tried. — D." |
+| Skeleton key | Looks like it should open every locked door | Opens nothing — a note reads "Doesn't fit anything I've tried. — D." Quest item for Moira (see "NPC dialog & quests") — the "D." is Uncle Doug's mark |
 | Ticket stub (torn) | Looks like one of the five Grand Marquee tickets | From an unrelated theater; not part of the set |
-| Arcade token | Embossed with a defunct arcade's logo | No arcade machine exists anywhere (yet — a planted rumor for a future location) |
+| Arcade token | Embossed with a defunct arcade's logo | No arcade machine exists anywhere (yet — a planted rumor for a future location). Quest item for Reggie — custom-cast for an unfinished cabinet he and Doug built together |
 | Tangled headphone cable | Ethan's sure it'll patch into Recording Studio/VR gear | Just a cable — he keeps it "for parts" |
 | Faded treasure map | Covered in confident X's and arrows | Landmarks don't match anything in the game — a forgery or doodle |
-| Bent spoon | Quinn insists "it has a story" | Pure character color, zero function |
+| Bent spoon | Quinn insists "it has a story" | Quest item for Gus — it's Doug's old pipe-tapping spoon |
 | Lucky rabbit's foot keychain | Evan assumes it'll help him talk to William & Mary | Does nothing for the rabbits — or anyone |
+| Embroidered handkerchief | Looks like a keepsake, monogrammed "D" | Quest item for Penny — Doug's handkerchief, lost mid-mend; turning it in grants the Hand-Stitched Patch |
+| Hand-Stitched Patch | A little gear-shaped patch | Pure character color — Penny's thank-you for the handkerchief, zero function |
+| Brass compass | Engraved "To O., so you always find your way home" | Quest item for Otis — a gift from Doug; turning it in grants the Sailor's Knot Bracelet |
+| Sailor's Knot Bracelet | Looks like a good-luck charm | Pure character color — Otis's thank-you for the compass, zero function |
 
 Visually distinguish the two categories in the `InventoryPanel` (e.g. a dimmer
 icon border for junk items) so players can tell "this might matter later" from
@@ -1572,6 +1577,58 @@ correctly after a swap, so no per-mode logic is needed:
   overlay, and `_retry_level()` reloads the current scene
   (`get_tree().reload_current_scene()`) and restores `time_scale = 1.0` on
   `ui_accept`.
+
+### NPC dialog & quests *(implemented)*
+The overworld town previously had four purely cosmetic `town_npc.gd`
+wanderers. They're now **quest-givers** with a paged dialog UI — see
+`npc_dialog/` for the full per-NPC writeups (dialog scripts, quest items,
+and how each ties into the Uncle Doug mystery).
+
+- **`DialogBoxScript`** (`scripts/ui/dialog_box.gd`, `extends Control`, no
+  `class_name` — same preload()+untyped-var convention as `LootBox`/
+  `Doorway`/`HidingSpot`, see [[feedback-godot-technical]]) is a single
+  programmatic `_draw()` panel (`PANEL_RECT`, above the bottom info panel)
+  instantiated once by `overworld_map.gd._build_ui()`. `open(npc_name,
+  portrait_color, lines: PackedStringArray)` starts a conversation;
+  `advance()` shows the next page or closes (emitting `closed`) after the
+  last; `is_open()` lets `overworld_map.gd._process()` route input.
+- **`town_npc.gd`** gained `npc_name: String` and `quest_id: String` fields,
+  set via an extended `setup(frames, home, name, quest)`.
+- **`NPC_DATA`** (`overworld_map.gd`) replaces the old `NPC_HOME_TILES`/
+  `NPC_COLORS` arrays — one dict per townsperson (`home`, `name`, `color`,
+  `quest_id`) for **Gus, Moira, Reggie, Fanny, Penny, and Otis**, all homed on
+  open grass clear of every building footprint.
+- **`QUESTS`** (`overworld_map.gd`) is keyed by `quest_id`, each entry holding
+  `want_item`, `give_item` (`""` = none), and four `PackedStringArray`s of
+  dialog pages: `intro`, `reminder`, `turn_in`, `after`.
+- **Quest state machine**, `not_started → active → complete`, persisted as a
+  string at `GameManager.level_progress["town"]["quest_<id>"]` via the
+  existing `get_level_flag`/`set_level_flag(TOWN_ID, ...)` pair (`TOWN_ID =
+  "town"`) — the same pattern every level uses for its own progress, just
+  under a town-wide pseudo-location id. `_talk_to_npc(idx)`:
+  - `not_started` → shows `intro`, flips to `active`.
+  - `active` → `_find_item_holder(want_item)` scans
+    `GameManager.unlocked_characters` for `has_item`; if found, shows
+    `turn_in`, `consume_item`s the want-item, `grant_item`s the give-item (if
+    any), and flips to `complete`. Otherwise shows `reminder`.
+  - `complete` → always shows `after`.
+- **Input/UI wiring**: `_update_nearby_npc()` (mirrors `_update_nearby()` for
+  building doors, `NPC_INTERACT_RADIUS = 40px`) drives a cyan pulsing
+  ring + name-label prompt (`_draw_npc_prompt`, distinct color from the
+  building doors' yellow `_draw_interact_ring`). `ui_accept`/`attack` in
+  `_process()` now branches: dialog open → `_dialog_box.advance()`; else
+  NPC nearby → `_talk_to_npc()`; else → `_launch()` (enter building). `swap`
+  is suppressed while the dialog is open so players can't swap mid-conversation.
+- **Items**: four new `.tres` resources (`embroidered_handkerchief`,
+  `stitched_patch`, `brass_compass`, `sailors_knot_bracelet`) follow the
+  `ItemData` convention exactly. `embroidered_handkerchief` (Old Parish
+  Church, `(480, 460)`) and `brass_compass` (Harbor & Docks, `(600, 350)`)
+  are placed as loot boxes the same way every other collectible is; the two
+  reward items are never placed as loot boxes — they're granted directly via
+  `GameManager.grant_item()` on turn-in. Gus/Moira/Reggie/Fanny's quest items
+  (`bent_spoon`, `skeleton_key`, `arcade_token`, `fannys_bottle`) were already
+  placed as loot boxes in earlier passes — no level changes needed for those
+  four.
 
 ### Save / Unlock system *(implemented)*
 `save_manager.gd` (autoload `SaveManager`, loaded before `GameManager` so it's

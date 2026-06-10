@@ -278,6 +278,7 @@ func _exit_to_overworld() -> void:
 		GameManager.complete_location(LOCATION_ID)
 		TransitionManager.change_scene("res://scenes/ui/ResultScreen.tscn")
 	else:
+		GameManager.last_location_id = LOCATION_ID
 		TransitionManager.change_scene("res://scenes/overworld/OverworldMap.tscn")
 
 func _update_hint() -> void:

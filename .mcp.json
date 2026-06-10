@@ -6,6 +6,10 @@
       "env": {
         "GODOT_PATH": "/Users/dougreichard/Library/Application Support/Steam/steamapps/common/Godot Engine/Godot.app/Contents/MacOS/Godot"
       }
+    },
+    "pixellab": {
+      "command": "npx",
+      "args": ["-y", "pixellab-mcp", "--secret=${PIXELLAB_SECRET}"]
     }
   }
 }

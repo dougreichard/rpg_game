@@ -9,12 +9,25 @@ extends Node2D
 # that location (replacing the old cursor-based selection).
 
 const TILE: int = 32
-const GRID_COLS: int = 40
-const GRID_ROWS: int = 19
+# The original 40x19 layout (LOCS anchors, NPC homes, etc.) is placed inside a
+# larger padded grid via MAP_OFFSET, giving room for the camera to scroll
+# around the town like a level's camera-follow instead of showing it all at
+# once.
+const MAP_OFFSET: Vector2i = Vector2i(10, 8)
+const GRID_COLS: int = 40 + MAP_OFFSET.x * 2
+const GRID_ROWS: int = 19 + MAP_OFFSET.y * 2
 const INTERACT_RADIUS: float = 48.0
+const NPC_INTERACT_RADIUS: float = 40.0
+const CAMERA_SMOOTHING_SPEED: float = 5.0
+
+# Quest state lives in GameManager.level_progress under this pseudo-location
+# id, the same get/set_level_flag pattern every level uses for its own
+# progress -- see CLAUDE.md "NPC dialog & quests".
+const TOWN_ID: String = "town"
 
 const PlayerScript: Script = preload("res://scripts/overworld/overworld_player.gd")
 const NpcScript: Script = preload("res://scripts/overworld/town_npc.gd")
+const DialogBoxScript: Script = preload("res://scripts/ui/dialog_box.gd")
 
 const CHAR_DATA: Dictionary = {
 	"Quinn": preload("res://data/characters/quinn.tres"),
@@ -140,23 +153,178 @@ const CONNECTIONS: Array = [
 	["vr_room", "grand_marquee"],
 ]
 
-# A few cosmetic townsfolk, homed on open grass between the buildings
-# (verified clear of every footprint in LOCS above).
-const NPC_HOME_TILES: Array = [Vector2i(5, 10), Vector2i(16, 5), Vector2i(28, 11), Vector2i(14, 16)]
-const NPC_COLORS: Array = [
-	Color(0.60, 0.55, 0.48), Color(0.50, 0.58, 0.55),
-	Color(0.58, 0.50, 0.60), Color(0.62, 0.60, 0.45),
+# Townsfolk, homed on open grass between the buildings (verified clear of
+# every footprint in LOCS above). Each is a quest-giver -- see CLAUDE.md
+# "NPC dialog & quests" -- whose `quest_id` indexes into QUESTS below.
+const NPC_DATA: Array = [
+	{"home": Vector2i(5, 10), "name": "Gus", "color": Color(0.60, 0.55, 0.48), "quest_id": "gus"},
+	{"home": Vector2i(16, 5), "name": "Moira", "color": Color(0.50, 0.58, 0.55), "quest_id": "moira"},
+	{"home": Vector2i(28, 11), "name": "Reggie", "color": Color(0.58, 0.50, 0.60), "quest_id": "reggie"},
+	{"home": Vector2i(14, 16), "name": "Fanny", "color": Color(0.62, 0.60, 0.45), "quest_id": "fanny"},
+	{"home": Vector2i(8, 13), "name": "Penny", "color": Color(0.85, 0.55, 0.65), "quest_id": "penny"},
+	{"home": Vector2i(33, 15), "name": "Otis", "color": Color(0.40, 0.55, 0.70), "quest_id": "otis"},
 ]
+
+# Each quest asks for one (already-placed, mostly pre-existing junk/lore)
+# collectible and -- if `give_item` is non-empty -- hands back a reward item
+# on turn-in. Dialog is paged (each entry is shown until the player presses
+# ui_accept again); use "\n" for a second line. State machine per quest is
+# not_started -> active -> complete, persisted via
+# GameManager.get/set_level_flag(TOWN_ID, "quest_<id>", ...).
+const QUESTS: Dictionary = {
+	"gus": {
+		"want_item": "bent_spoon", "give_item": "",
+		"intro": [
+			"Gus: Eh? Oh, it's you two.\nHaven't seen strangers 'round\nhere in ages.",
+			"Gus: Say -- you didn't happen\nto find an old bent spoon in\nthat organ workshop, did you?",
+			"Gus: Silly thing to miss, I\nknow. But it was Doug's -- he\nused it to tap pipe seams.",
+			"Gus: If you spot it, bring it\nback. I'd consider it a favor\nbetween friends.",
+		],
+		"reminder": [
+			"Gus: Still keeping an eye out\nfor that bent spoon? Workshop\nfloor, probably, knowing Doug.",
+		],
+		"turn_in": [
+			"Gus: That's it! That's Doug's\nold tapping spoon, bent from\nyears of pipe work.",
+			"Gus: Thank you. He'd want\nsomeone to have it who'd\nremember what it was for.",
+			"Gus: He used to say a pipe\norgan's only as good as the\nhands that tune it. Miss him.",
+		],
+		"after": [
+			"Gus: Thanks again for that\nspoon. Keeps me thinking\nabout the old days.",
+		],
+	},
+	"moira": {
+		"want_item": "skeleton_key", "give_item": "",
+		"intro": [
+			"Moira: Oh! Hello, dears. You\nlook like you're headed\nsomewhere important.",
+			"Moira: If your travels take you\nthrough the Library, keep an\neye out for an old skeleton key.",
+			"Moira: I lent it to a friend ages\nago and never got it back.\nHaven't seen him since, either.",
+			"Moira: Funny -- it doesn't open\nanything anymore. But I'd\nlike it back all the same.",
+		],
+		"reminder": [
+			"Moira: Still no luck with that\nskeleton key? It's probably\ngathering dust in the stacks.",
+		],
+		"turn_in": [
+			"Moira: You found it! Oh, thank\nyou. I haven't held this in\nyears.",
+			"Moira: ...Wait. Look here, on\nthe bow -- someone scratched a\nlittle 'D.' into the metal.",
+			"Moira: That's HIS mark. The\nfriend I lent it to. Doug\nalways signed his things.",
+			"Moira: He must have tried every\nlock in town with this before\ngiving up. Typical Doug.",
+			"Moira: Wherever he's gotten to,\nI hope he's all right. Thank\nyou for bringing this home.",
+		],
+		"after": [
+			"Moira: Strange, holding Doug's\nkey again. Made me think of\nhim all day. Thank you.",
+		],
+	},
+	"reggie": {
+		"want_item": "arcade_token", "give_item": "",
+		"intro": [
+			"Reggie: Hey hey! You two look\nlike you can keep a secret.",
+			"Reggie: Years back, me and a\nfella named Doug built an\narcade cabinet from scratch.",
+			"Reggie: Never finished it -- Doug\nhad the only token that fit\nthe coin slot. Custom-made!",
+			"Reggie: If you ever spot a token\nwith a logo that doesn't match\nANY arcade you know... that's it.",
+			"Reggie: Bring it here, would you?\nI think I finally know where\nthe cabinet's hiding.",
+		],
+		"reminder": [
+			"Reggie: Keep your eyes peeled\nfor that one-of-a-kind arcade\ntoken, yeah? You'll know it.",
+		],
+		"turn_in": [
+			"Reggie: THAT'S IT! That's Doug's\ntoken! I'd know that goofy\nlogo anywhere.",
+			"Reggie: He had it cast special,\nsaid 'so nobody else can ever\nplay MY high score.'",
+			"Reggie: With this, I bet I can\nget that old cabinet running\nagain. For old time's sake.",
+			"Reggie: ...And maybe, just maybe,\nit'll tell us something about\nwhere he went. Thanks, you two.",
+		],
+		"after": [
+			"Reggie: Still tinkering with that\ncabinet. One of these days,\nI'll get it humming again.",
+		],
+	},
+	"fanny": {
+		"want_item": "fannys_bottle", "give_item": "",
+		"intro": [
+			"Fanny: Oh, hello. You'll have to\nexcuse me -- I've been a bit\nout of sorts lately.",
+			"Fanny: I lost a little bottle of\nmine somewhere in those awful\ntunnels. F.B., it's marked.",
+			"Fanny: Lavender scent. My\nfavorite. I've looked\neverywhere I dare to go.",
+			"Fanny: If you're brave enough to\nsearch down there, I'd be so\ngrateful to have it back.",
+		],
+		"reminder": [
+			"Fanny: Still no sign of my\nlittle bottle? It's dark down\nthere -- you may need a light.",
+		],
+		"turn_in": [
+			"Fanny: You found it! Oh, thank\ngoodness. I thought I'd lost\nit for good.",
+			"Fanny: Doug gave me this, you\nknow. The day before he\ndisappeared.",
+			"Fanny: He said, 'Hang onto this,\nFanny -- something to remember\nme by, just in case.'",
+			"Fanny: I didn't think much of it\nat the time. Now I wonder if\nhe knew something was coming.",
+			"Fanny: Thank you for finding it.\nIt means more to me than you\ncould know.",
+		],
+		"after": [
+			"Fanny: I keep that bottle close\nnow. Thank you again for\nbringing it back to me.",
+		],
+	},
+	"penny": {
+		"want_item": "embroidered_handkerchief", "give_item": "stitched_patch",
+		"intro": [
+			"Penny: Hiya! You two look like\nyou get around. Mind doing me\na favor?",
+			"Penny: I was mending an old\nhandkerchief for a customer --\nan embroidered 'D,' very fancy.",
+			"Penny: I dropped it somewhere in\nthe Old Parish Church on my way\nto deliver it. So clumsy!",
+			"Penny: The customer was a sweet\nold fellow named Doug. Haven't\nseen him to apologize, even.",
+			"Penny: If you find it among the\npews, I'd be ever so grateful.\nI'll make it worth your while!",
+		],
+		"reminder": [
+			"Penny: Any luck with that\nhandkerchief? Should be\nsomewhere around the pews.",
+		],
+		"turn_in": [
+			"Penny: You found it! Oh, thank\nyou! I felt awful about losing\nMr. Doug's handkerchief.",
+			"Penny: Here -- I made this little\npatch for whoever found it. A\ngear, since Doug loved his tools.",
+			"Penny: Sew it on somewhere\nnobody will notice. It's small,\nbut it's something.",
+			"Penny: If you do see Doug around,\ntell him I'm sorry -- and that\nI'll mend it properly this time.",
+		],
+		"after": [
+			"Penny: Still hoping to track down\nMr. Doug and finish that\nmending properly. Thanks again.",
+		],
+	},
+	"otis": {
+		"want_item": "brass_compass", "give_item": "sailors_knot_bracelet",
+		"intro": [
+			"Otis: Well now, fresh faces!\nDon't get many of those down\nby the docks these days.",
+			"Otis: Say -- you wouldn't have\nspotted an old brass compass\nlying around the harbor, eh?",
+			"Otis: Lost it in all the cargo\nshuffle. Hasn't pointed north\nright in years, but it's mine.",
+			"Otis: Engraved on the back: 'To\nO.' -- that's me, Otis. Gift\nfrom an old friend.",
+			"Otis: Find it for me and I'll tie\nyou up a proper sailor's knot.\nGood luck charm, that.",
+		],
+		"reminder": [
+			"Otis: Still keeping an eye out\nfor my compass? Probably buried\nunder cargo somewhere.",
+		],
+		"turn_in": [
+			"Otis: Ha! There it is. Knew it\nhad to be down here\nsomewhere.",
+			"Otis: 'To O., so you always find\nyour way home.' Doug gave me\nthis, years back.",
+			"Otis: Funny thing to give a\nsailor whose home IS the docks.\nBut that was Doug.",
+			"Otis: Said everybody needs a way\nback, even if they don't know\nthey're lost yet.",
+			"Otis: Here -- a sailor's knot,\nlike I promised. Tie it on.\nMight bring you luck, too.",
+		],
+		"after": [
+			"Otis: That compass still doesn't\npoint north. But it points\nhome. Good enough for me.",
+		],
+	},
+}
 
 var _id_to_idx: Dictionary = {}
 var _loc_pos: Array = []   # Vector2 pixel center per location, parallel to LOCS
 var _loc_door: Array = []  # Vector2i door tile per location, parallel to LOCS
 var _nearby_idx: int = -1
+var _npcs: Array = []      # parallel to NPC_DATA
+var _nearby_npc_idx: int = -1
 var _font: Font
 var _name_label: Label
 var _status_label: Label
+var _dialog_box = null
 var _active_player = null
 var _standby_player = null
+
+@onready var camera: Camera2D = $Camera2D
+
+
+# LOCS anchors are authored against the original 40x19 layout; offset them
+# into the padded GRID_COLS x GRID_ROWS grid.
+func _anchor(loc: Dictionary) -> Vector2i:
+	return Vector2i(loc["anchor"]) + MAP_OFFSET
 
 
 func _ready() -> void:
@@ -165,16 +333,28 @@ func _ready() -> void:
 	for i in LOCS.size():
 		var loc: Dictionary = LOCS[i]
 		_id_to_idx[loc["id"]] = i
-		var anchor: Vector2i = loc["anchor"]
+		var anchor: Vector2i = _anchor(loc)
 		var size: Vector2i = loc["size"]
 		_loc_pos.append(Vector2((anchor.x + size.x / 2.0) * TILE, (anchor.y + size.y / 2.0) * TILE))
 		_loc_door.append(Vector2i(anchor.x + size.x / 2, mini(anchor.y + size.y, GRID_ROWS - 1)))
 	_build_floor()
 	_build_building_colliders()
 	_build_ui()
+	_setup_camera()
 	_spawn_duo()
 	_spawn_npcs()
 	_update_info()
+
+
+# Camera follows the active duo member within the full padded grid, the same
+# position_smoothing + limit_* pattern every level's _setup_camera() uses.
+func _setup_camera() -> void:
+	camera.position_smoothing_enabled = true
+	camera.position_smoothing_speed = CAMERA_SMOOTHING_SPEED
+	camera.limit_left = 0
+	camera.limit_top = 0
+	camera.limit_right = GRID_COLS * TILE
+	camera.limit_bottom = GRID_ROWS * TILE
 
 # Three-layer TileMap: grass (0), roads (1), buildings (2) — all drawn from
 # the shared PlaceholderArt.make_hb_tileset() atlas, source_id 0.
@@ -222,7 +402,7 @@ func _paint_road(tile_map: TileMap, a: Vector2i, b: Vector2i) -> void:
 
 func _paint_building(tile_map: TileMap, idx: int) -> void:
 	var loc: Dictionary = LOCS[idx]
-	var anchor: Vector2i = loc["anchor"]
+	var anchor: Vector2i = _anchor(loc)
 	var size: Vector2i = loc["size"]
 	var tiles: Array = OUTDOOR_BUILDING_TILES if loc["terrain_row"] == T_OUTDOOR else \
 			[Vector2i(0, loc["terrain_row"]), Vector2i(1, loc["terrain_row"])]
@@ -238,7 +418,7 @@ func _build_building_colliders() -> void:
 	holder.name = "BuildingColliders"
 	add_child(holder)
 	for loc: Dictionary in LOCS:
-		var anchor: Vector2i = loc["anchor"]
+		var anchor: Vector2i = _anchor(loc)
 		var size: Vector2i = loc["size"]
 		var body := StaticBody2D.new()
 		var shape := CollisionShape2D.new()
@@ -257,27 +437,41 @@ func _spawn_duo() -> void:
 	var names: Array = GameManager.unlocked_characters
 	var active_name: String = String(names[0]).capitalize() if names.size() > 0 else "Quinn"
 	var standby_name: String = String(names[1]).capitalize() if names.size() > 1 else "Erin"
-	var spawn: Vector2 = _loc_pos[_id_to_idx["pipe_organ_works"]] + Vector2(0.0, TILE * 1.5)
+	# Spawn at the door of whichever location the duo last left (set by that
+	# level's _exit_to_overworld), so re-entering the overworld picks up where
+	# they left off instead of always starting at Pipe Organ Works.
+	var spawn_idx: int = _id_to_idx.get(GameManager.last_location_id, _id_to_idx["pipe_organ_works"])
+	var spawn: Vector2 = Vector2(_loc_door[spawn_idx]) * TILE + Vector2(TILE / 2.0, TILE / 2.0)
 
 	_active_player = PlayerScript.new()
 	add_child(_active_player)
-	_active_player.setup(PlaceholderArt.make_player_frames(CHAR_DATA[active_name].sprite_color, active_name))
+	_active_player.setup(_load_player_frames(active_name))
 	_active_player.global_position = spawn
 	_active_player.mode = PlayerScript.Mode.ACTIVE
 
 	_standby_player = PlayerScript.new()
 	add_child(_standby_player)
-	_standby_player.setup(PlaceholderArt.make_player_frames(CHAR_DATA[standby_name].sprite_color, standby_name))
+	_standby_player.setup(_load_player_frames(standby_name))
 	_standby_player.global_position = spawn + Vector2(-TILE, 0.0)
 	_standby_player.mode = PlayerScript.Mode.FOLLOW
 
+# Same SpriteLoader-with-PlaceholderArt-fallback pattern as player.gd, so the
+# overworld duo matches the sprite sheets used in-level instead of always
+# falling back to placeholder art.
+func _load_player_frames(character_name: String) -> SpriteFrames:
+	var loaded: SpriteFrames = SpriteLoader.try_load_player(character_name)
+	if loaded != null:
+		return loaded
+	return PlaceholderArt.make_player_frames(CHAR_DATA[character_name].sprite_color, character_name)
+
 func _spawn_npcs() -> void:
-	for i: int in NPC_HOME_TILES.size():
+	for i: int in NPC_DATA.size():
+		var data: Dictionary = NPC_DATA[i]
 		var npc = NpcScript.new()
 		add_child(npc)
-		var color: Color = NPC_COLORS[i % NPC_COLORS.size()]
-		var home: Vector2 = Vector2(NPC_HOME_TILES[i]) * TILE + Vector2(TILE / 2.0, TILE / 2.0)
-		npc.setup(PlaceholderArt.make_player_frames(color, ""), home)
+		var home: Vector2 = Vector2(Vector2i(data["home"]) + MAP_OFFSET) * TILE + Vector2(TILE / 2.0, TILE / 2.0)
+		npc.setup(PlaceholderArt.make_player_frames(data["color"], ""), home, data["name"], data["quest_id"])
+		_npcs.append(npc)
 
 func _build_ui() -> void:
 	var canvas := CanvasLayer.new()
@@ -325,13 +519,16 @@ func _build_ui() -> void:
 	canvas.add_child(_status_label)
 
 	var hint := Label.new()
-	hint.text = "Move: WASD / Arrows / Stick     Swap duo: Tab     Enter a building: Enter / F"
+	hint.text = "Move: WASD / Arrows / Stick     Swap duo: Tab     Enter / Talk: Enter / F"
 	hint.position = Vector2(0.0, 690.0)
 	hint.size = Vector2(1280.0, 24.0)
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	hint.add_theme_font_size_override("font_size", 16)
 	hint.add_theme_color_override("font_color", Color(0.38, 0.38, 0.42))
 	canvas.add_child(hint)
+
+	_dialog_box = DialogBoxScript.new()
+	canvas.add_child(_dialog_box)
 
 func _update_info() -> void:
 	if _nearby_idx < 0:
@@ -367,11 +564,19 @@ func _is_completed(idx: int) -> bool:
 func _process(_delta: float) -> void:
 	if is_instance_valid(_standby_player):
 		_standby_player.follow_target = _active_player.global_position - _active_player.facing * (TILE * 0.9)
+	if is_instance_valid(_active_player):
+		camera.global_position = _active_player.global_position
 	_update_nearby()
-	if Input.is_action_just_pressed("swap"):
+	_update_nearby_npc()
+	if Input.is_action_just_pressed("swap") and not _dialog_box.is_open():
 		_swap_duo()
 	if Input.is_action_just_pressed("ui_accept") or Input.is_action_just_pressed("attack"):
-		_launch()
+		if _dialog_box.is_open():
+			_dialog_box.advance()
+		elif _nearby_npc_idx >= 0:
+			_talk_to_npc(_nearby_npc_idx)
+		else:
+			_launch()
 	queue_redraw()
 
 # Whichever building's door tile the active character is standing closest to
@@ -389,6 +594,59 @@ func _update_nearby() -> void:
 			_nearby_idx = i
 	if _nearby_idx != prev:
 		_update_info()
+
+# Whichever townsfolk the active character is standing closest to (within
+# NPC_INTERACT_RADIUS) becomes "nearby" -- mirrors _update_nearby() above for
+# building doors. Drawn as a pulsing ring + name prompt in _draw().
+func _update_nearby_npc() -> void:
+	_nearby_npc_idx = -1
+	var best_dist: float = NPC_INTERACT_RADIUS
+	for i: int in _npcs.size():
+		var d: float = _active_player.global_position.distance_to(_npcs[i].global_position)
+		if d < best_dist:
+			best_dist = d
+			_nearby_npc_idx = i
+
+# NPC dialog & quest state machine -- see CLAUDE.md "NPC dialog & quests".
+# not_started -> active (shows intro, quest now tracked) -> complete (turn-in
+# consumes want_item, grants give_item if any). Reminder shown while active
+# and the player hasn't found the item yet; after shown once complete.
+func _talk_to_npc(idx: int) -> void:
+	var npc = _npcs[idx]
+	var quest: Dictionary = QUESTS.get(npc.quest_id, {})
+	if quest.is_empty():
+		return
+	var flag_key: String = "quest_" + npc.quest_id
+	var state: String = GameManager.get_level_flag(TOWN_ID, flag_key, "not_started")
+	var lines: PackedStringArray
+	match state:
+		"complete":
+			lines = quest["after"]
+		"active":
+			var holder: String = _find_item_holder(quest["want_item"])
+			if holder != "":
+				GameManager.consume_item(holder, quest["want_item"])
+				if quest["give_item"] != "":
+					GameManager.grant_item(holder, quest["give_item"])
+				GameManager.set_level_flag(TOWN_ID, flag_key, "complete")
+				lines = quest["turn_in"]
+			else:
+				lines = quest["reminder"]
+		_:
+			GameManager.set_level_flag(TOWN_ID, flag_key, "active")
+			lines = quest["intro"]
+	Audio.play("ui_select")
+	_dialog_box.open(npc.npc_name, NPC_DATA[idx]["color"], lines)
+
+# Returns the lowercase name of the first unlocked character holding
+# `item_id`, or "" if none do -- mirrors GameManager.has_item's lowercase
+# inventory keys, so the result can be passed straight to consume_item/
+# grant_item.
+func _find_item_holder(item_id: String) -> String:
+	for character_name in GameManager.unlocked_characters:
+		if GameManager.has_item(character_name, item_id):
+			return character_name
+	return ""
 
 func _swap_duo() -> void:
 	if not is_instance_valid(_standby_player):
@@ -422,6 +680,8 @@ func _draw() -> void:
 		_draw_building_overlay(i)
 	if _nearby_idx >= 0:
 		_draw_interact_ring(_nearby_idx)
+	if _nearby_npc_idx >= 0:
+		_draw_npc_prompt(_nearby_npc_idx)
 
 func _draw_building_overlay(idx: int) -> void:
 	var loc: Dictionary = LOCS[idx]
@@ -429,7 +689,7 @@ func _draw_building_overlay(idx: int) -> void:
 	var icon: String = loc.get("icon", "")
 	var unlocked: bool = _is_unlocked(idx)
 	var completed: bool = _is_completed(idx)
-	var anchor: Vector2i = loc["anchor"]
+	var anchor: Vector2i = _anchor(loc)
 	var size: Vector2i = loc["size"]
 	var rect := Rect2(Vector2(anchor) * TILE, Vector2(size) * TILE)
 
@@ -455,6 +715,17 @@ func _draw_interact_ring(idx: int) -> void:
 	var door_px: Vector2 = Vector2(_loc_door[idx]) * TILE + Vector2(TILE / 2.0, TILE / 2.0)
 	var pulse: float = (sin(Time.get_ticks_msec() / 200.0) + 1.0) * 0.5
 	draw_arc(door_px, 14.0 + pulse * 3.0, 0.0, TAU, 20, Color(1.0, 0.92, 0.30), 2.0, true)
+
+# Pulsing ring + name label above a nearby NPC -- the same "press Enter/F"
+# affordance as _draw_interact_ring, distinguished by color so players learn
+# cyan = "talk" vs. yellow = "enter building".
+func _draw_npc_prompt(idx: int) -> void:
+	var npc = _npcs[idx]
+	var pos: Vector2 = npc.global_position
+	var pulse: float = (sin(Time.get_ticks_msec() / 200.0) + 1.0) * 0.5
+	draw_arc(pos, 14.0 + pulse * 3.0, 0.0, TAU, 20, Color(0.4, 0.95, 1.0), 2.0, true)
+	draw_string(_font, pos + Vector2(-40.0, -28.0), npc.npc_name,
+			HORIZONTAL_ALIGNMENT_CENTER, 80.0, 12, Color(0.4, 0.95, 1.0))
 
 func _draw_icon(kind: String, p: Vector2, color: Color) -> void:
 	match kind:

@@ -21,9 +21,14 @@ const ERIN_GATE_POS  := Vector2(700.0, 300.0)
 const LootBoxScript: Script = preload("res://scripts/systems/loot_box.gd")
 const TicketQuinnItem: ItemData = preload("res://data/items/ticket_quinn.tres")
 const FadedPhotoItem: ItemData = preload("res://data/items/faded_photograph.tres")
+# Penny (see npc_dialog/penny.md) sends the duo here looking for a
+# handkerchief she dropped among the pews -- a quest fetch-item, tucked in
+# alongside the location's other vestibule loot boxes.
+const HandkerchiefItem: ItemData = preload("res://data/items/embroidered_handkerchief.tres")
 const TICKET_LOOT_POS := Vector2(280.0, 520.0)
 const PHOTO_LOOT_POS  := Vector2(680.0, 520.0)
-const LOOT_FLAG_KEYS  := ["ticket_loot_open", "photo_loot_open"]
+const HANDKERCHIEF_LOOT_POS := Vector2(480.0, 460.0)
+const LOOT_FLAG_KEYS  := ["ticket_loot_open", "photo_loot_open", "handkerchief_loot_open"]
 
 # Doorway: the level's entrance/exit  --  see CLAUDE.md "Doorways, camera-follow
 # & multi-room levels". The duo spawns beside it in the vestibule; walking
@@ -203,6 +208,11 @@ func _create_loot_boxes() -> void:
 	add_child(photo_box)
 	_loot_boxes.append(photo_box)
 
+	var handkerchief_box = LootBoxScript.new()
+	handkerchief_box.setup(HandkerchiefItem, HANDKERCHIEF_LOOT_POS, GameManager.get_level_flag(LOCATION_ID, LOOT_FLAG_KEYS[2], false))
+	add_child(handkerchief_box)
+	_loot_boxes.append(handkerchief_box)
+
 func _create_doorway() -> void:
 	_doorway = DoorwayScript.new()
 	_doorway.setup(DOORWAY_POS)
@@ -244,6 +254,7 @@ func _process(_delta: float) -> void:
 	_update_hint()
 	if _quinn_done and _erin_done and Input.is_action_just_pressed("ui_accept"):
 		GameManager.complete_location(LOCATION_ID)
+		GameManager.last_location_id = LOCATION_ID
 		TransitionManager.change_scene("res://scenes/overworld/OverworldMap.tscn")
 
 # Doorway-triggered exit  --  distinct from the clear-overlay's "press ENTER"
@@ -253,6 +264,7 @@ func _process(_delta: float) -> void:
 func _exit_to_overworld() -> void:
 	if _quinn_done and _erin_done:
 		GameManager.complete_location(LOCATION_ID)
+	GameManager.last_location_id = LOCATION_ID
 	TransitionManager.change_scene("res://scenes/overworld/OverworldMap.tscn")
 
 func _update_hint() -> void:

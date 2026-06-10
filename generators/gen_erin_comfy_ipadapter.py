@@ -36,6 +36,7 @@ COMFY_URL  = "http://127.0.0.1:8188"
 ROOT       = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PIL_PATH   = os.path.join(ROOT, "assets", "art", "sprites", "erin.png")
 OUT_PATH   = PIL_PATH   # overwrite with the ComfyUI-enhanced version
+PLACEHOLDER_PATH = os.path.join(ROOT, "assets", "art", "sprites", "erin_placeholder.png")
 REF_PATH   = os.path.join(ROOT, "assets", "art", "sprites", "erin_reference.png")
 DEBUG_PATH = os.path.join(ROOT, "assets", "art", "sprites", "erin_debug_ip")
 
@@ -46,10 +47,10 @@ IPADAPTER_FILE = "ip-adapter-plus_sdxl_vit-h.safetensors"
 
 CHARACTER_SEED = 3891        # fixed for all per-frame img2img passes (matches gen_erin_comfy.py)
 REFERENCE_SEED = 9002        # fixed seed for the one identity-reference image
-DENOISE        = 0.60        # 0.5 = stick close to PIL; 0.7 = more creative
+DENOISE        = 0.72        # 0.5 = stick close to PIL; 0.7 = more creative
 LORA_STRENGTH  = 0.70
-IP_WEIGHT      = 0.6         # IP-Adapter identity strength
-IP_WEIGHT_TYPE = "linear"    # linear | style transfer | composition | ...
+IP_WEIGHT      = 0.75        # IP-Adapter identity strength
+IP_WEIGHT_TYPE = "style transfer"    # linear | style transfer | composition | ...
 STEPS          = 25
 CFG            = 7.0
 GEN_SIZE       = 1024        # SDXL native resolution
@@ -67,9 +68,13 @@ BASE_POS = (
 BASE_NEG = (
     "multiple characters, multiple poses, reference sheet, chart, grid, "
     "photo, 3d render, realistic, blurry, noisy, gradient, anti-aliasing, "
-    "colored background, shadow, hat, glasses, coat, trench coat, "
-    "male, boy, gun, sword, firearm, staff, cape, hood, robes, "
-    "extra limbs, deformed, text, watermark"
+    "colored background, gray background, grey background, tan background, "
+    "beige background, shadow, hat, glasses, coat, trench coat, "
+    "male, boy, gun, sword, firearm, staff, cape, hood, robes, fantasy costume, "
+    "extra limbs, deformed, text, watermark, "
+    "props, bag, box, furniture, extra objects, "
+    "second figure, duplicate character, two characters side by side, "
+    "silhouette, panel, frame, border, vignette"
 )
 FIRE = ", small orange flame at fingertips"
 REFERENCE_POSE = "standing still front view, neutral pose"
@@ -313,13 +318,21 @@ def result_to_sprite(result: Image.Image) -> Image.Image:
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
-def ensure_pil_sprite() -> Image.Image:
-    """Load PIL sprite sheet, generating it first if missing."""
-    if not os.path.exists(PIL_PATH):
-        print("PIL sprite not found — generating it first...")
+def ensure_placeholder_sprite() -> Image.Image:
+    """
+    Load the pristine placeholder sprite sheet — the source of pose-frame
+    structure guidance for every run. Generated once and never overwritten by
+    this script, so re-running on the same rows/cols (e.g. while tuning
+    DENOISE/IP_WEIGHT) always starts each frame from the same clean
+    placeholder instead of compounding on a previous AI-rendered frame.
+    """
+    if not os.path.exists(PLACEHOLDER_PATH):
+        print("Placeholder baseline not found — generating via gen_erin.py...")
         gen = os.path.join(ROOT, "generators", "gen_erin.py")
         subprocess.run([sys.executable, gen], check=True)
-    return Image.open(PIL_PATH).convert("RGBA")
+        os.makedirs(os.path.dirname(PLACEHOLDER_PATH), exist_ok=True)
+        Image.open(PIL_PATH).convert("RGBA").save(PLACEHOLDER_PATH)
+    return Image.open(PLACEHOLDER_PATH).convert("RGBA")
 
 def generate_reference(regenerate: bool) -> Image.Image:
     """Generate (or load cached) the single Erin identity-reference image."""
@@ -337,6 +350,8 @@ def generate_reference(regenerate: bool) -> Image.Image:
     result.save(REF_PATH)
     print(f"done -> {REF_PATH}")
     return result
+
+RUN_ID = uuid.uuid4().hex[:8]  # forces fresh SaveImage outputs even if a frame's inputs were cached from a prior run
 
 def main() -> None:
     ap = argparse.ArgumentParser()
@@ -364,9 +379,12 @@ def main() -> None:
 
     ref_name = upload_image(reference, "hb_erin_reference.png")
 
-    pil_sheet = ensure_pil_sprite()
-    sheet     = Image.new("RGBA", pil_sheet.size, (0, 0, 0, 0))
-    sheet.paste(pil_sheet, (0, 0))  # start from existing sheet so skipped rows are preserved
+    placeholder_sheet = ensure_placeholder_sprite()
+    if os.path.exists(OUT_PATH):
+        sheet = Image.open(OUT_PATH).convert("RGBA")  # resume, preserving prior AI-rendered rows
+    else:
+        sheet = Image.new("RGBA", placeholder_sheet.size, (0, 0, 0, 0))
+        sheet.paste(placeholder_sheet, (0, 0))
 
     selected_rows = set(args.rows.split(",")) if args.rows else None
 
@@ -382,8 +400,8 @@ def main() -> None:
 
         for col in range(cols):
 
-            # Extract the matching PIL frame (already shows the correct pose)
-            pil_frame = pil_sheet.crop((col * T, row * T, (col+1)*T, (row+1)*T))
+            # Extract the matching PIL frame from the pristine placeholder (already shows the correct pose)
+            pil_frame = placeholder_sheet.crop((col * T, row * T, (col+1)*T, (row+1)*T))
 
             # Prepare init image: white bg + upscale to SDXL resolution
             init_img  = pil_frame_to_init(pil_frame)
@@ -400,7 +418,7 @@ def main() -> None:
             # Queue img2img + IP-Adapter — fixed seed, identity locked by reference image
             wf  = make_img2img_ipadapter_workflow(prompt, BASE_NEG, CHARACTER_SEED,
                                                    init_name, ref_name, DENOISE,
-                                                   f"hb_erin_ip_r{row:02d}_c{col:02d}_")
+                                                   f"hb_erin_ip_r{row:02d}_c{col:02d}_{RUN_ID}_")
             pid = queue_prompt(wf)
             print(f"  col {col}: queued {pid[:8]}...", end=" ", flush=True)
 
@@ -415,6 +433,10 @@ def main() -> None:
             print("done", flush=True)
 
         print()
+
+        # Checkpoint after each row so a late failure doesn't lose earlier rows
+        os.makedirs(os.path.dirname(OUT_PATH), exist_ok=True)
+        sheet.save(OUT_PATH)
 
     os.makedirs(os.path.dirname(OUT_PATH), exist_ok=True)
     sheet.save(OUT_PATH)

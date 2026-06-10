@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="ItemData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/systems/item_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "stitched_patch"
+display_name = "Hand-Stitched Patch"
+description = "A neat little patch shaped like a gear. Penny sewed it herself: 'For whoever finds my handkerchief. Sew it on somewhere nobody will notice.'"
+icon_color = Color(0.55, 0.70, 0.85, 1)
+owner_character = ""
+is_junk = true

@@ -11,17 +11,24 @@ const PAUSE_MAX: float = 3.0
 const ARRIVE_DISTANCE: float = 4.0
 
 var sprite: AnimatedSprite2D
+var npc_name: String = ""
+var quest_id: String = ""
 var _home: Vector2
 var _target: Vector2
 var _pause_timer: float = 0.0
 var _rng := RandomNumberGenerator.new()
 
 
-func setup(frames: SpriteFrames, home: Vector2) -> void:
+# `name`/`quest` identify this townsfolk for overworld_map.gd's dialog/quest
+# system -- see CLAUDE.md "NPC dialog & quests". Cosmetic-only NPCs (none,
+# currently) would simply leave quest blank.
+func setup(frames: SpriteFrames, home: Vector2, name: String = "", quest: String = "") -> void:
 	sprite = AnimatedSprite2D.new()
 	sprite.sprite_frames = frames
 	sprite.play("idle")
 	add_child(sprite)
+	npc_name = name
+	quest_id = quest
 	_home = home
 	global_position = home
 	_rng.randomize()

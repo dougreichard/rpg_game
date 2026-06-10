@@ -49,10 +49,15 @@ const LootBoxScript: Script = preload("res://scripts/systems/loot_box.gd")
 const CrowbarItem: ItemData       = preload("res://data/items/crowbar.tres")
 const CrankHandleItem: ItemData   = preload("res://data/items/crane_crank_handle.tres")
 const TreasureMapItem: ItemData   = preload("res://data/items/faded_treasure_map.tres")
+# Otis (see npc_dialog/otis.md) sends the duo here looking for his brass
+# compass -- a quest fetch-item, tucked in alongside the location's other
+# yard loot boxes.
+const BrassCompassItem: ItemData  = preload("res://data/items/brass_compass.tres")
 const CROWBAR_LOOT_POS  := Vector2(840.0, 200.0)
 const CRANK_LOOT_POS    := Vector2(230.0, 200.0)
 const TREEMAP_LOOT_POS  := Vector2(450.0, 460.0)
-const LOOT_FLAG_KEYS    := ["crowbar_loot_open", "crank_loot_open", "treemap_loot_open"]
+const COMPASS_LOOT_POS  := Vector2(600.0, 350.0)
+const LOOT_FLAG_KEYS    := ["crowbar_loot_open", "crank_loot_open", "treemap_loot_open", "compass_loot_open"]
 
 # Doorway: the level's entrance/exit  --  see CLAUDE.md "Doorways, camera-follow
 # & multi-room levels". The duo spawns beside it on the pier; walking away and
@@ -224,6 +229,11 @@ func _create_loot_boxes() -> void:
 	add_child(treemap_box)
 	_loot_boxes.append(treemap_box)
 
+	var compass_box = LootBoxScript.new()
+	compass_box.setup(BrassCompassItem, COMPASS_LOOT_POS, GameManager.get_level_flag(LOCATION_ID, LOOT_FLAG_KEYS[3], false))
+	add_child(compass_box)
+	_loot_boxes.append(compass_box)
+
 func _create_doorway() -> void:
 	_doorway = DoorwayScript.new()
 	_doorway.setup(DOORWAY_POS)
@@ -308,6 +318,7 @@ func _process(delta: float) -> void:
 		clear_label.visible = true
 	if _cleared and Input.is_action_just_pressed("ui_accept"):
 		GameManager.complete_location(LOCATION_ID)
+		GameManager.last_location_id = LOCATION_ID
 		TransitionManager.change_scene("res://scenes/overworld/OverworldMap.tscn")
 
 # Doorway-triggered exit  --  distinct from the clear-overlay's "press ENTER"
@@ -317,6 +328,7 @@ func _process(delta: float) -> void:
 func _exit_to_overworld() -> void:
 	if _cleared:
 		GameManager.complete_location(LOCATION_ID)
+	GameManager.last_location_id = LOCATION_ID
 	TransitionManager.change_scene("res://scenes/overworld/OverworldMap.tscn")
 
 func _update_hint() -> void:

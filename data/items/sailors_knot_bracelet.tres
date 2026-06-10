@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="ItemData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/systems/item_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "sailors_knot_bracelet"
+display_name = "Sailor's Knot Bracelet"
+description = "A tightly woven bracelet of waxed cord. Otis ties one for anyone who does him a good turn -- and means it as a promise of more stories to come."
+icon_color = Color(0.45, 0.32, 0.20, 1)
+owner_character = ""
+is_junk = true

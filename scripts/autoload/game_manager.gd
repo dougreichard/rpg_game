@@ -58,6 +58,11 @@ var pending_level_name: String = ""
 var pending_level_duo: Array = []
 var preferred_active: String = ""
 
+# Set by a level just before returning to the overworld (either path:
+# clear-overlay "press ENTER" or Doorway exit) so OverworldMap.tscn can spawn
+# the duo back at that location's door instead of always at the start.
+var last_location_id: String = ""
+
 # Removes an item from a character's inventory (one-shot consumable use).
 func consume_item(character_name: String, item_id: String) -> void:
 	var key: String = character_name.to_lower()
