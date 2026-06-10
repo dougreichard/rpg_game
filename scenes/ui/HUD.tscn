@@ -1,9 +1,11 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/hud.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/ui/duo_panel.gd" id="2"]
 [ext_resource type="Script" path="res://scripts/ui/pause_menu.gd" id="3"]
 [ext_resource type="Script" path="res://scripts/ui/inventory_panel.gd" id="4"]
+[ext_resource type="Script" path="res://scripts/ui/achievements_overlay.gd" id="5"]
+[ext_resource type="Script" path="res://scripts/ui/achievement_toast.gd" id="6"]
 
 [node name="HUD" type="CanvasLayer"]
 layer = 10
@@ -19,6 +21,12 @@ script = ExtResource("4")
 
 [node name="PauseMenu" type="CanvasLayer" parent="."]
 script = ExtResource("3")
+
+[node name="AchievementsOverlay" type="CanvasLayer" parent="."]
+script = ExtResource("5")
+
+[node name="AchievementToast" type="CanvasLayer" parent="."]
+script = ExtResource("6")
 
 [node name="Panel" type="Panel" parent="."]
 offset_left = 8.0

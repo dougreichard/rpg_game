@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="AchievementData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/systems/achievement_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "welcome_ben"
+display_name = "Encore"
+description = "Found Ben at Iron & Strings Gym."
+icon_color = Color(0.75, 0.25, 0.55, 1)
+secret = false

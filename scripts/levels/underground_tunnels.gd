@@ -322,6 +322,7 @@ func _summon_frosty(target: Enemy) -> void:
 	frosty.setup(evan, target, FROSTY_COLOR)
 	add_child(frosty)
 	_frosty_cooldown_timer = FROSTY_COOLDOWN * _cd_scale
+	GameManager.companion_summoned.emit("frosty")
 
 func _nearest_enemy(from_pos: Vector2):
 	var living: Array = []
@@ -338,6 +339,7 @@ func _summon_twinkle() -> void:
 	twinkle.setup(evan, evan.facing)
 	add_child(twinkle)
 	_twinkle_cooldown_timer = TWINKLE_COOLDOWN * _cd_scale
+	GameManager.companion_summoned.emit("twinkle")
 
 func _spawn() -> void:
 	_add(GRUNT_SCENE,  Vector2(480.0, 260.0))

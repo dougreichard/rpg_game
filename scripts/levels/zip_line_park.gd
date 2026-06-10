@@ -256,6 +256,7 @@ func _summon_lizard() -> void:
 	add_child(lizard)
 	_lizard_cooldown_timer = LIZARD_COOLDOWN * _cd_scale
 	Audio.play("special")
+	GameManager.companion_summoned.emit("lizard")
 
 func _on_lizard_panel() -> void:
 	if _panel_hacked:

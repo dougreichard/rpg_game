@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="AchievementData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/systems/achievement_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "friend_of_the_town"
+display_name = "Friend of the Town"
+description = "Helped every townsfolk with their request."
+icon_color = Color(0.95, 0.7, 0.3, 1)
+secret = true

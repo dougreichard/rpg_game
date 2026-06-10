@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="AchievementData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/systems/achievement_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "good_boy"
+display_name = "Good Boy!"
+description = "Sent Frosty charging into a fight."
+icon_color = Color(0.88, 0.85, 0.78, 1)
+secret = false

@@ -5,7 +5,7 @@ extends CanvasLayer
 # input is handled in _unhandled_input with accept_event() to prevent the
 # same keypress reaching level scripts (e.g. the clear-overlay ui_accept check).
 
-const OPTIONS: Array[String] = ["Resume", "Options", "Quit to Map", "Quit to Title"]
+const OPTIONS: Array[String] = ["Resume", "Achievements", "Options", "Quit to Map", "Quit to Title"]
 const PANEL_RECT := Rect2(440.0, 240.0, 400.0, 260.0)
 const BORDER_COLOR: Color = Color(0.55, 0.45, 0.75)
 const TITLE_COLOR: Color = Color(0.95, 0.85, 0.2)
@@ -24,7 +24,10 @@ const SLIDER_STEPS: int = 10
 var _option_labels: Array = []
 var _cursor: int = 0
 var _in_options: bool = false
+var _in_achievements: bool = false
 var _opt_cursor: int = 0
+
+@onready var _achievements_overlay: Node = get_node("../AchievementsOverlay")
 
 # Options panel nodes
 var _main_panel_nodes: Array = []
@@ -40,6 +43,7 @@ func _ready() -> void:
 	_build_ui()
 	GameManager.paused.connect(_on_paused)
 	GameManager.unpaused.connect(_on_unpaused)
+	_achievements_overlay.closed.connect(_on_achievements_closed)
 
 func _build_ui() -> void:
 	_build_main_panel()
@@ -229,9 +233,19 @@ func _on_paused() -> void:
 func _on_unpaused() -> void:
 	visible = false
 	_in_options = false
+	if _in_achievements:
+		_achievements_overlay.close()
+		_in_achievements = false
+
+func _on_achievements_closed() -> void:
+	_in_achievements = false
+	_show_main()
+	_refresh_options()
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not visible:
+		return
+	if _in_achievements:
 		return
 	if _in_options:
 		_handle_options_input(event)
@@ -296,12 +310,18 @@ func _select_main() -> void:
 		0:
 			GameManager.toggle_pause()
 		1:
-			_show_options()
+			_in_achievements = true
+			for n: Node in _main_panel_nodes:
+				n.visible = false
+			_achievements_overlay.open()
 			Audio.play("ui_select")
 		2:
+			_show_options()
+			Audio.play("ui_select")
+		3:
 			GameManager.toggle_pause()
 			TransitionManager.change_scene("res://scenes/overworld/OverworldMap.tscn")
-		3:
+		4:
 			GameManager.toggle_pause()
 			TransitionManager.change_scene("res://scenes/ui/TitleScreen.tscn")
 

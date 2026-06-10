@@ -290,6 +290,7 @@ func _summon_calvin_and_coolidge() -> void:
 	coolidge.setup(evan, targets[1] if targets.size() > 1 else targets[0], COOLIDGE_COLOR)
 	add_child(coolidge)
 	_calvin_cooldown_timer = CALVIN_COOLDOWN * _cd_scale
+	GameManager.companion_summoned.emit("calvin_coolidge")
 
 func _nearest_enemies(from_pos: Vector2, count: int) -> Array:
 	var living: Array = []

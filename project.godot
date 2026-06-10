@@ -19,6 +19,7 @@ config/run/main_scene="res://scenes/ui/TitleScreen.tscn"
 [autoload]
 
 SaveManager="*res://scripts/autoload/save_manager.gd"
+AchievementManager="*res://scripts/autoload/achievement_manager.gd"
 GameManager="*res://scripts/autoload/game_manager.gd"
 CombatFX="*res://scripts/autoload/combat_fx.gd"
 Audio="*res://scripts/autoload/audio.gd"

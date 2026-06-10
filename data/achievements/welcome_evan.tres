@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="AchievementData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/systems/achievement_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "welcome_evan"
+display_name = "Strength in Numbers"
+description = "Found Evan at The Old Parish Church."
+icon_color = Color(0.55, 0.42, 0.18, 1)
+secret = false

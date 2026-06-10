@@ -230,6 +230,7 @@ func _summon_scout_pair() -> void:
 	_mary.setup(evan.global_position, MARY_TARGET_POS, MARY_COLOR)
 	add_child(_mary)
 	_scout_pair_cooldown_timer = SCOUT_PAIR_COOLDOWN * _cd_scale
+	GameManager.companion_summoned.emit("william_mary")
 
 func _check_scout_pair_holding() -> void:
 	if _landing_cleared or _william == null or _mary == null:
@@ -287,6 +288,7 @@ func _summon_frosty(target: Enemy) -> void:
 	frosty.setup(evan, target, FROSTY_COLOR)
 	add_child(frosty)
 	_frosty_cooldown_timer = FROSTY_COOLDOWN * _cd_scale
+	GameManager.companion_summoned.emit("frosty")
 
 func _nearest_enemy(from_pos: Vector2):
 	var living: Array = []

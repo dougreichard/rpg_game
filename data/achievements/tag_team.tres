@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="AchievementData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/systems/achievement_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "tag_team"
+display_name = "Tag Team"
+description = "Swapped your active character for the first time."
+icon_color = Color(0.55, 0.55, 0.85, 1)
+secret = false

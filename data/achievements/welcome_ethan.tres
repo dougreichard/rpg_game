@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="AchievementData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/systems/achievement_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "welcome_ethan"
+display_name = "Plug and Play"
+description = "Found Ethan at The Recording Studio."
+icon_color = Color(0.2, 0.65, 0.6, 1)
+secret = false

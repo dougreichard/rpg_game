@@ -1718,6 +1718,128 @@ available in `GameManager._ready()`) persists `completed_locations` and
 `SaveManager.save_game()`. `SaveManager.load_game()` runs once on boot from
 `GameManager._ready()`. Never store save state in scene nodes.
 
+### Achievements *(implemented)*
+A 19-achievement tracker — a mix of visible milestones and secret discoveries
+— with a Pause Menu screen to view progress and a slide-in toast on unlock.
+
+- **`AchievementData`** (`scripts/systems/achievement_data.gd`,
+  `class_name`, `extends Resource`) — `id`, `display_name`, `description`,
+  `icon_color`, `secret` (secret achievements show as `"???"` for both name
+  and description until unlocked). 19 `.tres` files in `data/achievements/`,
+  one per achievement, named after their `id` — same Resource convention as
+  `ItemData`/`CharacterData`/`EnemyData`.
+- **`AchievementManager`** (autoload, registered in `project.godot` between
+  `SaveManager` and `GameManager` — it needs `SaveManager.save_game()` for
+  `_unlock()` and runs its retroactive check after `GameManager._ready()`
+  loads a save) — `scripts/autoload/achievement_manager.gd`. Holds a curated
+  `const ACHIEVEMENT_LIST: Array[AchievementData]` (19 `preload()`s, in
+  display order), builds an `id -> AchievementData` `achievements` dict in
+  `_ready()`, and connects to **9 `GameManager` signals** to detect unlock
+  conditions — never reaches into level scripts directly. Persisted state
+  (`unlocked: Dictionary`, `bies_activation_count: int`,
+  `companion_types_seen: Dictionary`) is read/written directly by
+  `SaveManager` (no underscore prefixes), mirroring `inventories`/
+  `level_progress`. `signal achievement_unlocked(id: String)` drives the
+  toast and overlay refresh. Public API: `is_unlocked(id)`,
+  `get_ordered_ids()`, `get_display_name(id)`, `get_description(id)`,
+  `get_icon_color(id)` (all three "get" functions return the secret-locked
+  placeholder — `"???"` / a generic message / dim grey — for an unrevealed
+  secret achievement).
+- **5 new `GameManager` signals** added specifically to feed
+  `AchievementManager`, each emitted from an existing call site (no new
+  systems):
+  - `location_completed(location_id)` — end of `complete_location()`.
+  - `enemy_defeated(enemy_name, is_boss)` — `enemy.gd._on_hurtbox_hit()`,
+    right before an enemy at 0 HP `queue_free()`s.
+  - `player_revived` — end of `GameManager._tick_revive()`'s revive branch.
+  - `companion_summoned(companion_name)` — emitted from all 8
+    animal-companion summon call sites (Calvin & Coolidge at Harbor & Docks;
+    Frosty at Iron & Strings Gym, Underground Tunnels, and The Drop; Twinkle
+    at Underground Tunnels; William & Mary at The Drop; the Lizard at Zip
+    Line Park and VR Escape Room) with the companion's lowercase key
+    (`"frosty"`, `"twinkle"`, `"calvin_coolidge"`, `"william_mary"`,
+    `"lizard"`).
+  - `level_flag_set(location_id, key, value)` — end of `set_level_flag()`;
+    `AchievementManager` watches for `key == "secret_revealed"`.
+- **The 19 achievements** (`*` = secret until unlocked):
+  | id | Name | Unlocks when | Trigger |
+  |----|------|--------------|---------|
+  | `welcome_erin` | Reunited | Found Erin at Bellows & Sons Pipe Organ Works | `location_completed("pipe_organ_works")` |
+  | `welcome_evan` | Strength in Numbers | Found Evan at The Old Parish Church | `location_completed("old_parish_church")` |
+  | `welcome_ben` | Encore | Found Ben at Iron & Strings Gym | `location_completed("iron_strings_gym")` |
+  | `welcome_ethan` | Plug and Play | Found Ethan at The Recording Studio | `location_completed("recording_studio")` |
+  | `tag_team` | Tag Team | Swapped active character for the first time | `characters_swapped` |
+  | `first_blood` | First Blood | Defeated your first enemy | `enemy_defeated` |
+  | `boss_slayer` | Boss Slayer | Defeated a boss | `enemy_defeated(_, is_boss=true)` |
+  | `got_your_back` | Got Your Back | Revived a downed teammate | `player_revived` |
+  | `slow_your_roll` | Slow Your Roll | Activated Bies Mode for the first time | `bies_activated` |
+  | `loud_and_clear` | Loud and Clear | Created a noise distraction to lure a guard away | `noise_emitted` |
+  | `good_boy` | Good Boy! | Sent Frosty charging into a fight | `companion_summoned("frosty")` |
+  | `pack_rat` | Pack Rat | Collected 10 items (any character, any mix) | `item_collected` → total inventory size ≥ `PACK_RAT_TARGET` (10) |
+  | `globetrotter` | Globetrotter | Cleared all 13 locations | `location_completed` → `completed_locations.size() >= 13` |
+  | `curtain_call` | Curtain Call | Found Uncle Doug at The Grand Marquee Cinema | `location_completed("grand_marquee_cinema")` |
+  | `time_lord`* | Time Lord | Activated Bies Mode 25 times | `bies_activated` → `bies_activation_count >= TIME_LORD_TARGET` (25) |
+  | `menagerie`* | Menagerie | Called on every animal companion at least once | `companion_summoned` → all 5 `COMPANION_TYPES` seen |
+  | `secrets_out`* | Secret's Out | Found a hidden passage | `level_flag_set(_, "secret_revealed", true)` |
+  | `complete_set`* | The Complete Set | Collected all twelve numbered spoons | `item_collected` → 12 `numbered_spoon_*` ids held |
+  | `friend_of_the_town`* | Friend of the Town | Helped every townsfolk with their request | `item_collected` → all 12 `TOWN_QUEST_IDS` quests at `"complete"` |
+
+  `pack_rat`/`complete_set`/`friend_of_the_town` are re-derived from scratch
+  on every `item_collected` via `_check_collectible_achievements()` (scans
+  `GameManager.inventories` and `town` quest flags) rather than tracked with
+  incremental counters — simpler and always consistent regardless of which
+  event satisfies the condition.
+- **Retroactive unlocks** — `AchievementManager._ready()` calls
+  `call_deferred("_check_retroactive")`, which replays
+  `_on_location_completed()` for every already-`completed_locations` entry
+  and runs `_check_collectible_achievements()` once — so a save from before
+  this system existed immediately unlocks everything it already qualifies
+  for (e.g. `globetrotter` if all 13 locations were already cleared).
+- **`AchievementsOverlay`** (`scripts/ui/achievements_overlay.gd`,
+  `extends CanvasLayer`, `layer = 26`, sibling of `PauseMenu` in `HUD.tscn`)
+  — a full-screen list (`PANEL_RECT`) of all 19 achievements in
+  `ACHIEVEMENT_LIST` order, each row showing an icon-color swatch, name
+  (`"???"` + dimmed if a locked secret), and an `UNLOCKED`/`LOCKED` tag, plus
+  an "`N / 19 unlocked`" progress line and a description panel for the
+  cursor-selected row. Mirrors `pause_menu.gd`'s programmatic
+  `_draw()`-free `ColorRect`/`Label` construction, color consts, and
+  `_unhandled_input` + `set_input_as_handled()` pattern (`move_up`/
+  `move_down` to navigate, `ui_cancel` to close). Opened via Pause Menu →
+  **"Achievements"** (new second option, between "Resume" and "Options" —
+  `pause_menu.gd`'s `OPTIONS` array and `_select_main()` match are
+  reindexed accordingly): the pause menu hides its own panel, calls
+  `_achievements_overlay.open()`, and restores itself via the overlay's
+  `closed` signal (`_on_achievements_closed()`). Refreshes live on
+  `AchievementManager.achievement_unlocked` while open.
+- **`AchievementToast`** (`scripts/ui/achievement_toast.gd`, `extends
+  CanvasLayer`, `layer = 20`, sibling of `PauseMenu`/`AchievementsOverlay` in
+  `HUD.tscn`) — a small "ACHIEVEMENT UNLOCKED" panel that slides in from the
+  right, holds for `HOLD_DURATION` (3s), and slides back out via a single
+  `create_tween()` on a `Control` container's `position:x`. Triggered by
+  `AchievementManager.achievement_unlocked`, plays the `"special"` SFX, and
+  shows the achievement's icon color + display name (so a secret
+  achievement's name is revealed at the moment it unlocks, not before).
+  `PROCESS_MODE_ALWAYS` keeps it animating even if the unlock coincides with
+  a pause.
+- **Persistence** — `save_manager.gd` adds three keys under `"progress"`:
+  `achievements_unlocked` (→ `AchievementManager.unlocked`),
+  `achievements_bies_count` (→ `bies_activation_count`), and
+  `achievements_companions_seen` (→ `companion_types_seen`).
+- **GUT coverage** — `tests/unit/test_achievements.gd` (8 tests, scene-free):
+  count is in the CLAUDE.md-spec 12–20 range, ids are unique/non-empty, every
+  `.tres` filename matches its `id`, both secret and visible achievements
+  exist, `achievements`/`get_ordered_ids()` are populated correctly from
+  `ACHIEVEMENT_LIST`, and a locked secret achievement's name/description are
+  hidden via `get_display_name()`/`get_description()`.
+
+> **Gotcha**: a freshly-added `class_name` Resource script (like
+> `AchievementData`) isn't visible to other scripts under `--headless
+> --quit-after` until the global script class cache is rebuilt — same trap as
+> GUT's addon scripts (see "GUT unit tests" below). Run
+> `godot --headless --editor --path . --quit-after 2000` once after adding a
+> new `class_name` Resource type to populate
+> `.godot/global_script_class_cache.cfg` before the next boot check.
+
 ### Audio (autoload `Audio`)
 `audio.gd` generates short SFX procedurally at runtime as `AudioStreamWAV`
 buffers (sine/square/noise tones and frequency sweeps), cached by name and

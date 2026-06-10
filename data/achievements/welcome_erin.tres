@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="AchievementData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/systems/achievement_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "welcome_erin"
+display_name = "Reunited"
+description = "Found Erin at Bellows & Sons Pipe Organ Works."
+icon_color = Color(0.9, 0.35, 0.1, 1)
+secret = false

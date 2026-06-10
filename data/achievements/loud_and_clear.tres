@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="AchievementData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/systems/achievement_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "loud_and_clear"
+display_name = "Loud and Clear"
+description = "Created a noise distraction to lure a guard away."
+icon_color = Color(0.9, 0.8, 0.3, 1)
+secret = false

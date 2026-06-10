@@ -9,6 +9,11 @@ signal unpaused
 signal noise_emitted(position: Vector2, radius: float)
 signal enemies_calmed(position: Vector2, radius: float)
 signal item_collected(character_name: String, item_id: String)
+signal location_completed(location_id: String)
+signal enemy_defeated(enemy_name: String, is_boss: bool)
+signal player_revived
+signal companion_summoned(companion_name: String)
+signal level_flag_set(location_id: String, key: String, value)
 
 const UNLOCKS_CHARACTER: Dictionary = {
 	"pipe_organ_works": "erin",
@@ -114,6 +119,7 @@ func set_level_flag(location_id: String, key: String, value) -> void:
 		level_progress[location_id] = {}
 	level_progress[location_id][key] = value
 	SaveManager.save_game()
+	level_flag_set.emit(location_id, key, value)
 
 func _ready() -> void:
 	SaveManager.load_game()
@@ -125,6 +131,7 @@ func complete_location(id: String) -> void:
 	if unlocked != "" and unlocked not in unlocked_characters:
 		unlocked_characters.append(unlocked)
 	SaveManager.save_game()
+	location_completed.emit(id)
 
 const BIES_SLOWDOWN: float = 0.4
 const BIES_DURATION: float = 5.0
@@ -184,6 +191,7 @@ func _tick_revive(delta: float) -> void:
 		standby_player.revive_progress = minf(standby_player.revive_progress + delta, Player.REVIVE_HOLD_DURATION)
 		if standby_player.revive_progress >= Player.REVIVE_HOLD_DURATION:
 			standby_player.revive()
+			player_revived.emit()
 	else:
 		standby_player.revive_progress = maxf(standby_player.revive_progress - delta * REVIVE_DECAY_RATE, 0.0)
 

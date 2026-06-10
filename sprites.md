@@ -11,8 +11,8 @@ animation in code. This halves movement animation work. All sheets omit
 left-facing rows entirely.
 
 **Sheet layout:** Each animation occupies one horizontal row of **10 frames**
-(unused frames at the row end are fully transparent). Sheet width = **320 px**
-(10 × 32). Sheet height = number of animations × 32 (or × tile height for
+(unused frames at the row end are fully transparent). Sheet width = **640 px**
+(10 × 64). Sheet height = number of animations × 64 (or × tile height for
 larger sprites).
 
 **Direction convention:** Sprites face **right** by default. Up/down
@@ -25,24 +25,38 @@ animations face away from / toward the camera (top-down view).
 Apply every rule below to ALL sprites — players, animals, enemies, NPCs.
 Consistency here is what makes the game feel like one world.
 
-- **Art style:** Tintin/Hergé *ligne claire* — bold, clean black outlines
-  (1 px), flat cel-shaded fills, almost no internal shading (one highlight
-  dot or shadow band maximum per shape).
+- **Art style:** Clean, high-readability modern pixel art — inspired by
+  *Stranger Things: 1984*'s character-swapping promo aesthetic: crisp
+  silhouettes with confident outlines, soft directional shading (2–3 step
+  highlight/shadow gradients per shape, not flat single-tone fills), and
+  grounded, slightly-stylized teen-adventure character designs. More vibrant
+  and detailed than a flat retro look — see `gem/quinn.png`, `gem/erin.png`,
+  `gem/evan.png`, `gem/ben.png`, `gem/ethan.png` (and the animal companion
+  sheets in the same folder) for the canonical fidelity target. Match their
+  level of shading, color richness, and linework when generating or revising
+  any sheet in this document.
 - **Perspective:** Top-down, approximately ¾ overhead. Characters are seen
   slightly from above; faces are visible when walking toward the camera (full
   face) and when walking away (back of head only).
-- **Palette:** Shared 16-color limited palette across ALL sprites. The PICO-8
-  palette is recommended: `#000000 #1D2B53 #7E2553 #008751 #AB5236 #5F574F
-  #C2C3C7 #FFF1E8 #FF004D #FFA300 #FFEC27 #00E436 #29ADFF #83769C #FF77A8
-  #FFCCAA`. Each character section maps their design to specific palette slots.
-- **Proportions (32 × 32 px):** Head ≈ 10 px tall, torso ≈ 10 px, legs ≈ 12 px.
-  Characters should read clearly at this size; avoid fine detail that
-  disappears at scale.
-- **Outline:** 1 px black (#000000) silhouette on all characters. Interior
-  lines (eyes, clothing folds) in a dark palette color rather than pure black.
+- **Palette:** A shared **extended ~32-color palette** (see DESIGN.md §2.0)
+  covering neutrals, skin/hair tones, and a broad spread of saturated accent
+  colors — no longer a fixed 16-color retro set, and **not tied to PICO-8**.
+  Each character section below maps their design to specific colors from this
+  set plus their own signature accent color (DESIGN.md §2.1/§2.2). Build a
+  2–3 step shading ramp (base / highlight / shadow) per major shape rather
+  than a single flat fill.
+- **Proportions (64 × 64 px source frame):** Head ≈ 20 px tall, torso ≈ 20 px,
+  legs ≈ 24 px. Same ratio as the previous 32×32 spec, doubled for the larger
+  canvas — characters still occupy one 32×32 gameplay tile in-engine.
+  Characters should read clearly at gameplay scale; the extra resolution is
+  for shading/detail, not finer silhouettes that vanish when scaled down.
+- **Outline:** Confident outline in a soft near-black (`#1A1A22` from the
+  extended palette, not pure `#000000`) on all characters. Interior lines
+  (eyes, clothing folds, shading breaks) use dark palette colors.
 - **Background:** Fully transparent on every frame.
-- **Eyes:** 2 × 2 px white square with 1 × 1 dark pupil. Keep them
-  expressive — this is the primary face-reading device at this resolution.
+- **Eyes:** 4 × 4 px white square with 2 × 2 px dark pupil. Simple eyebrows
+  and mouth shapes are encouraged where the larger canvas allows — eyes
+  remain the primary face-reading device.
 - **Animation timing (default):** 10 fps. Idle/talk: 6–8 fps.
   Dash/hurt: 12–15 fps.
 - **Frame count guidance:**
@@ -66,10 +80,13 @@ wire-frame glasses, long coat, work boots. Brass wrench tucked in belt loop.
 British mod-spy-meets-workshop-apprentice. Pale skin, dark brown hair hidden
 under hat. Moves with quiet, purposeful confidence.
 
-**Palette slots:** Black (#000000) coat/hat, dark grey (#5F574F) coat lining,
-off-white (#FFF1E8) skin, brass (#FFA300) wrench, grey glasses rim.
+**Palette slots:** Ink-black (`#1A1A22`) coat/hat with a `#2E2E3A`/`#5C5C6E`
+shading ramp, steel-grey (`#6E7A86`) coat lining, pale skin (`#FFE3C7`),
+amber (`#FFC94D`) wrench, light-grey (`#A8A8B8`) glasses rim. Quinn's signature
+accent stays his blue (`#4D73D9`, DESIGN.md §2.1) for any UI/HUD tie-ins.
 
-**Sprite sheet:** 17 rows × 32 px = **320 × 544 px**
+**Sprite sheet:** 17 rows × 64 px = **640 × 1088 px** — see `gem/quinn.png`
+for the fidelity target.
 
 | Row | Animation | Frames | Notes |
 |-----|-----------|--------|-------|
@@ -92,19 +109,21 @@ off-white (#FFF1E8) skin, brass (#FFA300) wrench, grey glasses rim.
 | 16 | Doorway operate | 6 | Reaches forward with both hands, pushes, steps through |
 
 **AI Prompt:**
-> Pixel art sprite sheet, Tintin ligne claire style, transparent background.
-> Canvas 320 × 544 px, 32×32 tiles, 17 rows × 10 columns. Subject: teenage
-> figure, slim build, all-black wide-brim hat, round wire-frame glasses, long
-> black coat, black work boots, brass wrench in belt. Pale skin, dark brown
-> hair hidden under hat. Animations (one per row, left to right): idle
-> (coat sway, blink), walk-toward, walk-away, walk-right, run-toward,
-> run-away, run-right, wrench-swing-attack-right (reach back → strike →
-> recover), HA-laugh-special (arms wide, shockwave ripple radiates out),
-> talking-full-body, talking-closeup (head + shoulders), hurt-recoil (hat
-> tilts), death-crumple, revive-rise (adjusts hat), dash-right, crouch-repair
-> (wrench turning), doorway-push (reaches forward, steps through). Bold 1px
-> black outlines, flat colors, 16-color PICO-8 palette, no anti-aliasing,
-> no dithering.
+> Pixel art sprite sheet, clean modern pixel-art style inspired by
+> *Stranger Things: 1984*'s character-swap art (see `gem/quinn.png` for
+> fidelity reference), transparent background. Canvas 640 × 1088 px, 64×64
+> tiles, 17 rows × 10 columns. Subject: teenage figure, slim build, all-black
+> wide-brim hat, round wire-frame glasses, long black coat, black work boots,
+> brass wrench in belt. Pale skin, dark brown hair hidden under hat. Animations
+> (one per row, left to right): idle (coat sway, blink), walk-toward,
+> walk-away, walk-right, run-toward, run-away, run-right, wrench-swing-attack-
+> right (reach back → strike → recover), HA-laugh-special (arms wide, shockwave
+> ripple radiates out), talking-full-body, talking-closeup (head + shoulders),
+> hurt-recoil (hat tilts), death-crumple, revive-rise (adjusts hat), dash-right,
+> crouch-repair (wrench turning), doorway-push (reaches forward, steps
+> through). Confident outlines, soft directional shading with 2-3 step
+> highlight/shadow gradients, extended vibrant palette (DESIGN.md §2.0), no
+> dithering.
 
 **Save to:** `assets/art/sprites/quinn.png`
 
@@ -118,11 +137,13 @@ hands are always slightly raised, ready to talk or move fast. Her fire
 ability manifests as small orange flame flickers at her fingertips during
 combat. Confident, slightly mischievous expression.
 
-**Palette slots:** Dark green (#008751) jacket, black (#000000) jeans,
-auburn (#AB5236 lightened) hair, orange (#FFA300) flame accent,
-off-white (#FFF1E8) skin.
+**Palette slots:** Deep-green (`#2E7D4F`) jacket with `#4FB05C` highlights,
+ink-black (`#1A1A22`) jeans, auburn (`#9C5A2E`) hair, flame-orange (`#FF9A3C`)
+fingertip accent, light-tan skin (`#F2C49B`). Erin's signature accent stays
+her orange (`#E6591A`, DESIGN.md §2.1) for any UI/HUD tie-ins.
 
-**Sprite sheet:** 17 rows × 32 px = **320 × 544 px**
+**Sprite sheet:** 17 rows × 64 px = **640 × 1088 px** — see `gem/erin.png`
+for the fidelity target.
 
 | Row | Animation | Frames | Notes |
 |-----|-----------|--------|-------|
@@ -145,18 +166,21 @@ off-white (#FFF1E8) skin.
 | 16 | Hide — enter hiding spot | 6 | Ducks down, brings knees in, silhouette nearly disappears |
 
 **AI Prompt:**
-> Pixel art sprite sheet, Tintin ligne claire style, transparent background.
-> Canvas 320 × 544 px, 32×32 tiles, 17 rows × 10 columns. Subject: teenage
-> girl, lithe build, short red-auburn hair, dark-green fitted jacket, black
-> jeans, scuffed sneakers. Small orange flame flickers at fingertips in idle
-> and attack frames. Animations: idle (flame flicker), walk-toward, walk-away,
-> walk-right, fast-run-toward, fast-run-away, fast-run-right (aggressive lean),
+> Pixel art sprite sheet, clean modern pixel-art style inspired by
+> *Stranger Things: 1984*'s character-swap art (see `gem/erin.png` for
+> fidelity reference), transparent background. Canvas 640 × 1088 px, 64×64
+> tiles, 17 rows × 10 columns. Subject: teenage girl, lithe build, short
+> red-auburn hair, dark-green fitted jacket, black jeans, scuffed sneakers.
+> Small orange flame flickers at fingertips in idle and attack frames.
+> Animations: idle (flame flicker), walk-toward, walk-away, walk-right,
+> fast-run-toward, fast-run-away, fast-run-right (aggressive lean),
 > fire-jab-attack-right (hand ignites → burst → fades), fast-talk-special
 > (rapid gestures + speech glyph above head), stealth-crouch-tiptoe, talking-
 > full-body, talking-closeup, hurt-stumble-hair-flick, death-fall-forward
 > (flame extinguishes), revive-roll-push-up, dash-low-sidestep, hide-crouch-
-> disappear. Bold 1px black outlines, flat colors, 16-color PICO-8 palette,
-> no anti-aliasing.
+> disappear. Confident outlines, soft directional shading with 2-3 step
+> highlight/shadow gradients, extended vibrant palette (DESIGN.md §2.0), no
+> dithering.
 
 **Save to:** `assets/art/sprites/erin.png`
 
@@ -170,10 +194,12 @@ Fists are his weapons (no tool). Often has an animal visible nearby in idle.
 Warm, open face with strong jaw. Super-strength reads in exaggerated flexing
 during heavy-lift animations. Slowest character but hits hardest.
 
-**Palette slots:** Olive/khaki (#AB5236 desaturated) t-shirt, brown (#5F574F)
-cargo shorts, warm skin (#FFCCAA + #AB5236 blend), worn boot brown.
+**Palette slots:** Olive/khaki (`#9C8A4E`) t-shirt, brown (`#6E4A2E`) cargo
+shorts, warm skin (`#D9A36E`), worn boot brown (`#6E4A2E` darkened). Evan's
+signature accent stays his olive (DESIGN.md §2.1).
 
-**Sprite sheet:** 17 rows × 32 px = **320 × 544 px**
+**Sprite sheet:** 17 rows × 64 px = **640 × 1088 px** — see `gem/evan.png` for
+the fidelity target.
 
 | Row | Animation | Frames | Notes |
 |-----|-----------|--------|-------|
@@ -196,18 +222,21 @@ cargo shorts, warm skin (#FFCCAA + #AB5236 blend), worn boot brown.
 | 16 | Brace / Hold | 6 | Feet wide, arms spread, leaning into something — used for two-point puzzle holds |
 
 **AI Prompt:**
-> Pixel art sprite sheet, Tintin ligne claire style, transparent background.
-> Canvas 320 × 544 px, 32×32 tiles, 17 rows × 10 columns. Subject: teenage
-> boy, broad/muscular build (visibly larger than other characters), worn olive
-> khaki t-shirt, brown cargo shorts, hiking boots, warm skin tone. White
-> schnoodle dog (Frosty) visible at his feet in idle frame. Animations: idle
-> (dog at feet), walk-toward, walk-away, walk-right, heavy-run-toward,
-> heavy-run-away, heavy-run-right, straight-punch-right (fist extends beyond
-> tile), animal-call-whistle-point (paw glyph emits), heavy-lift-shove
-> (crouches → heaves → releases), talking-full-body (big gestures),
-> talking-closeup, hurt-slight-flinch, death-heavy-slow-fall, revive-knee-stand,
-> short-dash-right, brace-wide-stance. Bold 1px black outlines, flat colors,
-> 16-color PICO-8 palette, no anti-aliasing.
+> Pixel art sprite sheet, clean modern pixel-art style inspired by
+> *Stranger Things: 1984*'s character-swap art (see `gem/evan.png` for
+> fidelity reference), transparent background. Canvas 640 × 1088 px, 64×64
+> tiles, 17 rows × 10 columns. Subject: teenage boy, broad/muscular build
+> (visibly larger than other characters), worn olive khaki t-shirt, brown
+> cargo shorts, hiking boots, warm skin tone. White schnoodle dog (Frosty)
+> visible at his feet in idle frame. Animations: idle (dog at feet),
+> walk-toward, walk-away, walk-right, heavy-run-toward, heavy-run-away,
+> heavy-run-right, straight-punch-right (fist extends beyond tile),
+> animal-call-whistle-point (paw glyph emits), heavy-lift-shove (crouches →
+> heaves → releases), talking-full-body (big gestures), talking-closeup,
+> hurt-slight-flinch, death-heavy-slow-fall, revive-knee-stand, short-dash-right,
+> brace-wide-stance. Confident outlines, soft directional shading with 2-3 step
+> highlight/shadow gradients, extended vibrant palette (DESIGN.md §2.0), no
+> dithering.
 
 **Save to:** `assets/art/sprites/evan.png`
 
@@ -222,11 +251,13 @@ faintly cyan at the keys during attacks and specials. Messy mid-brown hair,
 easy smile. Musical note and sound-wave pixel glyphs appear during attacks
 and specials.
 
-**Palette slots:** Patchwork jacket uses several slots (blue, green, red
-patches — one per palette color), dark grey (#5F574F) trousers, grey/black
-keytar body with cyan (#29ADFF) glowing keys, mid-brown hair (#AB5236).
+**Palette slots:** Patchwork jacket uses several slots (blues `#4D9CE6`/
+`#2F4A99`, greens `#4FB05C`/`#2E7D4F`, reds `#E13B4A`/`#FF6B5C` — one per
+patch), dark grey (`#5C5C6E`) trousers, grey/black keytar body with cyan
+(`#5ED6FF`) glowing keys, mid-brown hair (`#9C5A2E`).
 
-**Sprite sheet:** 17 rows × 32 px = **320 × 544 px**
+**Sprite sheet:** 17 rows × 64 px = **640 × 1088 px** — see `gem/ben.png` for
+the fidelity target.
 
 | Row | Animation | Frames | Notes |
 |-----|-----------|--------|-------|
@@ -249,20 +280,22 @@ keytar body with cyan (#29ADFF) glowing keys, mid-brown hair (#AB5236).
 | 16 | Perform — crowd address | 8 | Full-body performance pose; arms out, slight sway; note glyphs everywhere |
 
 **AI Prompt:**
-> Pixel art sprite sheet, Tintin ligne claire style, transparent background.
-> Canvas 320 × 544 px, 32×32 tiles, 17 rows × 10 columns. Subject: teenage
-> boy, medium build, multi-color patchwork jacket (each patch a different
-> palette color), dark trousers, ankle boots, messy brown hair. Electric
-> keytar slung across body with glowing cyan keys. Musical note and sound-wave
-> pixel glyphs appear in attack and special frames. Animations: idle (finger
-> tap, floating note glyph), walk-toward, walk-away, walk-right, run-toward
-> (keytar tucked), run-away, run-right, keytar-club-swing-attack,
-> aoe-musical-wave-special (planted stance, concentric rings + note scatter),
-> perfect-pitch-listen (hand to ear, notes above head), talking-full-body,
-> talking-closeup (wide grin), hurt-recoil-keytar-swings, death-fall-keytar-
-> clatters-beside, revive-grab-keytar-first, dash-right, crowd-address-perform
-> (arms out, swaying). Bold 1px black outlines, flat colors, 16-color PICO-8
-> palette, no anti-aliasing.
+> Pixel art sprite sheet, clean modern pixel-art style inspired by
+> *Stranger Things: 1984*'s character-swap art (see `gem/ben.png` for
+> fidelity reference), transparent background. Canvas 640 × 1088 px, 64×64
+> tiles, 17 rows × 10 columns. Subject: teenage boy, medium build, multi-color
+> patchwork jacket (each patch a different palette color), dark trousers,
+> ankle boots, messy brown hair. Electric keytar slung across body with
+> glowing cyan keys. Musical note and sound-wave pixel glyphs appear in attack
+> and special frames. Animations: idle (finger tap, floating note glyph),
+> walk-toward, walk-away, walk-right, run-toward (keytar tucked), run-away,
+> run-right, keytar-club-swing-attack, aoe-musical-wave-special (planted
+> stance, concentric rings + note scatter), perfect-pitch-listen (hand to ear,
+> notes above head), talking-full-body, talking-closeup (wide grin),
+> hurt-recoil-keytar-swings, death-fall-keytar-clatters-beside, revive-grab-
+> keytar-first, dash-right, crowd-address-perform (arms out, swaying).
+> Confident outlines, soft directional shading with 2-3 step highlight/shadow
+> gradients, extended vibrant palette (DESIGN.md §2.0), no dithering.
 
 **Save to:** `assets/art/sprites/ben.png`
 
@@ -277,10 +310,11 @@ tool. Dark-blue rectangular AR glasses (simple dark-blue rectangles at this
 resolution). Short neat dark hair. Efficient, purposeful movements. Cyan
 data-stream glyphs appear during hack specials.
 
-**Palette slots:** Grey (#C2C3C7) hoodie, dark navy (#1D2B53) cargo pants,
-cyan (#29ADFF) device glow and AR-glasses tint, dark hair (#1D2B53).
+**Palette slots:** Grey (`#A8A8B8`) hoodie, dark navy (`#2F4A99`) cargo pants,
+cyan (`#5ED6FF`) device glow and AR-glasses tint, dark hair (`#18141A`).
 
-**Sprite sheet:** 17 rows × 32 px = **320 × 544 px**
+**Sprite sheet:** 17 rows × 64 px = **640 × 1088 px** — see `gem/ethan.png`
+for the fidelity target.
 
 | Row | Animation | Frames | Notes |
 |-----|-----------|--------|-------|
@@ -303,19 +337,22 @@ cyan (#29ADFF) device glow and AR-glasses tint, dark hair (#1D2B53).
 | 16 | Lizard summon | 6 | Holds device up, beeps (1–3); small green lizard appears on arm (4–6) |
 
 **AI Prompt:**
-> Pixel art sprite sheet, Tintin ligne claire style, transparent background.
-> Canvas 320 × 544 px, 32×32 tiles, 17 rows × 10 columns. Subject: teenage
-> boy, lean wiry build, grey hoodie, dark navy cargo pants with gadget pockets,
-> sneakers, short dark hair, dark-blue rectangular AR glasses. Small glowing
-> cyan hacking device always in hand or clipped to belt. Cyan digit/data-stream
-> glyphs appear during hack and attack frames. Animations: idle (device glance,
-> cyan pulse), walk-toward, walk-away, walk-right, run-toward (device pocketed),
-> run-away, run-right, gadget-zap-attack-right (extends device, energy burst),
-> hack-special (rapid typing, digit glyphs radiate), panel-crouch-interact
-> (plugged in, progress glyph), talking-full-body (device in hand), talking-
-> closeup (AR glasses lit), hurt-drops-device, death-screen-goes-dark, revive-
-> checks-device-first, dash-right, lizard-summon (lizard appears on arm). Bold
-> 1px black outlines, flat colors, 16-color PICO-8 palette, no anti-aliasing.
+> Pixel art sprite sheet, clean modern pixel-art style inspired by
+> *Stranger Things: 1984*'s character-swap art (see `gem/ethan.png` for
+> fidelity reference), transparent background. Canvas 640 × 1088 px, 64×64
+> tiles, 17 rows × 10 columns. Subject: teenage boy, lean wiry build, grey
+> hoodie, dark navy cargo pants with gadget pockets, sneakers, short dark hair,
+> dark-blue rectangular AR glasses. Small glowing cyan hacking device always
+> in hand or clipped to belt. Cyan digit/data-stream glyphs appear during hack
+> and attack frames. Animations: idle (device glance, cyan pulse), walk-toward,
+> walk-away, walk-right, run-toward (device pocketed), run-away, run-right,
+> gadget-zap-attack-right (extends device, energy burst), hack-special (rapid
+> typing, digit glyphs radiate), panel-crouch-interact (plugged in, progress
+> glyph), talking-full-body (device in hand), talking-closeup (AR glasses lit),
+> hurt-drops-device, death-screen-goes-dark, revive-checks-device-first,
+> dash-right, lizard-summon (lizard appears on arm). Confident outlines, soft
+> directional shading with 2-3 step highlight/shadow gradients, extended
+> vibrant palette (DESIGN.md §2.0), no dithering.
 
 **Save to:** `assets/art/sprites/ethan.png`
 
@@ -329,10 +366,11 @@ cyan (#29ADFF) device glow and AR-glasses tint, dark hair (#1D2B53).
 (slightly blocky muzzle) with poodle fluffiness. Always alert and eager.
 General-purpose combat companion — charges enemies, headbutts, returns.
 
-**Palette slots:** Near-white (#FFF1E8) fur, pink (#FF77A8) tongue/inner ears,
-dark dot eyes, black nose.
+**Palette slots:** Near-white (`#F4F0E6`) fur, pink (`#FF9CC2`) tongue/inner
+ears, dark dot eyes and nose (`#1A1A22`).
 
-**Sprite sheet:** 11 rows × 32 px = **320 × 352 px**
+**Sprite sheet:** 11 rows × 64 px = **640 × 704 px** — see `gem/frosty.png`
+for the fidelity target.
 
 | Row | Animation | Frames | Notes |
 |-----|-----------|--------|-------|
@@ -349,14 +387,18 @@ dark dot eyes, black nose.
 | 10 | Return to owner | 6 | Happy trot, tail high |
 
 **AI Prompt:**
-> Pixel art sprite sheet, Tintin style, transparent background. Canvas
-> 320 × 352 px, 32×32 tiles, 11 rows × 10 columns. Subject: small fluffy
-> white dog, Schnauzer/Poodle mix, slightly blocky muzzle, round dark eyes,
-> pink tongue visible in active frames. Animations: idle (tail wag, head
-> tilt), trot-toward, trot-away, trot-right, gallop-toward, gallop-away,
-> gallop-right, headbutt-charge-attack (low sprint → head-down ram → bounce
-> back), hurt-stumble-yip, death-lie-flat (tail stops), happy-return-trot
-> (tail high). Bold 1px black outlines, flat colors, 16-color PICO-8 palette.
+> Pixel art sprite sheet, clean modern pixel-art style inspired by
+> *Stranger Things: 1984*'s character-swap art (see `gem/frosty.png` for
+> fidelity reference), transparent background. Canvas 640 × 704 px, 64×64
+> tiles, 11 rows × 10 columns. Subject: small fluffy white dog,
+> Schnauzer/Poodle mix, slightly blocky muzzle, round dark eyes, pink tongue
+> visible in active frames. Animations: idle (tail wag, head tilt),
+> trot-toward, trot-away, trot-right, gallop-toward, gallop-away, gallop-right,
+> headbutt-charge-attack (low sprint → head-down ram → bounce back),
+> hurt-stumble-yip, death-lie-flat (tail stops), happy-return-trot (tail
+> high). Confident outlines, soft directional shading with 2-3 step
+> highlight/shadow gradients, extended vibrant palette (DESIGN.md §2.0), no
+> dithering.
 
 **Save to:** `assets/art/sprites/frosty.png`
 
@@ -370,10 +412,11 @@ blank/cloudy eyes (she is blind), single prominent snaggle tooth visible
 even at rest, slightly wobbly stance. She looks ridiculous. That is the
 point. Her bark is her weapon.
 
-**Palette slots:** Cream (#FFF1E8) fur, tiny dark eye dots (barely visible —
-cloudy), ivory snaggle tooth, tiny pink tongue.
+**Palette slots:** Cream (`#F4F0E6`) fur, tiny dark eye dots (barely visible —
+cloudy), ivory snaggle tooth, tiny pink tongue (`#FF9CC2`).
 
-**Sprite sheet:** 9 rows × 32 px = **320 × 288 px**
+**Sprite sheet:** 9 rows × 64 px = **640 × 576 px** — see `gem/twinkle.png`
+for the fidelity target.
 
 | Row | Animation | Frames | Notes |
 |-----|-----------|--------|-------|
@@ -388,16 +431,19 @@ cloudy), ivory snaggle tooth, tiny pink tongue.
 | 8 | Annoyed | 4 | Sits; turns head away — used after failed actions |
 
 **AI Prompt:**
-> Pixel art sprite sheet, Tintin style, transparent background. Canvas
-> 320 × 288 px, 32×32 tiles, 9 rows × 10 columns. Subject: very small, round,
-> extremely fluffy cream-colored Pomeranian — noticeably smaller than Frosty.
-> Cloudy/blank eyes (she is blind), single prominent snaggle tooth always
-> visible, slightly wobbly unsteady stance. Comedic proportions encouraged.
-> Animations: idle (tiny wobble, snaggle tooth, cloudy eyes), trot-toward,
-> trot-right, full-body-bark (bouncing, mouth wide, sound rings emit), return-
-> trot, hurt-tiny-stumble-indignant, death-flop-leg-up, nose-to-ground-sniff,
-> annoyed-head-turn. Bold 1px black outlines, flat colors, 16-color PICO-8
-> palette.
+> Pixel art sprite sheet, clean modern pixel-art style inspired by
+> *Stranger Things: 1984*'s character-swap art (see `gem/twinkle.png` for
+> fidelity reference), transparent background. Canvas 640 × 576 px, 64×64
+> tiles, 9 rows × 10 columns. Subject: very small, round, extremely fluffy
+> cream-colored Pomeranian — noticeably smaller than Frosty. Cloudy/blank eyes
+> (she is blind), single prominent snaggle tooth always visible, slightly
+> wobbly unsteady stance. Comedic proportions encouraged. Animations: idle
+> (tiny wobble, snaggle tooth, cloudy eyes), trot-toward, trot-right,
+> full-body-bark (bouncing, mouth wide, sound rings emit), return-trot,
+> hurt-tiny-stumble-indignant, death-flop-leg-up, nose-to-ground-sniff,
+> annoyed-head-turn. Confident outlines, soft directional shading with 2-3
+> step highlight/shadow gradients, extended vibrant palette (DESIGN.md §2.0),
+> no dithering.
 
 **Save to:** `assets/art/sprites/twinkle.png`
 
@@ -410,11 +456,12 @@ rabbits. William is slightly larger and looks curious/adventurous; Mary is
 calmer and more compact. William: grey-and-white. Mary: mostly white. They
 are never split; the code always treats them as a unit.
 
-**Palette slots:** Mid-grey (#5F574F) William main fur, off-white (#FFF1E8)
-Mary, pink inner ears (#FF77A8), dark dot eyes.
+**Palette slots:** Mid-grey (`#5C5C6E`) William main fur, off-white
+(`#F4F0E6`) Mary, pink inner ears (`#FF9CC2`), dark dot eyes (`#1A1A22`).
 
-**Sprite sheet:** 8 rows × 32 px = **320 × 256 px** — both rabbits fit
-side-by-side in each 32 × 32 tile (they are small).
+**Sprite sheet:** 8 rows × 64 px = **640 × 512 px** — see
+`gem/william_and_mary.png` for the fidelity target. Both rabbits fit
+side-by-side in each 64 × 64 tile (they are small).
 
 | Row | Animation | Frames | Notes |
 |-----|-----------|--------|-------|
@@ -428,15 +475,18 @@ side-by-side in each 32 × 32 tile (they are small).
 | 7 | Death / Down — pair | 8 | Both lie flat simultaneously |
 
 **AI Prompt:**
-> Pixel art sprite sheet, Tintin style, transparent background. Canvas
-> 320 × 256 px, 32×32 tiles, 8 rows × 10 columns. Subject: TWO rabbits
-> present together in every frame — William (slightly larger, grey-and-white,
-> alert adventurous look) and Mary (smaller, mostly white, calm). Animations:
-> idle-pair (nose twitch, William looks around), hop-toward-pair, hop-right-pair,
-> brace-push-pair (both feet dug in against object edge), william-solo-squeeze-
-> through-gap (low sideways crawl; Mary waits), reunite-nose-bump, hurt-startle-
-> pair (ears flat), death-lie-flat-pair. Both rabbits visible in every row.
-> Bold 1px black outlines, flat colors, 16-color PICO-8 palette.
+> Pixel art sprite sheet, clean modern pixel-art style inspired by
+> *Stranger Things: 1984*'s character-swap art (see `gem/william_and_mary.png`
+> for fidelity reference), transparent background. Canvas 640 × 512 px, 64×64
+> tiles, 8 rows × 10 columns. Subject: TWO rabbits present together in every
+> frame — William (slightly larger, grey-and-white, alert adventurous look)
+> and Mary (smaller, mostly white, calm). Animations: idle-pair (nose twitch,
+> William looks around), hop-toward-pair, hop-right-pair, brace-push-pair
+> (both feet dug in against object edge), william-solo-squeeze-through-gap (low
+> sideways crawl; Mary waits), reunite-nose-bump, hurt-startle-pair (ears
+> flat), death-lie-flat-pair. Both rabbits visible in every row. Confident
+> outlines, soft directional shading with 2-3 step highlight/shadow gradients,
+> extended vibrant palette (DESIGN.md §2.0), no dithering.
 
 **Save to:** `assets/art/sprites/william_and_mary.png`
 
@@ -450,11 +500,12 @@ leaner (the brace/pusher). Both have the characteristic Great Pyrenees
 lion-like mane and heavy paws. Imposing at rest; devastating in a charge.
 Always together; code never separates them.
 
-**Palette slots:** White (#FFF1E8) main coat, light grey (#C2C3C7) mane depth
-shading, dark eyes and nose, pink tongue.
+**Palette slots:** White (`#F4F0E6`) main coat, light grey (`#A8A8B8`) mane
+depth shading, dark eyes and nose (`#1A1A22`), pink tongue (`#FF9CC2`).
 
-**Sprite sheet:** 9 rows × 32 px = **320 × 288 px** — note: if 32×32 is too
-cramped for two large dogs, use 48 × 32 px tiles (sheet becomes 480 × 288 px).
+**Sprite sheet:** 9 rows × 64 px = **640 × 576 px** — see
+`gem/calvin_and_coolidge.png` for the fidelity target. Note: if 64×64 is too
+cramped for two large dogs, use 96 × 64 px tiles (sheet becomes 960 × 576 px).
 
 | Row | Animation | Frames | Notes |
 |-----|-----------|--------|-------|
@@ -469,18 +520,22 @@ cramped for two large dogs, use 48 × 32 px tiles (sheet becomes 480 × 288 px).
 | 8 | Return to Evan | 6 | Trot back side by side; tails up |
 
 **AI Prompt:**
-> Pixel art sprite sheet, Tintin style, transparent background. Canvas
-> 320 × 288 px, 32×32 tiles, 9 rows × 10 columns. Subject: TWO large white
-> Great Pyrenees dogs always together in every frame — Calvin (heavier-set,
-> charger) and Coolidge (slightly leaner, braces). Both have lion-like manes
-> and heavy paws, visibly larger than Frosty. Animations: idle-pair (slow
-> breath, tail sway), heavy-walk-toward-pair, heavy-walk-right-pair, calvin-
-> shoulder-charge (Calvin sprints ahead, Coolidge follows), coolidge-brace-
-> push (Coolidge wide-planted against object, Calvin flanks), dual-charge-split
-> (both break in opposite directions simultaneously), hurt-flinch-mane-ripple-
-> pair, death-lie-flat-manes-spread-pair, return-trot-pair (tails up). Both
-> dogs in every frame. Bold 1px black outlines, flat colors, 16-color PICO-8
-> palette.
+> Pixel art sprite sheet, clean modern pixel-art style inspired by
+> *Stranger Things: 1984*'s character-swap art (see
+> `gem/calvin_and_coolidge.png` for fidelity reference), transparent
+> background. Canvas 640 × 576 px, 64×64 tiles, 9 rows × 10 columns. Subject:
+> TWO large white Great Pyrenees dogs always together in every frame — Calvin
+> (heavier-set, charger) and Coolidge (slightly leaner, braces). Both have
+> lion-like manes and heavy paws, visibly larger than Frosty. Animations:
+> idle-pair (slow breath, tail sway), heavy-walk-toward-pair,
+> heavy-walk-right-pair, calvin-shoulder-charge (Calvin sprints ahead,
+> Coolidge follows), coolidge-brace-push (Coolidge wide-planted against
+> object, Calvin flanks), dual-charge-split (both break in opposite
+> directions simultaneously), hurt-flinch-mane-ripple-pair,
+> death-lie-flat-manes-spread-pair, return-trot-pair (tails up). Both dogs in
+> every frame. Confident outlines, soft directional shading with 2-3 step
+> highlight/shadow gradients, extended vibrant palette (DESIGN.md §2.0), no
+> dithering.
 
 **Save to:** `assets/art/sprites/calvin_and_coolidge.png`
 
@@ -493,10 +548,11 @@ bodies, short legs, varied colorings (brown, white, tan — classic guinea pig
 tri-color). Their purpose is crowd-cover chaos — filling a floor with
 distracting scurrying motion — so animations emphasize mass movement.
 
-**Palette slots:** Brown (#AB5236), white (#FFF1E8), tan (#FFCCAA) varied
-across the 3–4 individuals, tiny dark eyes.
+**Palette slots:** Brown (`#9C5A2E`), white (`#F4F0E6`), tan (`#D9A36E`)
+varied across the 3–4 individuals, tiny dark eyes (`#1A1A22`).
 
-**Sprite sheet:** 6 rows × 32 px = **320 × 192 px**
+**Sprite sheet:** 6 rows × 64 px = **640 × 384 px** — see
+`gem/guinea_pigs.png` for the fidelity target.
 
 | Row | Animation | Frames | Notes |
 |-----|-----------|--------|-------|
@@ -518,10 +574,11 @@ across the 3–4 individuals, tiny dark eyes.
 is vertical traversal (scaling walls and pipes the duo cannot reach), so the
 climb animation is the hero animation for this sprite.
 
-**Palette slots:** Olive green (#008751 desaturated), dark stripe markings
-(#5F574F), tiny yellow eye (#FFEC27).
+**Palette slots:** Olive green (`#9C8A4E`), dark stripe markings (`#5C5C6E`),
+tiny yellow eye (`#FFE066`).
 
-**Sprite sheet:** 7 rows × 32 px = **320 × 224 px**
+**Sprite sheet:** 7 rows × 64 px = **640 × 448 px** — see `gem/lizard.png`
+for the fidelity target.
 
 | Row | Animation | Frames | Notes |
 |-----|-----------|--------|-------|
@@ -546,10 +603,10 @@ Face partly obscured by a bandana or cap brim — deliberately generic threat.
 Carries a blunt weapon (pipe or bat) in one hand. Should read instantly as
 "enemy" at 32 × 32 from the silhouette alone.
 
-**Palette slots:** Dark grey (#5F574F) jacket, navy (#1D2B53) trousers,
-red (#FF004D) bandana accent.
+**Palette slots:** Dark grey (`#5C5C6E`) jacket, navy (`#2F4A99`) trousers,
+red (`#E13B4A`) bandana accent.
 
-**Sprite sheet:** 8 rows × 32 px = **320 × 256 px**
+**Sprite sheet:** 8 rows × 64 px = **640 × 512 px**
 
 | Row | Animation | Frames | Notes |
 |-----|-----------|--------|-------|
@@ -573,10 +630,10 @@ Tracksuit or lightweight athletic gear. No visible weapon — attacks with
 quick jabs and kicks. A slightly manic, coiled energy even in idle. Fastest
 enemy; lowest health.
 
-**Palette slots:** Cyan (#29ADFF) tracksuit (visually distinct from Grunt's
-grey at a glance), white stripe accent, dark boots.
+**Palette slots:** Cyan (`#5ED6FF`) tracksuit (visually distinct from Grunt's
+grey at a glance), white (`#F4F0E6`) stripe accent, dark (`#1A1A22`) boots.
 
-**Sprite sheet:** 8 rows × 32 px = **320 × 256 px**
+**Sprite sheet:** 8 rows × 64 px = **640 × 512 px**
 
 | Row | Animation | Frames | Notes |
 |-----|-----------|--------|-------|
@@ -601,12 +658,12 @@ every movement has weight — arms visibly thick even at 32 × 32. Primary
 enemy in Iron & Strings Gym. Hits hardest of all enemies; slowest windup but
 heaviest damage.
 
-**Sprite tile: 48 × 32 px** (wider than standard to give the silhouette room).
+**Sprite tile: 96 × 64 px** (wider than standard to give the silhouette room).
 
-**Palette slots:** Dark red (#7E2553) tank top, grey (#C2C3C7) track pants,
-warm skin (#FFCCAA + #AB5236).
+**Palette slots:** Dark magenta-red (`#C2528C`) tank top, grey (`#A8A8B8`)
+track pants, warm skin (`#D9A36E`).
 
-**Sprite sheet:** 8 rows × 48 px = **480 × 256 px** (10 frames × 48 px wide)
+**Sprite sheet:** 8 rows × 96 px = **960 × 512 px** (10 frames × 96 px wide)
 
 | Row | Animation | Frames | Notes |
 |-----|-----------|--------|-------|
@@ -630,10 +687,10 @@ jacket, peaked cap. Holds a ranged weapon: a dart pistol or futuristic zapper
 (read-as-weapon but non-realistic — this is not a firearm). Used in The
 Library & Archive and The VR Escape Room. Measured, methodical movements.
 
-**Palette slots:** Navy (#1D2B53) uniform, dark cap, orange (#FFA300) weapon
-accent (makes it read clearly), white (#FFF1E8) gloves.
+**Palette slots:** Navy (`#2F4A99`) uniform, dark (`#18141A`) cap, orange
+(`#FF9A3C`) weapon accent (makes it read clearly), white (`#F4F0E6`) gloves.
 
-**Sprite sheet:** 8 rows × 32 px = **320 × 256 px**
+**Sprite sheet:** 8 rows × 64 px = **640 × 512 px**
 
 | Row | Animation | Frames | Notes |
 |-----|-----------|--------|-------|
@@ -655,7 +712,7 @@ accent (makes it read clearly), white (#FFF1E8) gloves.
 **Visual:** Small fast-moving bolt or energy disc. Cyan/orange glow. Just a
 spin or pulse loop — this is on-screen for a fraction of a second.
 
-**Sprite tile: 16 × 16 px.** Sheet: **160 × 16 px** (10 frames × 16 px).
+**Sprite tile: 32 × 32 px.** Sheet: **320 × 32 px** (10 frames × 32 px).
 
 | Row | Animation | Frames | Notes |
 |-----|-----------|--------|-------|
@@ -671,12 +728,13 @@ spin or pulse loop — this is on-screen for a fraction of a second.
 Gear motifs: visible spinning gears on shoulders or chest plate. Single
 glowing red eye. Conveys mass and power. Appears as the Clocktower guardian
 and the Grand Marquee Cinema's final guardian — same sprite, both roles.
-Use **64 × 64 px tiles** for presence.
+Use **128 × 128 px tiles** for presence.
 
-**Palette slots:** Iron grey (#5F574F) armor, gold (#FFA300) gear accents,
-red (#FF004D) glowing eye, off-white (#FFF1E8) AoE warning ring outline.
+**Palette slots:** Iron grey (`#5C5C6E`) armor, gold (`#FFC94D`) gear
+accents, red (`#E13B4A`) glowing eye, off-white (`#F4F0E6`) AoE warning ring
+outline.
 
-**Sprite sheet:** 10 rows × 64 px = **640 × 640 px** (10 frames × 64 px wide)
+**Sprite sheet:** 10 rows × 128 px = **1280 × 1280 px** (10 frames × 128 px wide)
 
 | Row | Animation | Frames | Notes |
 |-----|-----------|--------|-------|
@@ -704,7 +762,7 @@ build,  glasses on a chain. Rumpled collared shirt and slacks: he did
 not dress for an adventure. Warm and slightly bewildered expression. Found in
 the projection booth at the end of The Grand Marquee Cinema.
 
-**Sprite sheet:** 4 rows × 32 px = **320 × 128 px**
+**Sprite sheet:** 4 rows × 64 px = **640 × 256 px**
 
 | Row | Animation | Frames | Notes |
 |-----|-----------|--------|-------|
@@ -724,7 +782,7 @@ tight bun. Cardigan over a collared shirt. Carries a large hardcover book or
 a stamp at all times. The desk-blocker NPC in The Public Library & Archive.
 Her "step aside" animation is the payoff for Erin's Fast Talk.
 
-**Sprite sheet:** 4 rows × 32 px = **320 × 128 px**
+**Sprite sheet:** 4 rows × 64 px = **640 × 256 px**
 
 | Row | Animation | Frames | Notes |
 |-----|-----------|--------|-------|
@@ -745,7 +803,7 @@ flat cap with a badge. Broad-shouldered but not genuinely threatening —
 more jobsworth bouncer than actual danger. Guards the backstage curtain at
 The Carnival & Fairground.
 
-**Sprite sheet:** 4 rows × 32 px = **320 × 128 px**
+**Sprite sheet:** 4 rows × 64 px = **640 × 256 px**
 
 | Row | Animation | Frames | Notes |
 |-----|-----------|--------|-------|
@@ -762,12 +820,17 @@ The Carnival & Fairground.
 
 - **Left-facing versions of all walk/run/attack animations are code-flips of
   the right-facing row.** Do not generate separate left rows.
-- **All sheets share the 16-color PICO-8 palette.** When prompting an AI tool,
-  include: `"16-color PICO-8 palette, no anti-aliasing, no dithering"` to
-  enforce the constraint.
+- **All sheets share the extended ~32-color palette defined in DESIGN.md
+  §2.0** — no longer tied to PICO-8. When prompting an AI tool, include:
+  `"extended vibrant palette (DESIGN.md §2.0), confident outlines, soft
+  directional shading with 2-3 step highlight/shadow gradients, no dithering"`
+  to enforce the new *Stranger Things: 1984*-inspired modern pixel-art style.
+  See `gem/` for fidelity-reference sheets for the five player characters and
+  the animal companions.
 - **Unused frames at the end of a row are transparent** — if an animation has
-  fewer than 10 frames, pad the remaining columns with fully transparent 32×32
-  tiles.
+  fewer than 10 frames, pad the remaining columns with fully transparent
+  64×64 tiles (or that sheet's tile size, for the special-case sheets like
+  Brute/Boss/Projectile).
 - **Place finished sheets in** `assets/art/sprites/` and update
   `scripts/systems/placeholder_art.gd` to load from the file path instead of
   generating procedurally — the `PlaceholderArt` functions remain as fallbacks

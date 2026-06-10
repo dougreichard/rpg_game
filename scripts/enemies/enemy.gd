@@ -388,6 +388,7 @@ func _on_hurtbox_hit(damage: float, knockback: Vector2) -> void:
 	CombatFX.shake(0.3)
 	if hp == 0.0:
 		Audio.play("defeat")
+		GameManager.enemy_defeated.emit(data.enemy_name, data.is_boss)
 		queue_free()
 		return
 	Audio.play("hit")

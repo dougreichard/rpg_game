@@ -16,20 +16,46 @@ palettes, art-generation conventions, UI styling, and on-screen feedback
 
 ## 1. Pixel grid & viewport
 
-- **Tile size:** 32×32 px — matches character sprites and the `TileMap` grid.
-- **Character sprite:** 32×32 px (Brute and the Boss break this — see below).
-- **Viewport:** 1280×720, with `Camera2D.zoom = Vector2(2, 2)` — every level
-  is authored at 640×360 "logical" pixels and rendered at 2×.
-- **Room footprint:** every level is built from the same shared 640×360 base
-  room, expanded per-location into a bespoke multi-room layout (see CLAUDE.md
-  "Doorways, camera-follow & multi-room levels"). `FLOOR_COLS`/`FLOOR_ROWS`
-  scale with each location's bounding box at `room_px / 32` (rounded up).
-- **Exceptions to 32×32:**
+> **Target spec (current generation).** This section describes the viewport
+> and room scale all *new* work should target. The 13 existing location
+> scenes were authored at the previous 1280×720 / 640×360 spec (see
+> "Migration note" below) — bringing them up to this spec is tracked as a
+> separate follow-up pass, not part of this document update.
+
+- **Tile size (gameplay grid):** 32×32 px — collision, `TileMap` cells, and
+  level-layout math (`FLOOR_COLS`/`FLOOR_ROWS`, wall placement, prop
+  positions) are all still expressed in this grid. Unchanged from before —
+  bumping the viewport does not change how levels are built.
+- **Character sprite (gameplay footprint):** still occupies one 32×32 tile
+  (Brute and the Boss break this — see below). **Source art resolution is now
+  64×64 px per frame** (2× oversample) so characters render with finer linework
+  and shading at the larger viewport — see §3/§4 and `sprites.md`.
+- **Viewport:** **1920×1080**, with `Camera2D.zoom = Vector2(2, 2)` — every
+  level is authored at **960×540 "logical" pixels** and rendered at 2×.
+- **Room footprint:** every level is built from a shared **960×540 base room**
+  (1.5× the previous 640×360), expanded per-location into a bespoke multi-room
+  layout (see CLAUDE.md "Doorways, camera-follow & multi-room levels").
+  `FLOOR_COLS`/`FLOOR_ROWS` scale with each location's bounding box at
+  `room_px / 32` (rounded up) — a 960×540 base room is `30 × 17` tiles.
+- **Exceptions to 32×32 (gameplay tile):**
   - **Brute** — 48×32 px tile (wider silhouette for a bigger, slower enemy).
   - **Boss (Clockwork Guardian)** — 64×64 px tile (used at both Clocktower and
     Grand Marquee Cinema).
   - **Sentry projectile** — 16×16 px tile.
   - **Item icons** — 16×16 px (`InventoryPanel`).
+  - Source-art canvases for these double the same way as the 32×32 case
+    (96×64, 128×128, 32×32, 32×32 respectively) — see `sprites.md`.
+
+### Migration note (1280×720 → 1920×1080)
+
+The 13 shipped locations, the overworld map, and all UI panel positions
+(`InventoryPanel` at `(1112, 136)`, `DuoPanel` at `(1112, 16)`, etc.) were
+built against the 1280×720 / 640×360 / 20×12-tile spec and remain correct
+*as-is* — nothing breaks by leaving them alone. Recomputing room bounding
+boxes, camera limits, `FLOOR_COLS`/`FLOOR_ROWS`, and absolute UI positions for
+the new 1920×1080 / 960×540 / 30×17-tile spec across all 13 locations is a
+larger follow-up effort, deliberately out of scope here. New locations and any
+future visual-rework pass should target the new spec from the start.
 
 ---
 
@@ -37,16 +63,48 @@ palettes, art-generation conventions, UI styling, and on-screen feedback
 
 Two palette systems coexist:
 
-1. **Sprite art (`sprites.md`)** — a fixed 16-color PICO-8 palette shared by
-   every character/enemy/animal/NPC sheet:
-   `#000000 #1D2B53 #7E2553 #008751 #AB5236 #5F574F #C2C3C7 #FFF1E8 #FF004D
-   #FFA300 #FFEC27 #00E436 #29ADFF #83769C #FF77A8 #FFCCAA`. Each character's
-   section in `sprites.md` maps its design to specific slots from this set —
-   see that file for the full per-character breakdown.
+1. **Sprite art (`sprites.md`)** — an **extended ~32-color palette** (§2.0)
+   shared by every character/enemy/animal/NPC sheet, plus each
+   character/enemy/location's own accent color from §2.1–§2.4 and its
+   `.lightened()`/`.darkened()` variants. This **replaces the old fixed
+   16-color PICO-8 palette** — sprite art is no longer constrained to a single
+   retro swatch set, and is free to use richer shading/highlight ramps.
 2. **Procedural/runtime art (`PlaceholderArt`)** — environment tiles, walls,
    props, gates, and item icons are generated at runtime from arbitrary
-   `Color` values (not constrained to the PICO-8 set), each derived from a
-   per-location "base" color via `.lightened()`/`.darkened()` — see §4.
+   `Color` values (always unconstrained), each derived from a per-location
+   "base" color via `.lightened()`/`.darkened()` — see §4.
+
+### 2.0 Extended sprite palette
+
+The shared base palette every sprite sheet draws from — neutrals, skin/hair
+tones, and a spread of saturated accent colors for clothing, FX, and glyphs.
+It is intentionally broader and more vibrant than a single retro 8-bit set:
+artists should pick the closest swatch and may use `.lightened()`/
+`.darkened()` steps from it (or from a character's own accent color, §2.1) to
+build a 2–3 step shading ramp per shape — flat single-tone fills are no longer
+the goal.
+
+| Group | Swatches (hex) |
+|-------|----------------|
+| Ink / outline | `#1A1A22` (soft ink — replaces pure `#000000` for linework) |
+| Neutrals | `#2E2E3A` `#5C5C6E` `#A8A8B8` `#F4F0E6` `#FFFFFF` |
+| Skin tones | `#FFE3C7` `#F2C49B` `#D9A36E` `#8A5A3C` |
+| Hair tones | `#18141A` `#4A2E1C` `#9C5A2E` `#B8814B` |
+| Reds / corals | `#E13B4A` `#FF6B5C` |
+| Oranges / ambers | `#FF9A3C` `#FFC94D` |
+| Yellows | `#FFE066` |
+| Greens | `#4FB05C` `#2E7D4F` |
+| Teals / aquas | `#4FD1C5` `#1F7A78` |
+| Blues | `#4D9CE6` `#2F4A99` `#5ED6FF` |
+| Purples / magentas | `#8C6FD1` `#C2528C` |
+| Browns / olives | `#9C8A4E` `#6E4A2E` |
+| Pinks | `#FF9CC2` |
+| Steel | `#6E7A86` |
+
+This palette is descriptive, not exclusive — a character or location's own
+accent color (§2.1–§2.4) always takes priority for *that* character/location's
+signature hue, with this set filling in everything else (skin, hair, neutrals,
+shared FX colors like fire/cyan-tech/sound-wave glyphs).
 
 ### 2.1 Character sprite colors (`data/characters/*.tres: sprite_color`)
 
@@ -128,16 +186,29 @@ that don't define their own const reuse `FLOOR_ACCENT_COLOR` or a
 
 From `sprites.md` — applies to every player, animal, enemy, and NPC sheet:
 
-- **Art style:** Tintin/Hergé *ligne claire* — bold 1px black outlines, flat
-  cel-shaded fills, minimal internal shading (one highlight/shadow max).
+- **Art style:** Clean, high-readability modern pixel art — inspired by
+  *Stranger Things: 1984*'s character-swapping promo aesthetic: crisp
+  silhouettes, soft directional shading with 2–3 step gradients/highlights for
+  real volume (not flat single-tone cel-shading), grounded teen-adventure
+  character designs. More vibrant and detailed than the project's earlier flat
+  ligne-claire look — see `gem/` (below) for the target fidelity.
+- **Reference sheets:** `gem/quinn.png`, `gem/erin.png`, `gem/evan.png`,
+  `gem/ben.png`, `gem/ethan.png` (plus the animal-companion sheets in the same
+  folder) are the canonical visual targets for the five player characters —
+  match their level of detail, shading, and color richness when generating or
+  revising sprite sheets.
 - **Perspective:** top-down, ~¾ overhead.
-- **Proportions (32×32):** head ≈10px, torso ≈10px, legs ≈12px.
-- **Eyes:** 2×2px white square + 1×1px dark pupil — primary face-reading device.
+- **Proportions (64×64 source frame):** head ≈20px, torso ≈20px, legs ≈24px —
+  same 1:1:1.2 ratio as before, doubled for the higher-resolution canvas (still
+  renders into one 32×32 gameplay tile).
+- **Eyes:** 4×4px white square + 2×2px dark pupil, plus simple eyebrows/mouth
+  shapes where the larger canvas allows — still the primary face-reading
+  device.
 - **Background:** fully transparent.
 - **Mirroring rule:** left-facing walk/run/attack rows are never drawn — code
   flips the right-facing row.
-- **Sheet layout:** one animation per row, 10 frames/row (320px wide), unused
-  frames transparent.
+- **Sheet layout:** one animation per row, 10 frames/row (640px wide at 64px
+  tiles), unused frames transparent.
 - **Animation timing:** 10fps default; idle/talk 6–8fps; dash/hurt 12–15fps.
 
 Each of the five playable characters, the animal companions, and the five
@@ -154,7 +225,9 @@ AI-prompt block) in `sprites.md` — not duplicated here. Quick identity hooks:
 version of these same hooks: Quinn's newsboy cap, Erin's auburn hair,
 Evan's crew-cut + wide shoulders, Ben's spiky hair, Ethan's glasses — plus a
 held-prop silhouette per character (wrench, torch, fists, keytar, tech
-gadget).
+gadget). The procedural fallback stays at 32×32/flat-fill — it does not need
+to match the new 64×64/shaded spec, since it's superseded wherever a real
+sheet exists.
 
 ---
 
@@ -197,8 +270,19 @@ Python scripts + ComfyUI, per `sprites.md`) are dropped into
 `assets/art/sprites/` and loaded via `load()`, with `PlaceholderArt` remaining
 as the fallback for anything not yet replaced. `quinn.png`/`erin.png`/
 `evan.png`/`ben.png`/`ethan.png` (plus `*_reference.png`/`*_placeholder.png`
-variants) already exist; integration into `make_player_frames()`'s call sites
-is tracked separately from this doc.
+variants) already exist at the **previous** 320×544 (32×32-frame) spec;
+integration into `make_player_frames()`'s call sites is tracked separately
+from this doc.
+
+**`gem/` reference folder:** `gem/quinn.png`, `gem/erin.png`, `gem/evan.png`,
+`gem/ben.png`, `gem/ethan.png` (plus animal-companion sheets — `frosty.png`,
+`twinkle.png`, `lizard.png`, `william_and_mary.png`,
+`calvin_and_coolidge.png`, `guinea_pigs.png`) are the new visual-fidelity
+target per §3 — larger per-frame canvas, richer shading/gradients, more
+saturated colors than the existing `assets/art/sprites/` set. Regenerating the
+five player sheets (and the animal companions) to this fidelity, at the new
+64×64-frame spec from `sprites.md`, is the next asset-pipeline pass —
+not done as part of this doc update.
 
 ---
 
@@ -351,10 +435,17 @@ Static overlay — drawn once, no per-frame updates.
 
 - `make_player_frames()`'s procedural humanoids are a **fallback**; real
   sprite sheets from `sprites.md` (already present for all 5 characters in
-  `assets/art/sprites/`) are not yet wired into `make_player_frames()`'s call
-  sites — when that happens, this doc's §3/§4 should be updated to describe
-  the real-sprite path as primary and `PlaceholderArt` as fallback-only.
+  `assets/art/sprites/`, but at the previous 320×544/32×32-frame spec) are not
+  yet wired into `make_player_frames()`'s call sites — when that happens, this
+  doc's §3/§4 should be updated to describe the real-sprite path as primary
+  and `PlaceholderArt` as fallback-only.
 - `generators/gen_tileset.py` and the per-character `gen_*_comfy*.py` scripts
   are the asset-generation pipeline referenced by `sprites.md`'s "Save to"
   paths — not documented in detail here; see `sprites.md` and each script's
   header comments.
+- **Viewport/spec migration (§1):** the new 1920×1080 / 960×540-logical /
+  64×64-sprite-frame / extended-palette spec (§1–§3) applies to *new* work.
+  Migrating the 13 existing locations' room geometry, camera bounds, and UI
+  positions, and regenerating the player/animal sprite sheets to the new
+  frame size and `gem/`-reference fidelity (§4), are both tracked as
+  follow-up passes — neither is done as part of this doc update.

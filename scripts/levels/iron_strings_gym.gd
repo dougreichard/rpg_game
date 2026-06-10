@@ -226,6 +226,7 @@ func _summon_frosty() -> void:
 	frosty.setup(evan, target, FROSTY_COLOR)
 	add_child(frosty)
 	_frosty_cooldown_timer = FROSTY_COOLDOWN * _cd_scale
+	GameManager.companion_summoned.emit("frosty")
 
 func _nearest_enemy(from_pos: Vector2):
 	var living: Array = []
