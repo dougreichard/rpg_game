@@ -1,4 +1,4 @@
-[gd_scene load_steps=12 format=3]
+[gd_scene load_steps=15 format=3]
 
 [ext_resource type="Script" path="res://scripts/levels/old_parish_church.gd" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/players/Player.tscn" id="2"]
@@ -23,6 +23,15 @@ size = Vector2(16.0, 160.0)
 
 [sub_resource type="RectangleShape2D" id="11"]
 size = Vector2(16.0, 80.0)
+
+[sub_resource type="RectangleShape2D" id="12"]
+size = Vector2(16.0, 140.0)
+
+[sub_resource type="RectangleShape2D" id="13"]
+size = Vector2(112.0, 16.0)
+
+[sub_resource type="RectangleShape2D" id="14"]
+size = Vector2(16.0, 176.0)
 
 [node name="OldParishChurch" type="Node2D"]
 script = ExtResource("1")
@@ -68,12 +77,40 @@ collision_layer = 1
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Walls/NaveBottomRight"]
 shape = SubResource("8")
 
-[node name="NaveLeft" type="StaticBody2D" parent="Walls"]
-position = Vector2(192.0, 300.0)
+[node name="NaveLeftTop" type="StaticBody2D" parent="Walls"]
+position = Vector2(192.0, 190.0)
 collision_layer = 1
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Walls/NaveLeft"]
-shape = SubResource("9")
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Walls/NaveLeftTop"]
+shape = SubResource("12")
+
+[node name="NaveLeftBottom" type="StaticBody2D" parent="Walls"]
+position = Vector2(192.0, 410.0)
+collision_layer = 1
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Walls/NaveLeftBottom"]
+shape = SubResource("12")
+
+[node name="SideChapelNorth" type="StaticBody2D" parent="Walls"]
+position = Vector2(128.0, 212.0)
+collision_layer = 1
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Walls/SideChapelNorth"]
+shape = SubResource("13")
+
+[node name="SideChapelSouth" type="StaticBody2D" parent="Walls"]
+position = Vector2(128.0, 388.0)
+collision_layer = 1
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Walls/SideChapelSouth"]
+shape = SubResource("13")
+
+[node name="SideChapelWest" type="StaticBody2D" parent="Walls"]
+position = Vector2(64.0, 300.0)
+collision_layer = 1
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Walls/SideChapelWest"]
+shape = SubResource("14")
 
 [node name="NaveRight" type="StaticBody2D" parent="Walls"]
 position = Vector2(768.0, 300.0)

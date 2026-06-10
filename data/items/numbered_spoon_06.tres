@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="ItemData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/systems/item_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "numbered_spoon_06"
+display_name = "Spoon No. 6"
+description = "Marked '6'. Half a dozen down. Feels like there should be more out there."
+icon_color = Color(0.68, 0.68, 0.72, 1)
+owner_character = ""
+is_junk = true

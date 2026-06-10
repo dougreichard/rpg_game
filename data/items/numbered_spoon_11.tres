@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="ItemData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/systems/item_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "numbered_spoon_11"
+display_name = "Spoon No. 11"
+description = "Engraved '11'. One more, and the set's complete -- assuming twelve is really the whole set."
+icon_color = Color(0.68, 0.68, 0.72, 1)
+owner_character = ""
+is_junk = true

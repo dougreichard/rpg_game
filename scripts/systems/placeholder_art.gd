@@ -641,6 +641,87 @@ static func make_barbell_texture(color: Color, w: int, h: int) -> ImageTexture:
 		img.set_pixel(w - 1, y, Color.BLACK)
 	return ImageTexture.create_from_image(img)
 
+# Pew bench — dark wood rectangle with a 2px back rail across the top and
+# small leg blocks at each end. 80x18px in The Old Parish Church.
+static func make_pew_texture(color: Color, w: int, h: int) -> ImageTexture:
+	var img := Image.create(w, h, false, Image.FORMAT_RGBA8)
+	img.fill(color)
+	var rail: Color = color.lightened(0.18)
+	var leg: Color = color.darkened(0.35)
+	_rect(img, 0, 0, w, 2, rail)
+	var leg_w: int = maxi(w / 10, 2)
+	_rect(img, 0, h - 4, leg_w, 4, leg)
+	_rect(img, w - leg_w, h - 4, leg_w, 4, leg)
+	return ImageTexture.create_from_image(img)
+
+# Altar — raised stone platform with a cloth-draped table on top. 64x24px.
+static func make_altar_texture(w: int, h: int) -> ImageTexture:
+	var img := Image.create(w, h, false, Image.FORMAT_RGBA8)
+	var stone: Color = Color(0.55, 0.53, 0.50)
+	var cloth: Color = Color(0.55, 0.12, 0.14)
+	var cloth_dark: Color = cloth.darkened(0.25)
+	img.fill(stone)
+	var cloth_h: int = h / 2
+	_rect(img, 0, 0, w, cloth_h, cloth)
+	_rect(img, 0, cloth_h - 1, w, 1, cloth_dark)
+	for x: int in range(0, w, 6):
+		_rect(img, x, cloth_h, 3, 2, cloth_dark)
+	_rect(img, 0, h - 2, w, 2, stone.darkened(0.3))
+	return ImageTexture.create_from_image(img)
+
+# Stained glass — 3x4 grid of colored panels separated by 1px black lead
+# lines, cycling through the colors array. 32x64px on the nave's east/west
+# walls.
+static func make_stained_glass_texture(w: int, h: int, colors: Array) -> ImageTexture:
+	var img := Image.create(w, h, false, Image.FORMAT_RGBA8)
+	img.fill(Color.BLACK)
+	const COLS: int = 3
+	const ROWS: int = 4
+	var cell_w: int = (w - (COLS - 1)) / COLS
+	var cell_h: int = (h - (ROWS - 1)) / ROWS
+	for row: int in range(ROWS):
+		for col: int in range(COLS):
+			var panel: Color = colors[(row * COLS + col) % colors.size()]
+			_rect(img, col * (cell_w + 1), row * (cell_h + 1), cell_w, cell_h, panel)
+	return ImageTexture.create_from_image(img)
+
+# Candle — thin white wax stub with a small orange flame teardrop at the top
+# when lit. 8x24px.
+static func make_candle_texture(w: int, h: int, lit: bool) -> ImageTexture:
+	var img := Image.create(w, h, false, Image.FORMAT_RGBA8)
+	var wax: Color = Color(0.92, 0.88, 0.78)
+	var flame_h: int = 6 if lit else 0
+	_rect(img, 0, flame_h, w, h - flame_h, wax)
+	_rect(img, w - 1, flame_h, 1, h - flame_h, wax.darkened(0.15))
+	if lit:
+		var flame: Color = Color(1.0, 0.55, 0.1)
+		var flame_core: Color = Color(1.0, 0.85, 0.3)
+		var cx: int = w / 2
+		_rect(img, cx, 0, 1, 1, flame)
+		_rect(img, cx - 1, 1, 3, 2, flame)
+		_rect(img, cx, 3, 1, 1, flame_core)
+		_rect(img, cx - 1, 4, 3, 1, flame)
+		_rect(img, cx, 5, 1, 1, flame)
+	return ImageTexture.create_from_image(img)
+
+# Arch window — pointed-arch outline with a colored glass fill and a center
+# mullion. Used above the altar on the nave's north wall.
+static func make_arch_window_texture(w: int, h: int, glass_color: Color) -> ImageTexture:
+	var img := Image.create(w, h, false, Image.FORMAT_RGBA8)
+	var frame: Color = Color(0.25, 0.22, 0.18)
+	img.fill(frame)
+	var arch_h: int = h / 2
+	# Pointed arch top — triangular taper from a point down to full width.
+	for y: int in range(arch_h):
+		var t: float = float(y) / float(maxi(arch_h - 1, 1))
+		var inset: int = int(lerp(float(w) / 2.0 - 1.0, 2.0, t))
+		_rect(img, inset, y, maxi(w - inset * 2, 0), 1, glass_color)
+	# Rectangular base below the arch.
+	_rect(img, 2, arch_h, w - 4, h - arch_h - 2, glass_color)
+	# Center mullion divider.
+	_rect(img, w / 2, 0, 1, h, glass_color.darkened(0.35))
+	return ImageTexture.create_from_image(img)
+
 static func _rect(img: Image, x: int, y: int, w: int, h: int, color: Color) -> void:
 	var iw: int = img.get_width()
 	var ih: int = img.get_height()

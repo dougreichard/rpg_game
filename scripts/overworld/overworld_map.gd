@@ -50,7 +50,14 @@ const T_CYBER: int = 7
 const GRASS_TILE: Vector2i = Vector2i(4, T_OUTDOOR)
 const GRASS_ACCENT_TILE: Vector2i = Vector2i(2, T_OUTDOOR)
 const GRASS_ACCENT_PERIOD: int = 5
-const ROAD_TILE: Vector2i = Vector2i(0, T_STONE)
+# Roads previously reused the indoor STONE-row ashlar tile, which read as a
+# dropped-in dungeon floor square rather than a path. Gravel/packed-dirt
+# OUTDOOR tiles are non-directional (work for both horizontal and vertical
+# road runs) and contrast with the green grass tiles, so an L-shaped route
+# reads as a worn road cut through the lawn.
+const ROAD_TILE: Vector2i = Vector2i(3, T_OUTDOOR)
+const ROAD_ACCENT_TILE: Vector2i = Vector2i(1, T_OUTDOOR)
+const ROAD_ACCENT_PERIOD: int = 3
 # zip_line / the_drop share the OUTDOOR row with grass — use distinct columns
 # so their building footprints read as built structures, not more lawn.
 const OUTDOOR_BUILDING_TILES: Array = [Vector2i(5, T_OUTDOOR), Vector2i(8, T_OUTDOOR)]
@@ -165,6 +172,30 @@ const NPC_DATA: Array = [
 	{"home": Vector2i(33, 15), "name": "Otis", "color": Color(0.40, 0.55, 0.70), "quest_id": "otis"},
 ]
 
+# Second wave of quest-givers, added for the 12-spoon collectible set (see
+# CLAUDE.md "Numbered Spoons"). Homed out in the grass padding beyond the
+# original 40x19 layout (negative/large coords are valid -- _anchor() just
+# adds MAP_OFFSET, and _build_floor() paints grass across the whole padded
+# GRID_COLS x GRID_ROWS grid), so these new homes can't collide with any
+# building footprint or existing NPC. Wendell/Clara/Ambrose/Dottie are always
+# present (fetch quests for already-placed junk items); Tobias/Agnes are only
+# spawned once the matching location's secret passage has been found --
+# `requires_flag` is checked in _spawn_npcs().
+const NPC_DATA_2: Array = [
+	{"home": Vector2i(-5, 4), "name": "Wendell", "color": Color(0.55, 0.45, 0.40), "quest_id": "wendell"},
+	{"home": Vector2i(-5, 12), "name": "Clara", "color": Color(0.45, 0.55, 0.60), "quest_id": "clara"},
+	{"home": Vector2i(44, 4), "name": "Ambrose", "color": Color(0.60, 0.58, 0.42), "quest_id": "ambrose"},
+	{"home": Vector2i(44, 12), "name": "Dottie", "color": Color(0.70, 0.48, 0.55), "quest_id": "dottie"},
+	{
+		"home": Vector2i(15, -5), "name": "Tobias", "color": Color(0.50, 0.50, 0.55), "quest_id": "tobias",
+		"requires_flag": {"location": "pipe_organ_works", "flag": "secret_revealed"},
+	},
+	{
+		"home": Vector2i(15, 23), "name": "Agnes", "color": Color(0.65, 0.62, 0.78), "quest_id": "agnes",
+		"requires_flag": {"location": "old_parish_church", "flag": "secret_revealed"},
+	},
+]
+
 # Each quest asks for one (already-placed, mostly pre-existing junk/lore)
 # collectible and -- if `give_item` is non-empty -- hands back a reward item
 # on turn-in. Dialog is paged (each entry is shown until the player presses
@@ -173,7 +204,7 @@ const NPC_DATA: Array = [
 # GameManager.get/set_level_flag(TOWN_ID, "quest_<id>", ...).
 const QUESTS: Dictionary = {
 	"gus": {
-		"want_item": "bent_spoon", "give_item": "",
+		"want_item": "bent_spoon", "give_item": "", "spoon": "numbered_spoon_01",
 		"intro": [
 			"Gus: Eh? Oh, it's you two.\nHaven't seen strangers 'round\nhere in ages.",
 			"Gus: Say -- you didn't happen\nto find an old bent spoon in\nthat organ workshop, did you?",
@@ -193,7 +224,7 @@ const QUESTS: Dictionary = {
 		],
 	},
 	"moira": {
-		"want_item": "skeleton_key", "give_item": "",
+		"want_item": "skeleton_key", "give_item": "", "spoon": "numbered_spoon_02",
 		"intro": [
 			"Moira: Oh! Hello, dears. You\nlook like you're headed\nsomewhere important.",
 			"Moira: If your travels take you\nthrough the Library, keep an\neye out for an old skeleton key.",
@@ -215,7 +246,7 @@ const QUESTS: Dictionary = {
 		],
 	},
 	"reggie": {
-		"want_item": "arcade_token", "give_item": "",
+		"want_item": "arcade_token", "give_item": "", "spoon": "numbered_spoon_03",
 		"intro": [
 			"Reggie: Hey hey! You two look\nlike you can keep a secret.",
 			"Reggie: Years back, me and a\nfella named Doug built an\narcade cabinet from scratch.",
@@ -237,7 +268,7 @@ const QUESTS: Dictionary = {
 		],
 	},
 	"fanny": {
-		"want_item": "fannys_bottle", "give_item": "",
+		"want_item": "fannys_bottle", "give_item": "", "spoon": "numbered_spoon_04",
 		"intro": [
 			"Fanny: Oh, hello. You'll have to\nexcuse me -- I've been a bit\nout of sorts lately.",
 			"Fanny: I lost a little bottle of\nmine somewhere in those awful\ntunnels. F.B., it's marked.",
@@ -259,7 +290,7 @@ const QUESTS: Dictionary = {
 		],
 	},
 	"penny": {
-		"want_item": "embroidered_handkerchief", "give_item": "stitched_patch",
+		"want_item": "embroidered_handkerchief", "give_item": "stitched_patch", "spoon": "numbered_spoon_05",
 		"intro": [
 			"Penny: Hiya! You two look like\nyou get around. Mind doing me\na favor?",
 			"Penny: I was mending an old\nhandkerchief for a customer --\nan embroidered 'D,' very fancy.",
@@ -281,7 +312,7 @@ const QUESTS: Dictionary = {
 		],
 	},
 	"otis": {
-		"want_item": "brass_compass", "give_item": "sailors_knot_bracelet",
+		"want_item": "brass_compass", "give_item": "sailors_knot_bracelet", "spoon": "numbered_spoon_06",
 		"intro": [
 			"Otis: Well now, fresh faces!\nDon't get many of those down\nby the docks these days.",
 			"Otis: Say -- you wouldn't have\nspotted an old brass compass\nlying around the harbor, eh?",
@@ -301,6 +332,118 @@ const QUESTS: Dictionary = {
 		],
 		"after": [
 			"Otis: That compass still doesn't\npoint north. But it points\nhome. Good enough for me.",
+		],
+	},
+}
+
+# Second wave of quests, for the new NPC_DATA_2 quest-givers -- see CLAUDE.md
+# "Numbered Spoons". Wendell/Clara/Ambrose/Dottie are ordinary fetch quests
+# (want_item -> spoon, no flavor give_item). Tobias/Agnes have no want_item:
+# they were "freed" by the player finding a secret passage elsewhere, so the
+# very first conversation both completes the quest and hands over their spoon
+# -- see _talk_to_npc()'s want_item == "" branch. Every quest here (and every
+# quest above, via the "spoon" key added to QUESTS) grants exactly one of the
+# 12 numbered_spoon_NN items.
+const QUESTS_2: Dictionary = {
+	"wendell": {
+		"want_item": "ticket_stub_torn", "give_item": "", "spoon": "numbered_spoon_07",
+		"intro": [
+			"Wendell: ...Oh. Visitors. Don't\nget many of those out here.",
+			"Wendell: I collect ticket stubs --\nodd hobby, I know. Lost one\nsomewhere near the Carnival.",
+			"Wendell: Torn clean in half. If you\nspot it, I'd love to add it\nback to the collection.",
+		],
+		"reminder": [
+			"Wendell: Still no torn ticket\nstub? It'd have blown around\nnear the Carnival, probably.",
+		],
+		"turn_in": [
+			"Wendell: That's the one! Thank\nyou. Every stub tells a\nlittle story.",
+			"Wendell: Here, take this -- found\nit years ago, no idea what it\ngoes to. Number 7, see?",
+			"Wendell: I had eleven others like\nit once, scattered all over\ntown. Funny, isn't it?",
+			"Wendell: Always wondered what kind\nof game needs that many\nidentical spoons.",
+		],
+		"after": [
+			"Wendell: Thanks again for that\nstub. Let me know if you ever\nfind the rest of that set.",
+		],
+	},
+	"clara": {
+		"want_item": "tangled_headphone_cable", "give_item": "", "spoon": "numbered_spoon_08",
+		"intro": [
+			"Clara: Hey! You two get around,\nright? I'm missing a cable for\nmy crystal radio project.",
+			"Clara: Tangled mess of a thing,\nlast I saw it near the\nRecording Studio.",
+			"Clara: Probably looks like junk to\nmost people. To me it's a\nspare part. Keep an eye out?",
+		],
+		"reminder": [
+			"Clara: Still no cable? It's\nprobably tangled up with\nsomething else by now.",
+		],
+		"turn_in": [
+			"Clara: You found it! Perfect,\nthanks. This'll patch right\ninto the radio.",
+			"Clara: Oh -- this was tangled up\nwith it. A spoon? Number 8,\nstamped right there.",
+			"Clara: No idea why anyone would\ntape a spoon to a headphone\ncable. Yours now, I guess.",
+		],
+		"after": [
+			"Clara: Radio's coming along\nnicely, thanks to you. Still\npicking up mostly static, but!",
+		],
+	},
+	"ambrose": {
+		"want_item": "faded_treasure_map", "give_item": "", "spoon": "numbered_spoon_09",
+		"intro": [
+			"Ambrose: Ah, travelers! I'm an\namateur cartographer. Maps\nfascinate me, even bad ones.",
+			"Ambrose: I heard tell of a faded\ntreasure map down at the\nHarbor & Docks. Useless, but--",
+			"Ambrose: --I'd love to study it\nanyway. The X's never line up\nwith anything, but still!",
+		],
+		"reminder": [
+			"Ambrose: Any luck with that\ntreasure map? Probably stuffed\nin a crate down at the docks.",
+		],
+		"turn_in": [
+			"Ambrose: Wonderful! Let's see...\nyes, these landmarks match\nNOTHING. Fascinating.",
+			"Ambrose: Hold on -- something was\nfolded inside it. A spoon,\nnumbered '9'.",
+			"Ambrose: Maybe X marked this spot\nafter all. Here, it's yours --\nI'm keeping the map.",
+		],
+		"after": [
+			"Ambrose: Still cross-referencing\nthat map against, well,\nreality. Slow going.",
+		],
+	},
+	"dottie": {
+		"want_item": "rabbits_foot_keychain", "give_item": "", "spoon": "numbered_spoon_10",
+		"intro": [
+			"Dottie: Ooh, hello! I collect\nlucky charms. Doesn't matter\nif they actually work.",
+			"Dottie: I heard there's a rabbit's\nfoot keychain out wherever\nthe team made their big jump.",
+			"Dottie: 'The Drop,' they call it?\nSounds thrilling. If you find\nit, it'd complete my shelf.",
+		],
+		"reminder": [
+			"Dottie: Still no rabbit's foot?\nIt can't have gone far --\nthere's nowhere TO go, really.",
+		],
+		"turn_in": [
+			"Dottie: You found it! My shelf is\ncomplete. Well -- ENOUGH.\nThere's always more to find.",
+			"Dottie: Funny, this was tucked\nunderneath it. Spoon, marked\n'10'. Double digits!",
+			"Dottie: Here, take it. Whatever\ngame these belong to, it's a\nbig one. Lucky you, I suppose.",
+		],
+		"after": [
+			"Dottie: Still feeling lucky from\nthat rabbit's foot. Or maybe\nthat's just my outlook. Thanks!",
+		],
+	},
+	"tobias": {
+		"want_item": "", "give_item": "", "spoon": "numbered_spoon_11", "reminder": [], "turn_in": [],
+		"intro": [
+			"Tobias: ...Whoa. Daylight. Hadn't\nseen that in a while.",
+			"Tobias: I got turned around in\nthat parts closet behind the\norgan workshop. Thanks for\nfinding the way through.",
+			"Tobias: Here -- found this rolling\naround in there with me.\nSpoon, marked '11'. Yours.",
+			"Tobias: Don't ask me what it's for.\nI was just glad for the\ncompany, honestly.",
+		],
+		"after": [
+			"Tobias: Good to be back out and\nabout. Thanks again for\nletting some light in.",
+		],
+	},
+	"agnes": {
+		"want_item": "", "give_item": "", "spoon": "numbered_spoon_12", "reminder": [], "turn_in": [],
+		"intro": [
+			"Agnes: Oh! Someone found the\nloft. I've been up there\npracticing for, oh, ages.",
+			"Agnes: Lovely organ, that one. A\nbit dusty. Anyway -- you\nstartled this right out of\nmy pocket.",
+			"Agnes: A spoon. Number '12', if\nyou squint. A full dozen, all\nnumbered, none useful for soup.",
+			"Agnes: Definitely a game piece --\nbut for which game, I\ncouldn't tell you. Keep it!",
+		],
+		"after": [
+			"Agnes: Back to practicing, I\nthink. Thanks for the\ncompany -- and the daylight.",
 		],
 	},
 }
@@ -389,16 +532,19 @@ func _build_floor() -> void:
 func _paint_road(tile_map: TileMap, a: Vector2i, b: Vector2i) -> void:
 	var x: int = a.x
 	while true:
-		tile_map.set_cell(1, Vector2i(x, a.y), 0, ROAD_TILE)
+		tile_map.set_cell(1, Vector2i(x, a.y), 0, _road_tile_at(x, a.y))
 		if x == b.x:
 			break
 		x += signi(b.x - a.x)
 	var y: int = a.y
 	while true:
-		tile_map.set_cell(1, Vector2i(b.x, y), 0, ROAD_TILE)
+		tile_map.set_cell(1, Vector2i(b.x, y), 0, _road_tile_at(b.x, y))
 		if y == b.y:
 			break
 		y += signi(b.y - a.y)
+
+func _road_tile_at(x: int, y: int) -> Vector2i:
+	return ROAD_ACCENT_TILE if (x * 7 + y * 13) % ROAD_ACCENT_PERIOD == 0 else ROAD_TILE
 
 func _paint_building(tile_map: TileMap, idx: int) -> void:
 	var loc: Dictionary = LOCS[idx]
@@ -464,13 +610,22 @@ func _load_player_frames(character_name: String) -> SpriteFrames:
 		return loaded
 	return PlaceholderArt.make_player_frames(CHAR_DATA[character_name].sprite_color, character_name)
 
+# NPC_DATA_2 entries may carry a "requires_flag" ({location, flag}) -- those
+# townsfolk represent characters "freed" by a secret-passage discovery
+# elsewhere (see CLAUDE.md "Numbered Spoons") and are skipped entirely until
+# that location's level_progress flag is set. _npcs is therefore not always
+# parallel to NPC_DATA + NPC_DATA_2 -- each npc carries its own `color` (set
+# via setup()) so _talk_to_npc() never needs to index back into the data
+# arrays by position.
 func _spawn_npcs() -> void:
-	for i: int in NPC_DATA.size():
-		var data: Dictionary = NPC_DATA[i]
+	for data: Dictionary in NPC_DATA + NPC_DATA_2:
+		var req: Dictionary = data.get("requires_flag", {})
+		if not req.is_empty() and not GameManager.get_level_flag(req["location"], req["flag"], false):
+			continue
 		var npc = NpcScript.new()
 		add_child(npc)
 		var home: Vector2 = Vector2(Vector2i(data["home"]) + MAP_OFFSET) * TILE + Vector2(TILE / 2.0, TILE / 2.0)
-		npc.setup(PlaceholderArt.make_player_frames(data["color"], ""), home, data["name"], data["quest_id"])
+		npc.setup(PlaceholderArt.make_player_frames(data["color"], ""), home, data["name"], data["quest_id"], data["color"])
 		_npcs.append(npc)
 
 func _build_ui() -> void:
@@ -613,7 +768,7 @@ func _update_nearby_npc() -> void:
 # and the player hasn't found the item yet; after shown once complete.
 func _talk_to_npc(idx: int) -> void:
 	var npc = _npcs[idx]
-	var quest: Dictionary = QUESTS.get(npc.quest_id, {})
+	var quest: Dictionary = QUESTS.get(npc.quest_id, QUESTS_2.get(npc.quest_id, {}))
 	if quest.is_empty():
 		return
 	var flag_key: String = "quest_" + npc.quest_id
@@ -628,15 +783,25 @@ func _talk_to_npc(idx: int) -> void:
 				GameManager.consume_item(holder, quest["want_item"])
 				if quest["give_item"] != "":
 					GameManager.grant_item(holder, quest["give_item"])
+				if quest.get("spoon", "") != "":
+					GameManager.grant_item(holder, quest["spoon"])
 				GameManager.set_level_flag(TOWN_ID, flag_key, "complete")
 				lines = quest["turn_in"]
 			else:
 				lines = quest["reminder"]
 		_:
-			GameManager.set_level_flag(TOWN_ID, flag_key, "active")
+			# A quest with no want_item (Tobias/Agnes -- "freed" by a secret
+			# passage found elsewhere) completes on the very first
+			# conversation: its "intro" doubles as the turn-in/thanks.
+			if quest["want_item"] == "":
+				if quest.get("spoon", "") != "":
+					GameManager.grant_item(GameManager.unlocked_characters[0], quest["spoon"])
+				GameManager.set_level_flag(TOWN_ID, flag_key, "complete")
+			else:
+				GameManager.set_level_flag(TOWN_ID, flag_key, "active")
 			lines = quest["intro"]
 	Audio.play("ui_select")
-	_dialog_box.open(npc.npc_name, NPC_DATA[idx]["color"], lines)
+	_dialog_box.open(npc.npc_name, npc.color, lines)
 
 # Returns the lowercase name of the first unlocked character holding
 # `item_id`, or "" if none do -- mirrors GameManager.has_item's lowercase

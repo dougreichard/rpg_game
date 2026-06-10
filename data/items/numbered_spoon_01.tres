@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="ItemData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/systems/item_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "numbered_spoon_01"
+display_name = "Spoon No. 1"
+description = "Stamped with a small '1' on the handle. Means nothing on its own -- but feels like it's part of a set."
+icon_color = Color(0.68, 0.68, 0.72, 1)
+owner_character = ""
+is_junk = true

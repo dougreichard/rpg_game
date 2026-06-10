@@ -13,6 +13,7 @@ const ARRIVE_DISTANCE: float = 4.0
 var sprite: AnimatedSprite2D
 var npc_name: String = ""
 var quest_id: String = ""
+var color: Color = Color.WHITE
 var _home: Vector2
 var _target: Vector2
 var _pause_timer: float = 0.0
@@ -20,15 +21,18 @@ var _rng := RandomNumberGenerator.new()
 
 
 # `name`/`quest` identify this townsfolk for overworld_map.gd's dialog/quest
-# system -- see CLAUDE.md "NPC dialog & quests". Cosmetic-only NPCs (none,
-# currently) would simply leave quest blank.
-func setup(frames: SpriteFrames, home: Vector2, name: String = "", quest: String = "") -> void:
+# system -- see CLAUDE.md "NPC dialog & quests". `npc_color` is stashed for
+# the dialog box portrait -- needed because NPC_DATA isn't always parallel to
+# the spawned _npcs array (some entries are conditionally spawned). Cosmetic-
+# only NPCs (none, currently) would simply leave quest blank.
+func setup(frames: SpriteFrames, home: Vector2, name: String = "", quest: String = "", npc_color: Color = Color.WHITE) -> void:
 	sprite = AnimatedSprite2D.new()
 	sprite.sprite_frames = frames
 	sprite.play("idle")
 	add_child(sprite)
 	npc_name = name
 	quest_id = quest
+	color = npc_color
 	_home = home
 	global_position = home
 	_rng.randomize()

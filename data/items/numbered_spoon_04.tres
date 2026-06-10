@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="ItemData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/systems/item_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "numbered_spoon_04"
+display_name = "Spoon No. 4"
+description = "Engraved '4'. Reggie swears he's seen one just like it bolted to the side of an old arcade cabinet."
+icon_color = Color(0.68, 0.68, 0.72, 1)
+owner_character = ""
+is_junk = true

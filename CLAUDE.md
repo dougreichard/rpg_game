@@ -223,6 +223,79 @@ icon border for junk items) so players can tell "this might matter later" from
 > completion gate (`_has_all_tickets()`) is the headline capstone. See the
 > "Follow-up pass: COMPLETE" note above for the per-item placement map.
 
+### Numbered spoon set (NPC quest rewards) *(implemented)*
+A 12-piece junk/lore set, layered on top of the existing town quest-givers:
+finishing **any** of the 12 town NPC quests (see "NPC dialog & quests" below)
+also grants one `numbered_spoon_NN` (`data/items/numbered_spoon_01.tres`
+through `_12.tres`, `is_junk = true`, following the `ItemData` convention
+exactly). Each spoon's `description` is its own little riff on Quinn's "Bent
+spoon...has a story" joke from the junk table above, escalating across the set
+toward an explicit Easter-egg hint: early entries read as plain flavor text
+("Stamped with a small '1' on the handle...feels like it's part of a set"),
+middle entries plant the payoff ("Reggie swears he's seen one just like it
+bolted to the side of an old arcade cabinet" — tying back to his arcade-token
+quest item and its "planted rumor for a future location" note), and the final
+entries spell it out ("One more, and the set's complete...", "...Definitely a
+game piece — but for which game?"). No mechanical gate depends on collecting
+the set — pure lore/completionist hook, in the same spirit as Penny's
+Hand-Stitched Patch or Otis's Sailor's Knot Bracelet.
+
+- **Quest → spoon mapping**: every entry in `QUESTS` and `QUESTS_2`
+  (`overworld_map.gd`) gained a `"spoon": "numbered_spoon_0N"` key — gus→01,
+  moira→02, reggie→03, fanny→04, penny→05, otis→06, wendell→07, clara→08,
+  ambrose→09, dottie→10, tobias→11, agnes→12. `_talk_to_npc()` grants the
+  spoon (via `GameManager.grant_item()`, idempotent like every other item
+  grant) at the same moment it grants a quest's `give_item` — one extra
+  `if quest.get("spoon", "") != ""` check alongside the existing turn-in
+  logic, so the established `not_started → active → complete` state machine
+  and dialog flow are otherwise untouched.
+- **6 new NPCs** (`NPC_DATA_2` in `overworld_map.gd`, alongside the existing
+  `NPC_DATA` six) round the roster up to 12 quest-givers — the user's explicit
+  call to "add more NPCs so there are enough to give out 12 spoons... some in
+  other locations, some freed from hidden/secret rooms":
+  - **Wendell, Clara, Ambrose, Dottie** — ordinary fetch-quest NPCs homed in
+    the overworld's grass padding (the area outside the original 40×19
+    `LOCS` grid — fully painted by `_build_floor()`'s padded `GRID_COLS x
+    GRID_ROWS` (60×35) grass pass but never given colliders by
+    `_build_building_colliders()`, so it's guaranteed-clear open ground for
+    new NPC homes with zero collision risk). Each quest reuses an
+    **already-placed** junk item from another location as its `want_item`
+    rather than introducing a new collectible/loot box: Wendell wants the
+    Carnival's `ticket_stub_torn`, Clara the Recording Studio's
+    `tangled_headphone_cable`, Ambrose Harbor & Docks' `faded_treasure_map`,
+    Dottie The Drop's `rabbits_foot_keychain` — all four already had loot-box
+    placements and `ItemData` entries from the original 29-item rollout, so
+    no level scenes changed.
+  - **Tobias and Agnes** — one-shot "freed" NPCs gated by `requires_flag` (a
+    new optional `NPC_DATA_2` key: `{"location": ..., "flag": ...}`, checked
+    in `_spawn_npcs()` via `GameManager.get_level_flag()` before an NPC is
+    even instantiated). Tobias requires
+    `level_progress["pipe_organ_works"]["secret_revealed"]`; Agnes requires
+    `level_progress["old_parish_church"]["secret_revealed"]` — reusing the
+    secret-passage flags those two locations already set when their hidden
+    rooms are found (see their implementation notes above), so finding either
+    secret passage literally "frees" the corresponding NPC into town. Their
+    `QUESTS_2` entries have `want_item == ""` and empty `reminder`/`turn_in`
+    arrays — `_talk_to_npc()` special-cases `want_item == ""` in the
+    `not_started` branch: the very first conversation (`intro`, doubling as
+    their thanks for being freed) grants their spoon directly to
+    `GameManager.unlocked_characters[0]` (always `"quinn"`) and jumps straight
+    to `complete`, skipping the `active`/`reminder` states entirely.
+- **`town_npc.gd`** gained a `color: Color` field, set via `setup()`'s new
+  `npc_color` param — needed because `_npcs` is no longer guaranteed parallel
+  to `NPC_DATA + NPC_DATA_2` once `requires_flag` entries are conditionally
+  skipped; `_talk_to_npc()` reads `npc.color` directly for the dialog
+  portrait instead of indexing back into the data table.
+
+Verified via a temp-autoload functional script: with neither secret passage
+found, exactly 10 NPCs spawn (Tobias/Agnes absent); with both
+`secret_revealed` flags set, all 12 spawn. Driving all 12 quests to
+completion (granting each `want_item` then re-talking for fetch quests;
+single conversation for Tobias/Agnes) confirms all 12 `numbered_spoon_NN`
+ids end up granted, each fetch quest's `want_item` is consumed, and
+`give_item`s (Hand-Stitched Patch, Sailor's Knot Bracelet) still grant
+alongside the new spoon. Boot check and GUT 16/16 unaffected.
+
 ---
 
 ## Prototype
@@ -1597,10 +1670,16 @@ and how each ties into the Uncle Doug mystery).
 - **`NPC_DATA`** (`overworld_map.gd`) replaces the old `NPC_HOME_TILES`/
   `NPC_COLORS` arrays — one dict per townsperson (`home`, `name`, `color`,
   `quest_id`) for **Gus, Moira, Reggie, Fanny, Penny, and Otis**, all homed on
-  open grass clear of every building footprint.
+  open grass clear of every building footprint. **`NPC_DATA_2`** adds six more
+  (Wendell, Clara, Ambrose, Dottie, Tobias, Agnes) — see "Numbered spoon set"
+  above for their quests, placement, and the `requires_flag` gating mechanism;
+  `_spawn_npcs()` iterates `NPC_DATA + NPC_DATA_2` as one combined list.
 - **`QUESTS`** (`overworld_map.gd`) is keyed by `quest_id`, each entry holding
-  `want_item`, `give_item` (`""` = none), and four `PackedStringArray`s of
-  dialog pages: `intro`, `reminder`, `turn_in`, `after`.
+  `want_item`, `give_item` (`""` = none), `spoon` (a `numbered_spoon_NN` id —
+  see "Numbered spoon set" above), and four dialog-page arrays: `intro`,
+  `reminder`, `turn_in`, `after`. **`QUESTS_2`** holds the six `NPC_DATA_2`
+  quests in the same shape; `_talk_to_npc()` looks an NPC's quest up via
+  `QUESTS.get(npc.quest_id, QUESTS_2.get(npc.quest_id, {}))`.
 - **Quest state machine**, `not_started → active → complete`, persisted as a
   string at `GameManager.level_progress["town"]["quest_<id>"]` via the
   existing `get_level_flag`/`set_level_flag(TOWN_ID, ...)` pair (`TOWN_ID =

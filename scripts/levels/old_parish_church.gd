@@ -2,9 +2,12 @@ extends Node2D
 
 const LOCATION_ID: String = "old_parish_church"
 
-# Tile-mapped floor palette  --  cool stone with warm candlelight flecks (see CLAUDE.md "Tile-mapped floors")
-const FLOOR_BASE_COLOR: Color = Color(0.30, 0.32, 0.36)
-const FLOOR_ACCENT_COLOR: Color = Color(0.55, 0.50, 0.40)
+# Tile-mapped floor palette  --  cool limestone with candlelit-stone accents,
+# per locations/02_old_parish_church.md "Improved floor plan" (see CLAUDE.md
+# "Tile-mapped floors"). _build_walls() derives the wall color from
+# FLOOR_BASE_COLOR.darkened(0.35), so this single change re-tones the whole room.
+const FLOOR_BASE_COLOR: Color = Color(0.60, 0.58, 0.52)
+const FLOOR_ACCENT_COLOR: Color = Color(0.75, 0.72, 0.60)
 const FLOOR_COLS: int = 25
 const FLOOR_ROWS: int = 21
 const FLOOR_TILE_PLAIN: Vector2i = Vector2i(0, 0)
@@ -25,7 +28,7 @@ const FadedPhotoItem: ItemData = preload("res://data/items/faded_photograph.tres
 # handkerchief she dropped among the pews -- a quest fetch-item, tucked in
 # alongside the location's other vestibule loot boxes.
 const HandkerchiefItem: ItemData = preload("res://data/items/embroidered_handkerchief.tres")
-const TICKET_LOOT_POS := Vector2(280.0, 520.0)
+const TICKET_LOOT_POS := Vector2(128.0, 300.0)
 const PHOTO_LOOT_POS  := Vector2(680.0, 520.0)
 const HANDKERCHIEF_LOOT_POS := Vector2(480.0, 460.0)
 const LOOT_FLAG_KEYS  := ["ticket_loot_open", "photo_loot_open", "handkerchief_loot_open"]
@@ -46,11 +49,42 @@ const LEVER_POS := Vector2(480.0, 160.0)
 const LEVER_RADIUS: float = 56.0
 const ORGAN_PROP_POS := Vector2(480.0, 75.0)
 
-# Multi-room layout bounding box (vestibule -> nave -> hidden organ loft)  -- 
-# a cross-shaped church floor plan. Feeds the camera's pan limits  --  see
-# CLAUDE.md "Doorways, camera-follow & multi-room levels". Recompute if the
-# wall layout changes.
-const CAMERA_LIMIT_LEFT: int = 184
+# Decorative + collidable nave furnishings  --  see
+# locations/02_old_parish_church.md "Visual props to add". Pews and the altar
+# get a StaticBody2D (the established cosmetic-prop pattern, e.g. Iron &
+# Strings' barbell) so the wide nave reads as furnished space the duo routes
+# around via the clear center aisle; stained glass, candles, and the arch
+# window are pure Sprite2D flourishes layered on top of the existing walls.
+const PEW_COLOR: Color = Color(0.30, 0.20, 0.12)
+const PEW_SIZE := Vector2(80.0, 18.0)
+const WEST_PEW_X: float = 300.0
+const EAST_PEW_X: float = 660.0
+const PEW_ROW_Y: Array[float] = [389.0, 419.0, 449.0]
+
+const ALTAR_POS := Vector2(480.0, 185.0)
+const ALTAR_SIZE := Vector2(64.0, 24.0)
+const CANDLE_POSITIONS: Array[Vector2] = [
+	Vector2(450.0, 200.0), Vector2(480.0, 200.0), Vector2(510.0, 200.0),
+]
+const ARCH_WINDOW_POS := Vector2(400.0, 112.0)
+const ARCH_WINDOW_SIZE := Vector2(48.0, 32.0)
+const STAINED_GLASS_SIZE := Vector2(32.0, 64.0)
+const STAINED_GLASS_COLORS: Array[Color] = [
+	Color(0.75, 0.15, 0.15), # red
+	Color(0.15, 0.35, 0.75), # blue
+	Color(0.85, 0.75, 0.15), # gold
+	Color(0.20, 0.55, 0.30), # green
+]
+const STAINED_GLASS_POSITIONS: Array[Vector2] = [
+	Vector2(192.0, 190.0), Vector2(192.0, 410.0),
+	Vector2(768.0, 200.0), Vector2(768.0, 400.0),
+]
+
+# Multi-room layout bounding box (vestibule -> nave -> hidden organ loft ->
+# west side chapel)  --  feeds the camera's pan limits  --  see CLAUDE.md
+# "Doorways, camera-follow & multi-room levels". Recompute if the wall layout
+# changes.
+const CAMERA_LIMIT_LEFT: int = 56
 const CAMERA_LIMIT_TOP: int = 24
 const CAMERA_LIMIT_RIGHT: int = 776
 const CAMERA_LIMIT_BOTTOM: int = 656
@@ -78,6 +112,7 @@ var _doorway = null
 func _ready() -> void:
 	_build_floor()
 	_build_walls()
+	_build_props()
 	GameManager.register_players_with_preference(quinn, erin)
 	hud.setup(quinn, erin)
 	quinn.special_used.connect(_on_special_used)
@@ -149,6 +184,72 @@ func _build_walls() -> void:
 		var sprite := Sprite2D.new()
 		sprite.texture = PlaceholderArt.make_wall_texture(wall_color, int(rect.size.x), int(rect.size.y))
 		wall.add_child(sprite)
+
+# Nave furnishings  --  see locations/02_old_parish_church.md "Visual props
+# to add". Pew rows flank the center aisle (both at the same x within their
+# side, three rows stacked north-south); the altar sits at the north end
+# below the secret-passage wall, with three lit candles in front of it;
+# stained glass windows line the east/west nave walls and an arch window sits
+# above the altar on the north wall  --  all pure PlaceholderArt, no imported
+# assets.
+func _build_props() -> void:
+	for x: float in [WEST_PEW_X, EAST_PEW_X]:
+		for y: float in PEW_ROW_Y:
+			_place_pew(Vector2(x, y))
+	_place_altar()
+	for pos: Vector2 in CANDLE_POSITIONS:
+		_place_candle(pos)
+	for pos: Vector2 in STAINED_GLASS_POSITIONS:
+		_place_stained_glass(pos)
+	_place_arch_window()
+
+func _place_pew(pos: Vector2) -> void:
+	var body := StaticBody2D.new()
+	body.position = pos
+	body.collision_layer = 1
+	var shape := CollisionShape2D.new()
+	var rect := RectangleShape2D.new()
+	rect.size = PEW_SIZE
+	shape.shape = rect
+	body.add_child(shape)
+	var sprite := Sprite2D.new()
+	sprite.texture = PlaceholderArt.make_pew_texture(PEW_COLOR, int(PEW_SIZE.x), int(PEW_SIZE.y))
+	body.add_child(sprite)
+	add_child(body)
+
+func _place_altar() -> void:
+	var body := StaticBody2D.new()
+	body.position = ALTAR_POS
+	body.collision_layer = 1
+	var shape := CollisionShape2D.new()
+	var rect := RectangleShape2D.new()
+	rect.size = ALTAR_SIZE
+	shape.shape = rect
+	body.add_child(shape)
+	var sprite := Sprite2D.new()
+	sprite.texture = PlaceholderArt.make_altar_texture(int(ALTAR_SIZE.x), int(ALTAR_SIZE.y))
+	body.add_child(sprite)
+	add_child(body)
+
+func _place_candle(pos: Vector2) -> void:
+	var sprite := Sprite2D.new()
+	sprite.texture = PlaceholderArt.make_candle_texture(8, 24, true)
+	sprite.position = pos
+	add_child(sprite)
+
+func _place_stained_glass(pos: Vector2) -> void:
+	var sprite := Sprite2D.new()
+	sprite.texture = PlaceholderArt.make_stained_glass_texture(
+		int(STAINED_GLASS_SIZE.x), int(STAINED_GLASS_SIZE.y), STAINED_GLASS_COLORS)
+	sprite.position = pos
+	add_child(sprite)
+
+func _place_arch_window() -> void:
+	var sprite := Sprite2D.new()
+	sprite.texture = PlaceholderArt.make_arch_window_texture(
+		int(ARCH_WINDOW_SIZE.x), int(ARCH_WINDOW_SIZE.y), STAINED_GLASS_COLORS[1])
+	sprite.position = ARCH_WINDOW_POS
+	add_child(sprite)
 
 func _create_gates() -> void:
 	_quinn_sprite = _gate(Color(0.3, 0.5, 0.9), QUINN_GATE_POS)
