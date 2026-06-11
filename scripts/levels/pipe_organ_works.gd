@@ -37,19 +37,59 @@ const ORGAN_RADIUS: float = 64.0
 const LEVER_POS := Vector2(1120.0, 260.0)
 const LEVER_RADIUS: float = 56.0
 
+# Manager's Office: a small room added below the entry bay, reached through a
+# gap opened in its south wall by _build_office_wing()  --  see CLAUDE.md
+# "1. Bellows & Sons Pipe Organ Works" and locations/01_pipe_organ_works.md.
+# Mr. Bellows, Quinn's manager, waits at his desk (DESK_POS  --  also one of
+# the new visual props, see _create_visual_props). The organ's second missing
+# part, a tuning key, is in his pocket; Erin's Fast Talk gets it out of him,
+# gating the repair on a 2-item check (_has_organ_parts).
+const DialogBoxScript: Script = preload("res://scripts/ui/dialog_box.gd")
+const TuningKeyItem: ItemData = preload("res://data/items/tuning_key.tres")
+const MANAGER_COLOR := Color(0.35, 0.4, 0.32)
+const MANAGER_POS := Vector2(200.0, 590.0)
+const MANAGER_RADIUS: float = 64.0
+const DESK_POS := Vector2(200.0, 545.0)
+
+const MANAGER_INTRO_LINES: Array = [
+	"A stooped man in ink-stained sleeves looks up from a ledger.",
+	"\"Quinn! Good, you're here. This place is falling apart and the bellows haven't breathed right in months.\"",
+	"\"Find the parts scattered around the floor and get that organ singing again -- and clear out whoever's been squatting in my workshop while you're at it.\"",
+	"\"...And if you can find my tuning key, I'd be obliged. Can't recall where I left the blasted thing. Erin might be able to talk it out of me -- she's sharper than I am most days.\"",
+]
+const MANAGER_ERIN_LINES: Array = [
+	"Mr. Bellows pats his pockets, flustered.",
+	"Erin: \"Mr. Bellows, that tuning key on your belt -- Quinn needs it for the organ. You remember, the one your father gave you?\"",
+	"\"...Did he? Well -- if my father gave it to him, I suppose Quinn had better have it.\"",
+	"He hands over a small brass tuning key, looking faintly confused about how that conversation went.",
+]
+const MANAGER_REMINDER_LINES: Array = [
+	"\"Still no luck finding my tuning key. Maybe Erin can jog my memory -- she's good at that.\"",
+]
+const MANAGER_AFTER_LINES: Array = [
+	"\"Get that organ fixed, and there might be a place for you both here permanently.\"",
+]
+
+# Goal banner: shown briefly on entry to make the location's objective explicit
+# (see CLAUDE.md "1. Bellows & Sons Pipe Organ Works", requirement "clearer
+# goal").
+const GOAL_TEXT: String = "GOAL: Clear the workshop, find the organ's missing parts, and repair the pipe organ for Mr. Bellows."
+const GOAL_DISPLAY_DURATION: float = 6.0
+
 # Multi-room layout bounding box (entry bay -> hallway -> main workshop ->
-# secret closet)  --  feeds the camera's pan limits (see CLAUDE.md "Doorways,
-# camera-follow & multi-room levels"). Recompute if the wall layout changes.
+# secret closet -> manager's office)  --  feeds the camera's pan limits (see
+# CLAUDE.md "Doorways, camera-follow & multi-room levels"). Recompute if the
+# wall layout changes.
 const CAMERA_LIMIT_LEFT: int = 24
 const CAMERA_LIMIT_TOP: int = 24
 const CAMERA_LIMIT_RIGHT: int = 1352
-const CAMERA_LIMIT_BOTTOM: int = 536
+const CAMERA_LIMIT_BOTTOM: int = 656
 const CAMERA_SMOOTHING_SPEED: float = 5.0
 
 const FLOOR_BASE_COLOR: Color = Color(0.32, 0.29, 0.27)
 const FLOOR_ACCENT_COLOR: Color = Color(0.6, 0.48, 0.22)
 const FLOOR_COLS: int = 43
-const FLOOR_ROWS: int = 17
+const FLOOR_ROWS: int = 20
 const FLOOR_TILE_PLAIN: Vector2i = Vector2i(0, 1)
 const FLOOR_TILE_ACCENT: Vector2i = Vector2i(1, 1)
 const FLOOR_ACCENT_PERIOD: int = 4
@@ -67,14 +107,19 @@ var _spawned: bool = false
 var _enemies_cleared: bool = false
 var _organ_repaired: bool = false
 var _secret_revealed: bool = false
+var _manager_met: bool = false
+var _tuning_key_given: bool = false
+var _pending_tuning_key: bool = false
 var _cleared: bool = false
 var _organ_sprite: Sprite2D
 var _loot_boxes: Array = []
 var _secret_wall_shape: CollisionShape2D
 var _secret_wall_sprite: Sprite2D
 var _doorway = null
+var _dialog_box = null
 
 func _ready() -> void:
+	_build_office_wing()
 	_build_floor()
 	_build_walls()
 	GameManager.register_players_with_preference(quinn, erin)
@@ -86,6 +131,9 @@ func _ready() -> void:
 	_create_loot_boxes()
 	_create_hiding_spot()
 	_create_doorway()
+	_create_visual_props()
+	_create_manager()
+	_create_goal_banner()
 	_setup_camera()
 	_restore_progress()
 
@@ -110,6 +158,8 @@ func _restore_progress() -> void:
 	_enemies_cleared = GameManager.get_level_flag(LOCATION_ID, "enemies_cleared", false)
 	_organ_repaired = GameManager.get_level_flag(LOCATION_ID, "organ_repaired", false)
 	_secret_revealed = GameManager.get_level_flag(LOCATION_ID, "secret_revealed", false)
+	_manager_met = GameManager.get_level_flag(LOCATION_ID, "manager_met", false)
+	_tuning_key_given = GameManager.get_level_flag(LOCATION_ID, "tuning_key_given", false)
 	if _organ_repaired:
 		_organ_sprite.modulate = Color(0.4, 1.0, 0.5)
 	if _secret_revealed:
@@ -118,6 +168,38 @@ func _restore_progress() -> void:
 		_spawned = true
 	else:
 		_spawn()
+
+# Carves the Manager's Office out below the entry bay  --  see CLAUDE.md
+# "1. Bellows & Sons Pipe Organ Works". Walls/EntryBottom (a single 320x16
+# span shared via SubResource with EntryTop) is removed and replaced with two
+# shorter segments either side of a doorway gap, plus three new walls forming
+# the office room beneath. Runs before _build_walls(), which iterates
+# $Walls.get_children() generically and will texture these new segments the
+# same as every other wall  --  no .tscn edits needed.
+func _build_office_wing() -> void:
+	var walls: Node2D = $Walls
+	var old_entry_bottom: Node = walls.get_node("EntryBottom")
+	walls.remove_child(old_entry_bottom)
+	old_entry_bottom.free()
+
+	_add_wall(walls, "EntryBottomLeft",  Vector2(96.0, 488.0),  Vector2(112.0, 16.0))
+	_add_wall(walls, "EntryBottomRight", Vector2(304.0, 488.0), Vector2(112.0, 16.0))
+	_add_wall(walls, "OfficeLeft",   Vector2(144.0, 560.0), Vector2(16.0, 144.0))
+	_add_wall(walls, "OfficeRight",  Vector2(256.0, 560.0), Vector2(16.0, 144.0))
+	_add_wall(walls, "OfficeBottom", Vector2(200.0, 632.0), Vector2(144.0, 16.0))
+
+func _add_wall(parent: Node2D, wall_name: String, pos: Vector2, size: Vector2) -> void:
+	var body := StaticBody2D.new()
+	body.name = wall_name
+	body.position = pos
+	body.collision_layer = 1
+	var shape := CollisionShape2D.new()
+	shape.name = "CollisionShape2D"
+	var rect := RectangleShape2D.new()
+	rect.size = size
+	shape.shape = rect
+	body.add_child(shape)
+	parent.add_child(body)
 
 # Tile-mapped retro floor (Zelda-style two-tone grid), generated at runtime
 # via PlaceholderArt to keep the original-IP guarantee  --  no imported tile art.
@@ -220,12 +302,123 @@ func _create_loot_boxes() -> void:
 	add_child(gear_box)
 	_loot_boxes.append(gear_box)
 
+# Visual props (CLAUDE.md "1. Bellows & Sons Pipe Organ Works", "more room,
+# more pipe organ parts"): freestanding pipe rack in the entry bay, a bellows
+# and overhead pipe run in the main workshop, a soot stain over the organ, and
+# Mr. Bellows' desk in the new office (also the manager-dialog anchor  --  see
+# _create_manager). All generated at runtime via PlaceholderArt, no imported
+# art  --  original-IP guarantee intact.
+func _create_visual_props() -> void:
+	var pipe_rack := Sprite2D.new()
+	pipe_rack.texture = PlaceholderArt.make_pipe_rack_texture(Color(0.7, 0.55, 0.25), 40, 64, 4)
+	pipe_rack.position = Vector2(80.0, 180.0)
+	add_child(pipe_rack)
+
+	var bellows := Sprite2D.new()
+	bellows.texture = PlaceholderArt.make_bellows_texture(Color(0.62, 0.4, 0.22), 80, 40)
+	bellows.position = Vector2(960.0, 440.0)
+	add_child(bellows)
+
+	var overhead_pipes := Sprite2D.new()
+	overhead_pipes.texture = PlaceholderArt.make_pipe_rack_texture(Color(0.7, 0.55, 0.25), 96, 56, 5)
+	overhead_pipes.position = Vector2(1000.0, 56.0)
+	overhead_pipes.rotation = PI
+	add_child(overhead_pipes)
+
+	var soot_stain := Sprite2D.new()
+	soot_stain.texture = PlaceholderArt.make_soot_stain_texture(96, 64)
+	soot_stain.position = Vector2(840.0, 45.0)
+	add_child(soot_stain)
+
+	var desk := Sprite2D.new()
+	desk.texture = PlaceholderArt.make_workbench_texture(Color(0.45, 0.32, 0.2), 64, 32)
+	desk.position = DESK_POS
+	add_child(desk)
+
+# Mr. Bellows, Quinn's manager  --  see CLAUDE.md "1. Bellows & Sons Pipe Organ
+# Works". Stationary AnimatedSprite2D (idle frame of the generic humanoid
+# placeholder, same as town NPCs  --  see overworld_map.gd._spawn_npcs) at his
+# desk in the new office wing. _talk_to_manager handles the dialog branches;
+# _dialog_box is the same generic, reusable Control as overworld_map.gd's NPC
+# dialog (see CLAUDE.md "NPC dialog & quests").
+func _create_manager() -> void:
+	var sprite := AnimatedSprite2D.new()
+	sprite.sprite_frames = PlaceholderArt.make_player_frames(MANAGER_COLOR, "")
+	sprite.play("idle")
+	sprite.position = MANAGER_POS
+	add_child(sprite)
+
+	_dialog_box = DialogBoxScript.new()
+	add_child(_dialog_box)
+	_dialog_box.closed.connect(_on_manager_dialog_closed)
+
+# Dialog branches  --  see CLAUDE.md "1. Bellows & Sons Pipe Organ Works":
+# Erin's Fast Talk (while the tuning key hasn't been handed over yet) takes
+# priority over Quinn's intro/reminder so either character can approach first
+# without softlocking the other's line. Granting the tuning key is deferred to
+# _on_manager_dialog_closed, mirroring the town quest turn-in pattern  --  the
+# reward never arrives mid-conversation.
+func _talk_to_manager(char_name: String) -> void:
+	if char_name == "Erin" and not _tuning_key_given:
+		_pending_tuning_key = true
+		_dialog_box.open("Mr. Bellows", MANAGER_COLOR, MANAGER_ERIN_LINES)
+	elif not _manager_met:
+		_manager_met = true
+		GameManager.set_level_flag(LOCATION_ID, "manager_met", true)
+		_dialog_box.open("Mr. Bellows", MANAGER_COLOR, MANAGER_INTRO_LINES)
+	elif not _tuning_key_given:
+		_dialog_box.open("Mr. Bellows", MANAGER_COLOR, MANAGER_REMINDER_LINES)
+	else:
+		_dialog_box.open("Mr. Bellows", MANAGER_COLOR, MANAGER_AFTER_LINES)
+
+func _on_manager_dialog_closed() -> void:
+	if _pending_tuning_key:
+		_pending_tuning_key = false
+		_tuning_key_given = true
+		GameManager.grant_item("Erin", TuningKeyItem.id)
+		GameManager.set_level_flag(LOCATION_ID, "tuning_key_given", true)
+		Audio.play("special")
+
+# The organ repair now needs both the brass pipe (a workshop-floor loot box)
+# and the tuning key (Mr. Bellows, via Erin's Fast Talk)  --  see CLAUDE.md
+# "1. Bellows & Sons Pipe Organ Works", "more pipe organ parts".
+func _has_organ_parts() -> bool:
+	var has_pipe: bool = GameManager.has_item("Quinn", BrassPipeItem.id) or GameManager.has_item("Erin", BrassPipeItem.id)
+	var has_key: bool = GameManager.has_item("Quinn", TuningKeyItem.id) or GameManager.has_item("Erin", TuningKeyItem.id)
+	return has_pipe and has_key
+
+# Goal banner  --  see CLAUDE.md "1. Bellows & Sons Pipe Organ Works",
+# "clearer goal". A plain CanvasLayer/Label, shown for GOAL_DISPLAY_DURATION
+# then faded out via the established create_tween() pattern; _update_hint
+# carries the moment-to-moment objective afterward.
+func _create_goal_banner() -> void:
+	var layer := CanvasLayer.new()
+	layer.layer = 18
+	add_child(layer)
+	var label := Label.new()
+	label.text = GOAL_TEXT
+	label.position = Vector2(8.0, 8.0)
+	label.size = Vector2(1264.0, 48.0)
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD
+	label.add_theme_font_size_override("font_size", 16)
+	label.add_theme_color_override("font_color", Color(1.0, 0.92, 0.6))
+	layer.add_child(label)
+	var timer := get_tree().create_timer(GOAL_DISPLAY_DURATION)
+	timer.timeout.connect(func() -> void:
+		var tween := create_tween()
+		tween.tween_property(label, "modulate:a", 0.0, 1.0)
+		tween.tween_callback(layer.queue_free)
+	)
+
 func _create_doorway() -> void:
 	_doorway = DoorwayScript.new()
 	_doorway.setup(DOORWAY_POS)
 	add_child(_doorway)
 
 func _on_special_used(char_name: String) -> void:
+	if _dialog_box.is_open():
+		return
 	var p: Player = quinn if char_name == "Quinn" else erin
 	for i in _loot_boxes.size():
 		if _loot_boxes[i].try_open(char_name, p.global_position):
@@ -234,8 +427,11 @@ func _on_special_used(char_name: String) -> void:
 	if char_name == "Quinn" and not _secret_revealed and quinn.global_position.distance_to(LEVER_POS) < LEVER_RADIUS:
 		_reveal_secret_passage()
 		return
+	if p.global_position.distance_to(MANAGER_POS) < MANAGER_RADIUS:
+		_talk_to_manager(char_name)
+		return
 	if char_name == "Quinn" and not _organ_repaired and quinn.global_position.distance_to(ORGAN_POS) < ORGAN_RADIUS:
-		if GameManager.has_item("Quinn", BrassPipeItem.id) or GameManager.has_item("Erin", BrassPipeItem.id):
+		if _has_organ_parts():
 			_organ_repaired = true
 			_organ_sprite.modulate = Color(0.4, 1.0, 0.5)
 			Audio.play("special")
@@ -257,6 +453,10 @@ func _add(scene: PackedScene, pos: Vector2) -> void:
 	enemies.add_child(e)
 
 func _process(_delta: float) -> void:
+	if _dialog_box.is_open():
+		if Input.is_action_just_pressed("ui_accept"):
+			_dialog_box.advance()
+		return
 	if is_instance_valid(GameManager.active_player):
 		var active_pos: Vector2 = GameManager.active_player.global_position
 		camera.global_position = active_pos
@@ -294,6 +494,12 @@ func _update_hint() -> void:
 	elif not _enemies_cleared:
 		hint_label.text = "Workshop hands haven't clocked you yet  --  clear them out, and check the crates for loose parts"
 	elif not _organ_repaired:
-		hint_label.text = "Quinn: the organ is missing a part  --  find it in a crate, then approach the organ and press G to repair it"
+		var has_pipe: bool = GameManager.has_item("Quinn", BrassPipeItem.id) or GameManager.has_item("Erin", BrassPipeItem.id)
+		if not has_pipe:
+			hint_label.text = "Quinn: the organ is missing a part  --  find it in a crate, then approach the organ and press G to repair it"
+		elif not _tuning_key_given:
+			hint_label.text = "Erin: Mr. Bellows is missing his tuning key too  --  find his office below the entry bay and press G to fast-talk it out of him"
+		else:
+			hint_label.text = "Quinn: you've got the part and the tuning key  --  approach the organ and press G to repair it"
 	else:
 		hint_label.text = ""

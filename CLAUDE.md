@@ -233,7 +233,7 @@ GUT 16/16 unaffected.
 |------|-----|
 | Character movie ticket (×5 — one per character) | All five required to enter The Grand Marquee Cinema |
 | Rusty key | Opens a shortcut door in the Underground Tunnels |
-| Brass organ pipe | The "scattered part" Quinn needs to finish the Pipe Organ Works repair |
+| Brass organ pipe | The first of two parts (with the tuning key) Quinn needs to finish the Pipe Organ Works repair |
 | Sheet music page | Gives Ben the correct Clocktower bell sequence instantly |
 | Security badge | Auto-fills one pip of Ethan's Underground Tunnels hatch hack |
 | Crowbar | Lets Evan force a stuck Harbor & Docks crate without summoning Calvin & Coolidge |
@@ -244,6 +244,7 @@ GUT 16/16 unaffected.
 | Guard whistle | Shared one-shot noise distraction (`GameManager.emit_noise`) usable by any character |
 | Backstage pass | Lets Quinn/Erin skip the Carnival's backstage-guard talk-down gate |
 | Tuning fork | Highlights the correct chime in Ben's sound puzzles |
+| Tuning key | The second piece (with the brass organ pipe) Quinn needs to finish the Pipe Organ Works repair — Erin fast-talks it out of Mr. Bellows |
 | Crane crank handle | Required to operate the Harbor & Docks crane mechanism |
 | VR override chip | Lets Quinn/Ethan instantly clear one corrupted VR Escape Room stage |
 | Film reel | Second item needed (with the projector repair) to restore the Grand Marquee projector |
@@ -521,18 +522,46 @@ locations open up.
 
 ### 1. Bellows & Sons Pipe Organ Works
 - **Unlock condition:** Available from the start — Quinn's opening location
-- **Unlocks:** Erin (found or rescued here)
+- **Unlocks:** Erin (officially recruited on completion — see "Erin's unlock" below)
 - **Key puzzle(s):** Quinn repairs a massive broken pipe organ using scattered parts throughout the workshop; bellows, pipes, and mechanical components strewn across the factory floor
 - **Enemy types:** TBD
-- **Characters required:** Quinn
+- **Characters required:** Quinn (and Erin, "on loan" — see below)
 - **Notes:** Introduces Quinn's mechanical repair as the core mechanic. Conveyor belts, pneumatic lifts, and pipe racks double as traversal and combat obstacles. A repaired organ could trigger a door, reveal a passage, or defeat a boss.
+- **Erin's unlock — "on loan":** A new game starts with
+  `GameManager.unlocked_characters = ["quinn"]` only — Erin isn't part of the
+  traveling roster yet. The `Players` node here still spawns both Quinn and
+  Erin from the start, unchanged: narratively she already works for Mr.
+  Bellows and is "on loan" to help Quinn. `complete_location("pipe_organ_works")`
+  (which already appends `"erin"` to `unlocked_characters`) is the moment
+  she's "officially" recruited into the traveling duo. The overworld's
+  `_spawn_duo()` skips spawning a standby player while
+  `unlocked_characters.size() <= 1` — `_swap_duo()` and the per-frame
+  follow/camera update were already `is_instance_valid(_standby_player)`-guarded.
 - **Implementation:** Prototype for tile-mapped floors and the Doorway/
-  camera-follow/multi-room system (~1352×536 camera bounds). Layout: entry
-  bay → hallway → main workshop floor (organ + loot boxes + Grunt/Runner
-  spawns) → secret parts closet behind a secret passage (Quinn's Special
-  reveals `spare_clockwork_gear`). `level_progress` flags: `enemies_cleared`/
-  `organ_repaired`/`secret_revealed`. Completion id: `"pipe_organ_works"`.
-  Full history: [docs/implementation_history.md](docs/implementation_history.md#1-bellows--sons-pipe-organ-works).
+  camera-follow/multi-room system (camera bounds `(24,24)`–`(1352,656)`,
+  `FLOOR_COLS = 43`/`FLOOR_ROWS = 20`). Layout: entry bay → hallway → main
+  workshop floor (organ + loot boxes + Grunt/Runner spawns) → secret parts
+  closet behind a secret passage (Quinn's Special reveals
+  `spare_clockwork_gear`) → **Manager's Office**, a 96×128 room reached
+  through a doorway gap in the entry bay's south wall
+  (`_build_office_wing()` removes the original shared-`SubResource`
+  `EntryBottom` wall and replaces it with `EntryBottomLeft`/
+  `EntryBottomRight` flanking the gap, plus `OfficeLeft`/`OfficeRight`/
+  `OfficeBottom`). **Mr. Bellows** (Quinn's manager, an `AnimatedSprite2D` at
+  his desk) is a dialog-driven NPC: Quinn's first visit gets an intro
+  (mentions his lost tuning key); Erin's Special near him fast-talks the
+  `tuning_key` item out of him (granted on dialog-close, deferred like the
+  town quest turn-in pattern). The organ repair gate now requires **both**
+  `brass_organ_pipe` *and* `tuning_key` (`_has_organ_parts()`), held by either
+  duo member. A `_create_goal_banner()` top-of-screen label states the
+  location's goal for `GOAL_DISPLAY_DURATION` (6s) before fading; staged
+  `_update_hint()` text walks the player through clear → find pipe →
+  fast-talk key → repair. New visual props (`PlaceholderArt`): pipe rack,
+  bellows, workbench/desk, overhead pipes, soot stain. `level_progress`
+  flags: `enemies_cleared`/`organ_repaired`/`secret_revealed`/`manager_met`/
+  `tuning_key_given`. Completion id: `"pipe_organ_works"`. Design doc:
+  [locations/01_pipe_organ_works.md](locations/01_pipe_organ_works.md). Full
+  history: [docs/implementation_history.md](docs/implementation_history.md#1-bellows--sons-pipe-organ-works).
 
 ---
 

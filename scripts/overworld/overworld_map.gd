@@ -306,7 +306,6 @@ func _build_building_colliders() -> void:
 func _spawn_duo() -> void:
 	var names: Array = GameManager.unlocked_characters
 	var active_name: String = String(names[0]).capitalize() if names.size() > 0 else "Quinn"
-	var standby_name: String = String(names[1]).capitalize() if names.size() > 1 else "Erin"
 	# Spawn at the door of whichever location the duo last left (set by that
 	# level's _exit_to_overworld), so re-entering the overworld picks up where
 	# they left off instead of always starting at Pipe Organ Works.
@@ -319,13 +318,21 @@ func _spawn_duo() -> void:
 	_active_player.global_position = spawn
 	_active_player.mode = PlayerScript.Mode.ACTIVE
 
-	_standby_player = PlayerScript.new()
-	add_child(_standby_player)
-	_standby_player.setup(_load_player_frames(standby_name), _player_sprite_scale(standby_name))
-	_standby_player.global_position = spawn + Vector2(-TILE, 0.0)
-	_standby_player.mode = PlayerScript.Mode.FOLLOW
-
-	_inventory_overlay.call("setup", active_name, standby_name)
+	# A new game starts with only Quinn unlocked — Erin is "on loan" inside
+	# Pipe Organ Works (see CLAUDE.md) but isn't part of the traveling duo
+	# until that location is completed. No standby spawns in that case;
+	# _swap_duo() and the per-frame follow/camera update already guard with
+	# is_instance_valid(_standby_player).
+	if names.size() > 1:
+		var standby_name: String = String(names[1]).capitalize()
+		_standby_player = PlayerScript.new()
+		add_child(_standby_player)
+		_standby_player.setup(_load_player_frames(standby_name), _player_sprite_scale(standby_name))
+		_standby_player.global_position = spawn + Vector2(-TILE, 0.0)
+		_standby_player.mode = PlayerScript.Mode.FOLLOW
+		_inventory_overlay.call("setup", active_name, standby_name)
+	else:
+		_inventory_overlay.call("setup", active_name, active_name)
 
 # Same SpriteLoader-with-PlaceholderArt-fallback pattern as player.gd, so the
 # overworld duo matches the sprite sheets used in-level instead of always

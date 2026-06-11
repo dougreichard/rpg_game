@@ -439,6 +439,115 @@ static func make_organ_texture(color: Color, w: int, h: int) -> ImageTexture:
 		img.set_pixel(w - 1, y, Color.BLACK)
 	return ImageTexture.create_from_image(img)
 
+# Pipe rack — a row of freestanding vertical brass/copper cylinders of
+# varying height, anchored to the bottom of the bounding box. Background
+# stays transparent so it reads as loose pipes leaning against a wall
+# rather than a boxed prop. Used in Pipe Organ Works' entry bay — see
+# CLAUDE.md "1. Bellows & Sons Pipe Organ Works".
+static func make_pipe_rack_texture(color: Color, w: int, h: int, n_pipes: int) -> ImageTexture:
+	var img := Image.create(w, h, false, Image.FORMAT_RGBA8)
+	var pipe_hi: Color = color.lightened(0.35)
+	var pipe_dark: Color = color.darkened(0.3)
+	var pipe_w: int = maxi(w / n_pipes - 2, 2)
+	var gap: int = maxi((w - pipe_w * n_pipes) / maxi(n_pipes - 1, 1), 1) if n_pipes > 1 else 0
+	var x: int = 0
+	for i: int in range(n_pipes):
+		var pipe_h: int = h - (i % 3) * (h / 4)
+		var y: int = h - pipe_h
+		_rect(img, x, y, pipe_w, pipe_h, color)
+		for py: int in range(y, h):
+			img.set_pixel(x, py, pipe_hi)
+			img.set_pixel(x + pipe_w - 1, py, pipe_dark)
+		_rect(img, x - 1, y, pipe_w + 2, 2, pipe_hi)
+		x += pipe_w + gap
+	return ImageTexture.create_from_image(img)
+
+# Bellows — a wide accordion-shaped prop: a copper-toned panel with a series
+# of diagonal fold creases running its length, alternating direction to read
+# as a zigzag/accordion silhouette. Used in Pipe Organ Works' main workshop.
+static func make_bellows_texture(color: Color, w: int, h: int) -> ImageTexture:
+	var img := Image.create(w, h, false, Image.FORMAT_RGBA8)
+	var dark: Color = color.darkened(0.45)
+	var hi: Color = color.lightened(0.25)
+	img.fill(color)
+	var fold_w: int = maxi(w / 6, 4)
+	var nx: int = 0
+	while nx < w:
+		for y: int in range(h):
+			var t: float = float(y) / float(maxi(h - 1, 1))
+			var cx: int = nx + int(t * fold_w)
+			if cx < w:
+				img.set_pixel(cx, y, dark)
+				if cx + 1 < w:
+					img.set_pixel(cx + 1, y, hi)
+		nx += fold_w
+	_rect(img, 0, 0, w, 2, hi)
+	_rect(img, 0, h - 2, w, 2, dark)
+	for x: int in range(w):
+		img.set_pixel(x, 0,     Color.BLACK)
+		img.set_pixel(x, h - 1, Color.BLACK)
+	for y: int in range(h):
+		img.set_pixel(0,     y, Color.BLACK)
+		img.set_pixel(w - 1, y, Color.BLACK)
+	return ImageTexture.create_from_image(img)
+
+# Workbench — a flat horizontal tabletop with two legs and three small tool
+# silhouettes (hammer, wrench, screwdriver) resting on top. Used in Pipe
+# Organ Works' main workshop to fill in the "factory floor scattered with
+# parts" spec line.
+static func make_workbench_texture(color: Color, w: int, h: int) -> ImageTexture:
+	var img := Image.create(w, h, false, Image.FORMAT_RGBA8)
+	var top_color: Color = color.lightened(0.18)
+	var leg_color: Color = color.darkened(0.35)
+	var tool_color: Color = Color(0.55, 0.57, 0.6)
+	var top_h: int = maxi(h / 3, 3)
+	_rect(img, 0, 0, w, top_h, top_color)
+	_rect(img, 0, top_h - 1, w, 1, leg_color)
+	var leg_w: int = maxi(w / 12, 2)
+	_rect(img, 2, top_h, leg_w, h - top_h, leg_color)
+	_rect(img, w - 2 - leg_w, top_h, leg_w, h - top_h, leg_color)
+	# Hammer — wood handle + metal head
+	var hx: int = w / 6
+	_rect(img, hx, 1, 2, top_h - 3, Color(0.4, 0.28, 0.16))
+	_rect(img, hx - 2, 0, 6, 2, tool_color)
+	# Wrench — angled bar with open-end heads at each end
+	var wx: int = w / 2
+	_rect(img, wx, 1, top_h - 2, 2, tool_color)
+	_rect(img, wx - 1, 0, 2, 2, tool_color)
+	_rect(img, wx + top_h - 4, top_h - 2, 2, 2, tool_color)
+	# Screwdriver — red handle, metal tip
+	var sx: int = w * 5 / 6
+	_rect(img, sx, 1, 1, top_h - 2, Color(0.85, 0.15, 0.1))
+	_rect(img, sx - 1, top_h - 3, 3, 2, Color(0.7, 0.7, 0.75))
+	for x: int in range(w):
+		img.set_pixel(x, 0,     Color.BLACK)
+		img.set_pixel(x, h - 1, Color.BLACK)
+	for y: int in range(h):
+		img.set_pixel(0,     y, Color.BLACK)
+		img.set_pixel(w - 1, y, Color.BLACK)
+	return ImageTexture.create_from_image(img)
+
+# Soot stain — an irregular dark smudge (a noisy-edged ellipse) for walls
+# near the organ; semi-transparent so the brick wall texture shows through
+# near the edges. Fixed RNG seed keeps the shape deterministic across runs.
+static func make_soot_stain_texture(w: int, h: int) -> ImageTexture:
+	var img := Image.create(w, h, false, Image.FORMAT_RGBA8)
+	var soot: Color = Color(0.05, 0.05, 0.06, 0.55)
+	var soot_core: Color = Color(0.02, 0.02, 0.03, 0.75)
+	var cx: float = float(w) / 2.0
+	var cy: float = float(h) / 2.0
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 1234
+	for y: int in range(h):
+		for x: int in range(w):
+			var dx: float = (float(x) - cx) / cx
+			var dy: float = (float(y) - cy) / cy
+			var dist: float = dx * dx + dy * dy
+			var noise: float = rng.randf_range(-0.15, 0.15)
+			if dist + noise <= 1.0:
+				img.set_pixel(x, y, soot_core if dist + noise < 0.4 else soot)
+	return ImageTexture.create_from_image(img)
+
 # Electronic console / soundboard — dark panel with a glowing screen and buttons.
 static func make_console_texture(color: Color, w: int, h: int) -> ImageTexture:
 	var img := Image.create(w, h, false, Image.FORMAT_RGBA8)

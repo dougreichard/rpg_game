@@ -25,7 +25,7 @@ const UNLOCKS_CHARACTER: Dictionary = {
 var active_player: Player = null
 var standby_player: Player = null
 var completed_locations: Array = []
-var unlocked_characters: Array = ["quinn", "erin"]
+var unlocked_characters: Array = ["quinn"]
 
 # Collectibles & inventory — see CLAUDE.md "Collectibles & Inventory".
 # Keyed by lowercase character name (matches `unlocked_characters`), each
@@ -125,7 +125,7 @@ func set_level_flag(location_id: String, key: String, value) -> void:
 # NOT touch current_slot or write a save; the caller handles persistence.
 func reset_progress() -> void:
 	completed_locations = []
-	unlocked_characters = ["quinn", "erin"]
+	unlocked_characters = ["quinn"]
 	inventories = {}
 	level_progress = {}
 	last_location_id = ""
