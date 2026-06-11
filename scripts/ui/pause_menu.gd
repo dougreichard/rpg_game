@@ -5,8 +5,8 @@ extends CanvasLayer
 # input is handled in _unhandled_input with accept_event() to prevent the
 # same keypress reaching level scripts (e.g. the clear-overlay ui_accept check).
 
-const OPTIONS_LEVEL: Array[String] = ["Resume", "Achievements", "Options", "Quit to Map", "Quit to Title"]
-const OPTIONS_OVERWORLD: Array[String] = ["Resume", "Achievements", "Options", "Quit to Title"]
+const OPTIONS_LEVEL: Array[String] = ["Resume", "Inventory", "Achievements", "Options", "Quit to Map", "Quit to Title"]
+const OPTIONS_OVERWORLD: Array[String] = ["Resume", "Inventory", "Achievements", "Options", "Quit to Title"]
 const PANEL_RECT := Rect2(440.0, 180.0, 400.0, 380.0)
 const BORDER_COLOR: Color = Color(0.55, 0.45, 0.75)
 const TITLE_COLOR: Color = Color(0.95, 0.85, 0.2)
@@ -32,9 +32,11 @@ var _option_labels: Array = []
 var _cursor: int = 0
 var _in_options: bool = false
 var _in_achievements: bool = false
+var _in_inventory: bool = false
 var _opt_cursor: int = 0
 
 @onready var _achievements_overlay: Node = get_node("../AchievementsOverlay")
+@onready var _inventory_overlay: Node = get_node("../InventoryOverlay")
 
 # Options panel nodes
 var _main_panel_nodes: Array = []
@@ -53,6 +55,7 @@ func _ready() -> void:
 	GameManager.unpaused.connect(_on_unpaused)
 	GameManager.register_pause_menu(self)
 	_achievements_overlay.closed.connect(_on_achievements_closed)
+	_inventory_overlay.closed.connect(_on_inventory_closed)
 
 func _exit_tree() -> void:
 	GameManager.unregister_pause_menu(self)
@@ -248,16 +251,24 @@ func _on_unpaused() -> void:
 	if _in_achievements:
 		_achievements_overlay.close()
 		_in_achievements = false
+	if _in_inventory:
+		_inventory_overlay.close()
+		_in_inventory = false
 
 func _on_achievements_closed() -> void:
 	_in_achievements = false
 	_show_main()
 	_refresh_options()
 
+func _on_inventory_closed() -> void:
+	_in_inventory = false
+	_show_main()
+	_refresh_options()
+
 func _unhandled_input(event: InputEvent) -> void:
 	if not visible:
 		return
-	if _in_achievements:
+	if _in_achievements or _in_inventory:
 		return
 	if _in_options:
 		_handle_options_input(event)
@@ -321,6 +332,12 @@ func _select_main() -> void:
 	match _options[_cursor]:
 		"Resume":
 			GameManager.toggle_pause()
+		"Inventory":
+			_in_inventory = true
+			for n: Node in _main_panel_nodes:
+				n.visible = false
+			_inventory_overlay.open()
+			Audio.play("ui_select")
 		"Achievements":
 			_in_achievements = true
 			for n: Node in _main_panel_nodes:

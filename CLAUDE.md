@@ -135,6 +135,60 @@ and all five are required to enter The Grand Marquee Cinema (Location 13).
   into `hud.gd` via the established `class_name`-on-UI-widget-but-referenced-
   untyped pattern: `@onready var inventory_panel: Node = $InventoryPanel`,
   `inventory_panel.call("setup", a, b)`.
+- **`InventoryOverlay`** (`scripts/ui/inventory_overlay.gd`, no `class_name` —
+  `extends CanvasLayer`, sibling of `AchievementsOverlay` in `HUD.tscn`,
+  `layer = 26`) — a full-screen, scrollable list view that solves the "what
+  does this item actually do?" gap the always-on `InventoryPanel` row can't:
+  a fixed icon swatch can't show a name or description, and with 46 possible
+  items a single character's row would run off-screen. Mirrors
+  `achievements_overlay.gd`'s construction exactly (same panel rect/colors,
+  `PROCESS_MODE_ALWAYS`, `_unhandled_input` + `set_input_as_handled()`).
+  Opened via Pause Menu → **"Inventory"** (new second option, between
+  "Resume" and "Achievements" — `pause_menu.gd`'s `OPTIONS_LEVEL`/
+  `OPTIONS_OVERWORLD` and `_select_main()` match are extended the same way
+  Achievements was). It looks up
+  `GameManager.inventories[character_name.to_lower()]` exactly like
+  `InventoryPanel`, but takes the duo's two character names via an explicit
+  `setup(name_a, name_b)` rather than reading `GameManager.active_player`/
+  `standby_player` — those are level-`Player`-only and **unset in the
+  overworld** (`overworld_player.gd` is a separate `CharacterBody2D`, never
+  registered with `GameManager`), so the first cut showed an empty inventory
+  on the overworld even though it worked in levels. `hud.gd.setup(a, b)`
+  calls `inventory_overlay.call("setup", a.data.character_name,
+  b.data.character_name)`; `overworld_map.gd._spawn_duo()` calls
+  `_inventory_overlay.call("setup", active_name, standby_name)` with the same
+  names it uses to spawn the overworld duo sprites. Duo membership is stable
+  per level/overworld session (swap only toggles active/follow roles, not
+  which two characters are in the duo), so `setup()` runs once. Left/right
+  switches between the two duo members' tabs; up/down moves a cursor through
+  up to `ROWS_VISIBLE` (14) visible rows with scroll-to-keep-cursor-visible
+  (`_scroll` offset, same idea as the Achievements list but with scrolling
+  since item counts are unbounded); each row shows the item's
+  `make_item_icon` swatch, `display_name`, and a FUNCTIONAL/JUNK tag, with the
+  selected item's `description` shown in a panel at the bottom.
+  `pause_menu.gd._on_unpaused()` closes it (alongside Achievements) if the
+  player unpauses mid-browse.
+
+  **Overworld wiring gotcha**: `OverworldMap.tscn` has no static `PauseMenu`/
+  overlay nodes — `overworld_map.gd._build_ui()` builds `PauseMenu` and
+  `AchievementsOverlay` programmatically as siblings at runtime (`PauseMenu`
+  looks them up via `get_node("../Name")`). `InventoryOverlay` had to be added
+  to that same programmatic-sibling list (`InventoryOverlayScript.new()`,
+  named `"InventoryOverlay"`, added before `PauseMenu`) — missing this caused
+  `pause_menu.gd`'s `@onready var _inventory_overlay = get_node
+  ("../InventoryOverlay")` to resolve to null and crash in `_ready()` the
+  moment the overworld loaded (i.e. on "Continue" from the title screen).
+  Any future overlay added to `HUD.tscn` that `PauseMenu` looks up as a
+  sibling needs the same addition in `overworld_map.gd._build_ui()`.
+
+  Verified via temp-autoload functional checks in both contexts: PipeOrganWorks
+  (granted 16 items to the active character and 2 to standby — correct counts,
+  scroll engages and keeps the cursor in view past row 14, tab-switch shows the
+  standby's distinct item set, description label matches the selected item's
+  `.tres` data) and OverworldMap (granted items to Quinn/Erin, confirmed
+  `setup()` receives the right names and each tab's `_ids` reflects that
+  character's `GameManager.inventories` entry). Boot check and GUT 24/24
+  unaffected.
 - Gating: level scripts add `GameManager.has_item(char_name, "id")` as an
   extra condition alongside existing `distance_to` + Special checks — the
   same multi-condition pattern Clocktower/The Drop/Grand Marquee already use.

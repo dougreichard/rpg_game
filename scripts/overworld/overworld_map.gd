@@ -31,6 +31,7 @@ const DialogBoxScript: Script = preload("res://scripts/ui/dialog_box.gd")
 const PauseMenuScript: Script = preload("res://scripts/ui/pause_menu.gd")
 const AchievementsOverlayScript: Script = preload("res://scripts/ui/achievements_overlay.gd")
 const AchievementToastScript: Script = preload("res://scripts/ui/achievement_toast.gd")
+const InventoryOverlayScript: Script = preload("res://scripts/ui/inventory_overlay.gd")
 
 const CHAR_DATA: Dictionary = {
 	"Quinn": preload("res://data/characters/quinn.tres"),
@@ -463,6 +464,7 @@ var _status_label: Label
 var _dialog_box = null
 var _active_player = null
 var _standby_player = null
+var _inventory_overlay = null
 
 @onready var camera: Camera2D = $Camera2D
 
@@ -604,6 +606,8 @@ func _spawn_duo() -> void:
 	_standby_player.global_position = spawn + Vector2(-TILE, 0.0)
 	_standby_player.mode = PlayerScript.Mode.FOLLOW
 
+	_inventory_overlay.call("setup", active_name, standby_name)
+
 # Same SpriteLoader-with-PlaceholderArt-fallback pattern as player.gd, so the
 # overworld duo matches the sprite sheets used in-level instead of always
 # falling back to placeholder art.
@@ -695,13 +699,17 @@ func _build_ui() -> void:
 	_dialog_box = DialogBoxScript.new()
 	canvas.add_child(_dialog_box)
 
-	# Pause menu (ESC) — same trio of CanvasLayers as the in-level HUD
-	# (PauseMenu.gd looks up "../AchievementsOverlay" as a sibling, so add
-	# that one first). "Quit to Map" is dropped in the overworld via
-	# in_overworld — there's nowhere to quit "back" to.
+	# Pause menu (ESC) — same group of CanvasLayers as the in-level HUD
+	# (PauseMenu.gd looks up "../AchievementsOverlay" and "../InventoryOverlay"
+	# as siblings, so add those first). "Quit to Map" is dropped in the
+	# overworld via in_overworld — there's nowhere to quit "back" to.
 	var achievements_overlay = AchievementsOverlayScript.new()
 	achievements_overlay.name = "AchievementsOverlay"
 	add_child(achievements_overlay)
+
+	_inventory_overlay = InventoryOverlayScript.new()
+	_inventory_overlay.name = "InventoryOverlay"
+	add_child(_inventory_overlay)
 
 	var achievement_toast = AchievementToastScript.new()
 	achievement_toast.name = "AchievementToast"
