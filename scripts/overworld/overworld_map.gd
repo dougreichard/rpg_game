@@ -177,6 +177,10 @@ var _font: Font
 var _name_label: Label
 var _status_label: Label
 var _dialog_box = null
+# Set by _talk_to_npc() when a turn-in dialog is opened; applied (item
+# consume/grant, spoon grant, flag -> "complete") only once that dialog is
+# fully read and closed -- see _on_dialog_closed().
+var _pending_turn_in: Dictionary = {}
 var _active_player = null
 var _standby_player = null
 var _inventory_overlay = null
@@ -413,6 +417,7 @@ func _build_ui() -> void:
 
 	_dialog_box = DialogBoxScript.new()
 	canvas.add_child(_dialog_box)
+	_dialog_box.closed.connect(_on_dialog_closed)
 
 	# Pause menu (ESC) — same group of CanvasLayers as the in-level HUD
 	# (PauseMenu.gd looks up "../AchievementsOverlay", "../InventoryOverlay",
@@ -523,6 +528,10 @@ func _update_nearby_npc() -> void:
 # not_started -> active (shows intro, quest now tracked) -> complete (turn-in
 # consumes want_item, grants give_item if any). Reminder shown while active
 # and the player hasn't found the item yet; after shown once complete.
+#
+# A quest only flips to "complete" -- and only then are the want_item
+# consumed and give_item/spoon granted -- once the player has read through
+# the turn-in dialog and closed it; see _on_dialog_closed().
 func _talk_to_npc(idx: int) -> void:
 	var npc = _npcs[idx]
 	var quest: Dictionary = QuestData.get_quest(npc.quest_id)
@@ -531,18 +540,14 @@ func _talk_to_npc(idx: int) -> void:
 	var flag_key: String = "quest_" + npc.quest_id
 	var state: String = GameManager.get_level_flag(TOWN_ID, flag_key, "not_started")
 	var lines: PackedStringArray
+	_pending_turn_in = {}
 	match state:
 		"complete":
 			lines = quest["after"]
 		"active":
 			var holder: String = _find_item_holder(quest["want_item"])
 			if holder != "":
-				GameManager.consume_item(holder, quest["want_item"])
-				if quest["give_item"] != "":
-					GameManager.grant_item(holder, quest["give_item"])
-				if quest.get("spoon", "") != "":
-					GameManager.grant_item(holder, quest["spoon"])
-				GameManager.set_level_flag(TOWN_ID, flag_key, "complete")
+				_pending_turn_in = {"flag_key": flag_key, "holder": holder, "quest": quest}
 				lines = quest["turn_in"]
 			else:
 				lines = quest["reminder"]
@@ -551,14 +556,34 @@ func _talk_to_npc(idx: int) -> void:
 			# passage found elsewhere) completes on the very first
 			# conversation: its "intro" doubles as the turn-in/thanks.
 			if quest["want_item"] == "":
-				if quest.get("spoon", "") != "":
-					GameManager.grant_item(GameManager.unlocked_characters[0], quest["spoon"])
-				GameManager.set_level_flag(TOWN_ID, flag_key, "complete")
+				_pending_turn_in = {
+					"flag_key": flag_key,
+					"holder": GameManager.unlocked_characters[0],
+					"quest": quest,
+					"no_want_item": true,
+				}
 			else:
 				GameManager.set_level_flag(TOWN_ID, flag_key, "active")
 			lines = quest["intro"]
 	Audio.play("ui_select")
 	_dialog_box.open(npc.npc_name, npc.color, lines)
+
+# Applies a pending turn-in (if any) once its dialog has been fully read and
+# closed -- see the comment on _talk_to_npc() above.
+func _on_dialog_closed() -> void:
+	if _pending_turn_in.is_empty():
+		return
+	var flag_key: String = _pending_turn_in["flag_key"]
+	var holder: String = _pending_turn_in["holder"]
+	var quest: Dictionary = _pending_turn_in["quest"]
+	if not _pending_turn_in.get("no_want_item", false):
+		GameManager.consume_item(holder, quest["want_item"])
+		if quest["give_item"] != "":
+			GameManager.grant_item(holder, quest["give_item"])
+	if quest.get("spoon", "") != "":
+		GameManager.grant_item(holder, quest["spoon"])
+	GameManager.set_level_flag(TOWN_ID, flag_key, "complete")
+	_pending_turn_in = {}
 
 # Returns the lowercase name of the first unlocked character holding
 # `item_id`, or "" if none do -- mirrors GameManager.has_item's lowercase

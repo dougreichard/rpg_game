@@ -1198,23 +1198,36 @@ and how each ties into the Uncle Doug mystery).
   (Wendell, Clara, Ambrose, Dottie, Tobias, Agnes) — see "Numbered spoon set"
   above for their quests, placement, and the `requires_flag` gating mechanism;
   `_spawn_npcs()` iterates `NPC_DATA + NPC_DATA_2` as one combined list.
-- **`QUESTS`** (`overworld_map.gd`) is keyed by `quest_id`, each entry holding
-  `want_item`, `give_item` (`""` = none), `spoon` (a `numbered_spoon_NN` id —
-  see "Numbered spoon set" above), and four dialog-page arrays: `intro`,
-  `reminder`, `turn_in`, `after`. **`QUESTS_2`** holds the six `NPC_DATA_2`
-  quests in the same shape; `_talk_to_npc()` looks an NPC's quest up via
-  `QUESTS.get(npc.quest_id, QUESTS_2.get(npc.quest_id, {}))`.
+- **`QuestData.QUESTS`** (`scripts/systems/quest_data.gd`) is keyed by
+  `quest_id`, each entry holding `want_item`, `give_item` (`""` = none),
+  `spoon` (a `numbered_spoon_NN` id — see "Numbered spoon set" above), and
+  four dialog-page arrays: `intro`, `reminder`, `turn_in`, `after`.
+  **`QuestData.QUESTS_2`** holds the six `NPC_DATA_2` quests in the same
+  shape; `_talk_to_npc()` looks an NPC's quest up via
+  `QuestData.get_quest(npc.quest_id)`.
 - **Quest state machine**, `not_started → active → complete`, persisted as a
   string at `GameManager.level_progress["town"]["quest_<id>"]` via the
   existing `get_level_flag`/`set_level_flag(TOWN_ID, ...)` pair (`TOWN_ID =
   "town"`) — the same pattern every level uses for its own progress, just
   under a town-wide pseudo-location id. `_talk_to_npc(idx)`:
-  - `not_started` → shows `intro`, flips to `active`.
+  - `not_started` → shows `intro`, flips to `active` (or, for the
+    no-`want_item` Tobias/Agnes quests, queues the same deferred completion
+    as the `turn_in` case below — their `intro` doubles as the turn-in).
   - `active` → `_find_item_holder(want_item)` scans
     `GameManager.unlocked_characters` for `has_item`; if found, shows
-    `turn_in`, `consume_item`s the want-item, `grant_item`s the give-item (if
-    any), and flips to `complete`. Otherwise shows `reminder`.
+    `turn_in` and stashes `_pending_turn_in` (flag key, item holder, quest
+    dict). Otherwise shows `reminder`.
   - `complete` → always shows `after`.
+
+  **Completion is deferred to dialog-close**, not the moment the turn-in
+  dialog opens: `_dialog_box.closed` (emitted by `advance()` past the last
+  page) is connected to `_on_dialog_closed()`, which — only if
+  `_pending_turn_in` is set — `consume_item`s the want-item, `grant_item`s
+  the give-item/spoon (if any), and *then* flips the flag to `complete`. This
+  keeps the Quest Log accurate while a turn-in conversation is still on
+  screen (it reads as `ACTIVE` until the player has actually finished the
+  exchange) and means the reward/spoon is never granted before the flag says
+  `complete`.
 - **Input/UI wiring**: `_update_nearby_npc()` (mirrors `_update_nearby()` for
   building doors, `NPC_INTERACT_RADIUS = 40px`) drives a cyan pulsing
   ring + name-label prompt (`_draw_npc_prompt`, distinct color from the
@@ -1277,6 +1290,15 @@ Verified via a temp-autoload functional check (3 quest states set —
 active/complete-with-reward/active-no-want_item — confirmed correct
 filtering, tags, and objective text for all three, plus that an untouched
 `not_started` quest stays hidden) plus a headless boot check and GUT 24/24.
+
+A second temp-autoload check drove the deferred-completion path end-to-end:
+with `quest_gus = "active"` and Quinn holding `bent_spoon`, calling
+`_talk_to_npc()` for Gus opens the `turn_in` dialog but leaves the flag at
+`"active"` and `bent_spoon` un-consumed; only after `_dialog_box.advance()`-ing
+through to close does the flag flip to `"complete"`, `bent_spoon` get
+consumed, and `numbered_spoon_01` get granted — confirming the Quest Log
+can't show `COMPLETE` mid-conversation and the spoon reward never arrives
+before completion.
 
 ### Save / Unlock system *(implemented)*
 `save_manager.gd` (autoload `SaveManager`, loaded before `GameManager` so it's
