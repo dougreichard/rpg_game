@@ -348,8 +348,15 @@ func _create_manager() -> void:
 	sprite.position = MANAGER_POS
 	add_child(sprite)
 
+	# The dialog box's _draw() uses screen-space coordinates (PANEL_RECT), so
+	# it must live in a CanvasLayer -- otherwise the following Camera2D's
+	# zoom/pan transforms it into the world and it never appears on screen
+	# (mirrors overworld_map.gd's canvas-layer placement of the same script).
+	var dialog_layer := CanvasLayer.new()
+	dialog_layer.layer = 19
+	add_child(dialog_layer)
 	_dialog_box = DialogBoxScript.new()
-	add_child(_dialog_box)
+	dialog_layer.add_child(_dialog_box)
 	_dialog_box.closed.connect(_on_manager_dialog_closed)
 
 # Dialog branches  --  see CLAUDE.md "1. Bellows & Sons Pipe Organ Works":
