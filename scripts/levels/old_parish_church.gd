@@ -90,6 +90,75 @@ const CAMERA_LIMIT_RIGHT: int = 776
 const CAMERA_LIMIT_BOTTOM: int = 656
 const CAMERA_SMOOTHING_SPEED: float = 5.0
 
+const DialogBoxScript: Script = preload("res://scripts/ui/dialog_box.gd")
+const DialogTreeScript: Script = preload("res://scripts/systems/dialog_tree.gd")
+
+# Father Aldric: a static NPC near the altar, clear of the BLUE/RED pillar
+# radii and the secret-passage lever -- the first dialog-choice NPC, see
+# CLAUDE.md "NPC dialog & quests" and scripts/systems/dialog_tree.gd. His
+# reaction to the duo's first conversation depends on which character is
+# active when the respectful-vs-blunt choice is made, and is remembered via
+# level_progress -- a quiet, lore-only echo of the BLUE/RED pillar puzzle's
+# "right character for the moment" theme.
+const ALDRIC_COLOR := Color(0.55, 0.5, 0.42)
+const ALDRIC_POS := Vector2(560.0, 230.0)
+const ALDRIC_RADIUS: float = 56.0
+
+const FATHER_ALDRIC_TREE: Dictionary = {
+	"start": {
+		"lines": [
+			"An older priest looks up from the altar candles as you approach.\nFather Aldric: \"Ah -- visitors. We don't get many, these days, not since the organ went silent.\"",
+		],
+		"next": "ask",
+	},
+	"ask": {
+		"lines": [
+			"Father Aldric: \"Tell me, what brings you both to my nave?\"",
+		],
+		"choices": [
+			{
+				"text": "Quinn removes his hat. \"Just passing through, Father. Didn't mean to intrude.\"",
+				"best_with": "Quinn",
+				"next": "pleased",
+				"next_alt": "amused",
+			},
+			{
+				"text": "Erin: \"Looking for an old man named Doug. You seen him?\"",
+				"best_with": "Erin",
+				"next": "annoyed",
+			},
+		],
+	},
+	"pleased": {
+		"lines": [
+			"Father Aldric: \"A polite young man -- how refreshing. Sit a while, if you like; the pews could use the company.\"",
+			"\"...Now that I think on it, an older fellow did sit right there in the back pew, some weeks past. Kept to himself, mostly. Haven't seen him since.\"",
+		],
+		"effects": {"set_flag": "father_aldric_impression", "flag_value": "good"},
+	},
+	"amused": {
+		"lines": [
+			"Father Aldric chuckles. \"Well, aren't you a surprise. Most folk barge in asking after lost relatives before they've even crossed the threshold.\"",
+			"\"...Funny you should ask, though -- there WAS an older man here a while back. Quiet sort. Haven't seen him since, I'm afraid.\"",
+		],
+		"effects": {"set_flag": "father_aldric_impression", "flag_value": "good"},
+	},
+	"annoyed": {
+		"lines": [
+			"Father Aldric stiffens. \"...I beg your pardon? We're in the middle of vespers, miss.\"",
+			"He turns back to his ledger without another word.",
+		],
+		"effects": {"set_flag": "father_aldric_impression", "flag_value": "cool"},
+	},
+}
+
+static var ALDRIC_RETURN_GOOD_TREE: Dictionary = DialogTreeScript.from_pages([
+	"Father Aldric: \"Back again? Good -- the pews are always open to you two.\"",
+])
+static var ALDRIC_RETURN_COOL_TREE: Dictionary = DialogTreeScript.from_pages([
+	"Father Aldric, without looking up: \"...Yes? Can I help you with something?\"",
+])
+
 @onready var camera: Camera2D = $Camera2D
 @onready var quinn: Player = $Players/Quinn
 @onready var erin: Player  = $Players/Erin
@@ -108,6 +177,7 @@ var _secret_wall_sprite: Sprite2D
 var _organ_prop: Sprite2D
 var _loot_boxes: Array = []
 var _doorway = null
+var _dialog_box = null
 
 func _ready() -> void:
 	_build_floor()
@@ -121,6 +191,7 @@ func _ready() -> void:
 	_create_secret_passage()
 	_create_loot_boxes()
 	_create_doorway()
+	_create_father_aldric()
 	_setup_camera()
 	_restore_progress()
 
@@ -319,7 +390,49 @@ func _create_doorway() -> void:
 	_doorway.setup(DOORWAY_POS)
 	add_child(_doorway)
 
+# Father Aldric  --  see the FATHER_ALDRIC_TREE comment above. Stationary
+# AnimatedSprite2D near the altar; _dialog_box is the same generic, reusable
+# Control as overworld_map.gd's NPC dialog and pipe_organ_works.gd's Mr.
+# Bellows (CLAUDE.md "NPC dialog & quests").
+func _create_father_aldric() -> void:
+	var sprite := AnimatedSprite2D.new()
+	sprite.sprite_frames = PlaceholderArt.make_player_frames(ALDRIC_COLOR, "")
+	sprite.play("idle")
+	sprite.position = ALDRIC_POS
+	add_child(sprite)
+
+	var dialog_layer := CanvasLayer.new()
+	dialog_layer.layer = 19
+	add_child(dialog_layer)
+	_dialog_box = DialogBoxScript.new()
+	dialog_layer.add_child(_dialog_box)
+	_dialog_box.closed.connect(_on_aldric_dialog_closed)
+
+# First conversation walks FATHER_ALDRIC_TREE's choice (its outcome depends on
+# which character is active, see resolve_choice); later visits show a short
+# return tree reflecting the stored impression.
+func _talk_to_father_aldric(char_name: String) -> void:
+	var p: Player = quinn if char_name == "Quinn" else erin
+	var impression: String = GameManager.get_level_flag(LOCATION_ID, "father_aldric_impression", "")
+	var tree: Dictionary
+	match impression:
+		"good":
+			tree = ALDRIC_RETURN_GOOD_TREE
+		"cool":
+			tree = ALDRIC_RETURN_COOL_TREE
+		_:
+			tree = FATHER_ALDRIC_TREE
+	Audio.play("ui_select")
+	_dialog_box.open("Father Aldric", ALDRIC_COLOR, tree, "start", p.data.character_name)
+
+func _on_aldric_dialog_closed(effects: Array) -> void:
+	for fx: Dictionary in effects:
+		if fx.has("set_flag"):
+			GameManager.set_level_flag(LOCATION_ID, fx["set_flag"], fx.get("flag_value", true))
+
 func _on_special_used(char_name: String) -> void:
+	if _dialog_box.is_open():
+		return
 	var p: Player = quinn if char_name == "Quinn" else erin
 	for i in _loot_boxes.size():
 		if _loot_boxes[i].try_open(char_name, p.global_position):
@@ -327,6 +440,9 @@ func _on_special_used(char_name: String) -> void:
 			return
 	if char_name == "Quinn" and not _secret_revealed and quinn.global_position.distance_to(LEVER_POS) < LEVER_RADIUS:
 		_reveal_secret_passage()
+		return
+	if p.global_position.distance_to(ALDRIC_POS) < ALDRIC_RADIUS:
+		_talk_to_father_aldric(char_name)
 		return
 	if char_name == "Quinn" and not _quinn_done:
 		if quinn.global_position.distance_to(QUINN_GATE_POS) < GATE_RADIUS:
@@ -346,6 +462,17 @@ func _on_special_used(char_name: String) -> void:
 		Audio.play("special")
 
 func _process(_delta: float) -> void:
+	if _dialog_box.is_open():
+		if _dialog_box.is_choice_mode():
+			if Input.is_action_just_pressed("move_up"):
+				_dialog_box.move_choice_cursor(-1)
+			elif Input.is_action_just_pressed("move_down"):
+				_dialog_box.move_choice_cursor(1)
+			elif Input.is_action_just_pressed("ui_accept"):
+				_dialog_box.select_choice()
+		elif Input.is_action_just_pressed("ui_accept"):
+			_dialog_box.advance()
+		return
 	if is_instance_valid(GameManager.active_player):
 		var active_pos: Vector2 = GameManager.active_player.global_position
 		camera.global_position = active_pos

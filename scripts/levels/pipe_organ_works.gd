@@ -51,24 +51,26 @@ const MANAGER_POS := Vector2(200.0, 590.0)
 const MANAGER_RADIUS: float = 64.0
 const DESK_POS := Vector2(200.0, 545.0)
 
-const MANAGER_INTRO_LINES: Array = [
+const DialogTreeScript: Script = preload("res://scripts/systems/dialog_tree.gd")
+
+static var MANAGER_INTRO_TREE: Dictionary = DialogTreeScript.from_pages([
 	"A stooped man in ink-stained sleeves looks up from a ledger.",
 	"\"Quinn! Good, you're here. This place is falling apart and the bellows haven't breathed right in months.\"",
 	"\"Find the parts scattered around the floor and get that organ singing again -- and clear out whoever's been squatting in my workshop while you're at it.\"",
 	"\"...And if you can find my tuning key, I'd be obliged. Can't recall where I left the blasted thing. Erin might be able to talk it out of me -- she's sharper than I am most days.\"",
-]
-const MANAGER_ERIN_LINES: Array = [
+], {"set_flag": "manager_met", "flag_value": true})
+static var MANAGER_ERIN_TREE: Dictionary = DialogTreeScript.from_pages([
 	"Mr. Bellows pats his pockets, flustered.",
 	"Erin: \"Mr. Bellows, that tuning key on your belt -- Quinn needs it for the organ. You remember, the one your father gave you?\"",
 	"\"...Did he? Well -- if my father gave it to him, I suppose Quinn had better have it.\"",
 	"He hands over a small brass tuning key, looking faintly confused about how that conversation went.",
-]
-const MANAGER_REMINDER_LINES: Array = [
+], {"grant_items": [TuningKeyItem.id], "set_flag": "tuning_key_given", "flag_value": true})
+static var MANAGER_REMINDER_TREE: Dictionary = DialogTreeScript.from_pages([
 	"\"Still no luck finding my tuning key. Maybe Erin can jog my memory -- she's good at that.\"",
-]
-const MANAGER_AFTER_LINES: Array = [
+])
+static var MANAGER_AFTER_TREE: Dictionary = DialogTreeScript.from_pages([
 	"\"Get that organ fixed, and there might be a place for you both here permanently.\"",
-]
+])
 
 # Goal banner: shown briefly on entry to make the location's objective explicit
 # (see CLAUDE.md "1. Bellows & Sons Pipe Organ Works", requirement "clearer
@@ -109,7 +111,6 @@ var _organ_repaired: bool = false
 var _secret_revealed: bool = false
 var _manager_met: bool = false
 var _tuning_key_given: bool = false
-var _pending_tuning_key: bool = false
 var _cleared: bool = false
 var _organ_sprite: Sprite2D
 var _loot_boxes: Array = []
@@ -362,29 +363,41 @@ func _create_manager() -> void:
 # Dialog branches  --  see CLAUDE.md "1. Bellows & Sons Pipe Organ Works":
 # Erin's Fast Talk (while the tuning key hasn't been handed over yet) takes
 # priority over Quinn's intro/reminder so either character can approach first
-# without softlocking the other's line. Granting the tuning key is deferred to
-# _on_manager_dialog_closed, mirroring the town quest turn-in pattern  --  the
-# reward never arrives mid-conversation.
+# without softlocking the other's line. Granting the tuning key (and flipping
+# _manager_met/_tuning_key_given) is deferred to _on_manager_dialog_closed via
+# each tree's terminal-node "effects", mirroring the town quest turn-in
+# pattern  --  the reward never arrives mid-conversation.
 func _talk_to_manager(char_name: String) -> void:
+	var p: Player = quinn if char_name == "Quinn" else erin
 	if char_name == "Erin" and not _tuning_key_given:
-		_pending_tuning_key = true
-		_dialog_box.open("Mr. Bellows", MANAGER_COLOR, MANAGER_ERIN_LINES)
+		_dialog_box.open("Mr. Bellows", MANAGER_COLOR, MANAGER_ERIN_TREE, "start", p.data.character_name)
 	elif not _manager_met:
-		_manager_met = true
-		GameManager.set_level_flag(LOCATION_ID, "manager_met", true)
-		_dialog_box.open("Mr. Bellows", MANAGER_COLOR, MANAGER_INTRO_LINES)
+		_dialog_box.open("Mr. Bellows", MANAGER_COLOR, MANAGER_INTRO_TREE, "start", p.data.character_name)
 	elif not _tuning_key_given:
-		_dialog_box.open("Mr. Bellows", MANAGER_COLOR, MANAGER_REMINDER_LINES)
+		_dialog_box.open("Mr. Bellows", MANAGER_COLOR, MANAGER_REMINDER_TREE, "start", p.data.character_name)
 	else:
-		_dialog_box.open("Mr. Bellows", MANAGER_COLOR, MANAGER_AFTER_LINES)
+		_dialog_box.open("Mr. Bellows", MANAGER_COLOR, MANAGER_AFTER_TREE, "start", p.data.character_name)
 
-func _on_manager_dialog_closed() -> void:
-	if _pending_tuning_key:
-		_pending_tuning_key = false
-		_tuning_key_given = true
-		GameManager.grant_item("Erin", TuningKeyItem.id)
-		GameManager.set_level_flag(LOCATION_ID, "tuning_key_given", true)
-		Audio.play("special")
+# Applies effects collected while walking a Mr. Bellows dialog tree -- see
+# scripts/systems/dialog_tree.gd. Simpler than overworld_map.gd's version:
+# Mr. Bellows only ever grants items to Erin (the one who fast-talks him) and
+# sets manager_met/tuning_key_given, so no item-holder lookup is needed.
+func _on_manager_dialog_closed(effects: Array) -> void:
+	for fx: Dictionary in effects:
+		var grants: Array = fx.get("grant_items", [])
+		for item_id: String in grants:
+			GameManager.grant_item("Erin", item_id)
+		if not grants.is_empty():
+			Audio.play("special")
+		if fx.has("set_flag"):
+			var key: String = fx["set_flag"]
+			var value = fx.get("flag_value", true)
+			GameManager.set_level_flag(LOCATION_ID, key, value)
+			match key:
+				"manager_met":
+					_manager_met = value
+				"tuning_key_given":
+					_tuning_key_given = value
 
 # The organ repair now needs both the brass pipe (a workshop-floor loot box)
 # and the tuning key (Mr. Bellows, via Erin's Fast Talk)  --  see CLAUDE.md

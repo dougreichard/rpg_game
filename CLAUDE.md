@@ -456,7 +456,13 @@ locations open up.
   on opposite west/east walls, ~440px apart) → hidden organ loft behind a
   secret passage at the altar end (Quinn's Special reveals a lore-only
   pipe-organ prop, no loot box). Camera bounds `184,24`–`776,656`.
-  `level_progress` flags: `quinn_done`/`erin_done`/`secret_revealed`.
+  **Father Aldric** (`ALDRIC_POS = (560, 230)`, near the altar) is a static
+  dialog-choice NPC — see "Dialog choices (DialogTree)" — whose reaction to
+  the duo's first conversation depends on which character is active for the
+  respectful-vs-blunt choice, persisted as `father_aldric_impression`
+  (`"good"`/`"cool"`) and echoed on return visits.
+  `level_progress` flags: `quinn_done`/`erin_done`/`secret_revealed`/
+  `father_aldric_impression`.
   Completion id: `"old_parish_church"`. Full history:
   [docs/implementation_history.md](docs/implementation_history.md#2-the-old-parish-church).
 
@@ -1094,9 +1100,12 @@ and how each ties into the Uncle Doug mystery).
   `Doorway`/`HidingSpot`, see [[feedback-godot-technical]]) is a single
   programmatic `_draw()` panel (`PANEL_RECT`, above the bottom info panel)
   instantiated once by `overworld_map.gd._build_ui()`. `open(npc_name,
-  portrait_color, lines: PackedStringArray)` starts a conversation;
-  `advance()` shows the next page or closes (emitting `closed`) after the
-  last; `is_open()` lets `overworld_map.gd._process()` route input.
+  portrait_color, tree: Dictionary, start_node: String = "start",
+  active_character: String = "")` walks a **DialogTree** (see "Dialog
+  choices (DialogTree)" below) — `advance()` shows the next page, enters
+  choice mode, follows a node's `next`, or closes (emitting
+  `closed(effects: Array)`) once the tree ends; `is_open()`/
+  `is_choice_mode()` let `overworld_map.gd._process()` route input.
 - **`town_npc.gd`** gained `npc_name: String` and `quest_id: String` fields,
   set via an extended `setup(frames, home, name, quest)`.
 - **`NPC_DATA`** (`overworld_map.gd`) replaces the old `NPC_HOME_TILES`/
@@ -1109,33 +1118,34 @@ and how each ties into the Uncle Doug mystery).
 - **`QuestData.QUESTS`** (`scripts/systems/quest_data.gd`) is keyed by
   `quest_id`, each entry holding `want_item`, `give_item` (`""` = none),
   `spoon` (a `numbered_spoon_NN` id — see "Numbered spoon set" above), and
-  four dialog-page arrays: `intro`, `reminder`, `turn_in`, `after`.
+  four **DialogTree** dicts (see "Dialog choices (DialogTree)" below):
+  `intro`, `reminder`, `turn_in`, `after`, each built via
+  `DialogTreeScript.from_pages(pages, effects)` — same page text as before,
+  with the `not_started→active`/`active→complete` flag flips and item
+  grant/consume expressed as `effects` on the terminal node.
   **`QuestData.QUESTS_2`** holds the six `NPC_DATA_2` quests in the same
-  shape; `_talk_to_npc()` looks an NPC's quest up via
-  `QuestData.get_quest(npc.quest_id)`.
+  shape (Tobias/Agnes have empty `{}` trees for `reminder`/`turn_in`, since
+  their `intro` both completes and rewards the quest); `_talk_to_npc()` looks
+  an NPC's quest up via `QuestData.get_quest(npc.quest_id)`.
 - **Quest state machine**, `not_started → active → complete`, persisted as a
   string at `GameManager.level_progress["town"]["quest_<id>"]` via the
   existing `get_level_flag`/`set_level_flag(TOWN_ID, ...)` pair (`TOWN_ID =
   "town"`) — the same pattern every level uses for its own progress, just
-  under a town-wide pseudo-location id. `_talk_to_npc(idx)`:
-  - `not_started` → shows `intro`, flips to `active` (or, for the
-    no-`want_item` Tobias/Agnes quests, queues the same deferred completion
-    as the `turn_in` case below — their `intro` doubles as the turn-in).
-  - `active` → `_find_item_holder(want_item)` scans
-    `GameManager.unlocked_characters` for `has_item`; if found, shows
-    `turn_in` and stashes `_pending_turn_in` (flag key, item holder, quest
-    dict). Otherwise shows `reminder`.
-  - `complete` → always shows `after`.
+  under a town-wide pseudo-location id. `_talk_to_npc(idx)` just **picks a
+  tree** based on state — `intro` (`not_started`), `turn_in` or `reminder`
+  (`active`, depending on whether `_find_item_holder(want_item)` finds the
+  item), or `after` (`complete`) — and opens it.
 
   **Completion is deferred to dialog-close**, not the moment the turn-in
-  dialog opens: `_dialog_box.closed` (emitted by `advance()` past the last
-  page) is connected to `_on_dialog_closed()`, which — only if
-  `_pending_turn_in` is set — `consume_item`s the want-item, `grant_item`s
-  the give-item/spoon (if any), and *then* flips the flag to `complete`. This
-  keeps the Quest Log accurate while a turn-in conversation is still on
-  screen (it reads as `ACTIVE` until the player has actually finished the
-  exchange) and means the reward/spoon is never granted before the flag says
-  `complete`.
+  dialog opens: `_dialog_box.closed(effects: Array)` (emitted once the tree
+  ends) is connected to `_on_dialog_closed()`, which calls
+  `_apply_dialog_effects(effects)` — `consume_item`s `effects.consume_item`
+  (looked up via `_find_item_holder`), `grant_item`s each
+  `effects.grant_items` entry to that same holder, and `set_level_flag`s
+  `effects.set_flag`/`flag_value`. This keeps the Quest Log accurate while a
+  turn-in conversation is still on screen (it reads as `ACTIVE` until the
+  player has actually finished the exchange) and means the reward/spoon is
+  never granted before the flag says `complete`.
 - **Input/UI wiring**: `_update_nearby_npc()` (mirrors `_update_nearby()` for
   building doors, `NPC_INTERACT_RADIUS = 40px`) drives a cyan pulsing
   ring + name-label prompt (`_draw_npc_prompt`, distinct color from the
@@ -1153,6 +1163,80 @@ and how each ties into the Uncle Doug mystery).
   (`bent_spoon`, `skeleton_key`, `arcade_token`, `fannys_bottle`) were already
   placed as loot boxes in earlier passes — no level changes needed for those
   four.
+
+### Dialog choices (DialogTree) *(implemented)*
+Every conversation in the game — the 12 town quests and Mr. Bellows — was
+originally a flat `Array[String]` of pages: open → advance → advance →
+close. `DialogBox` now speaks only one format, a small node-graph
+("DialogTree"), so NPCs can present **player-facing choices** whose outcome
+can depend on **which character is currently active** — the first mechanical
+payoff for the "right character for this NPC" personalities the cast already
+has (Quinn's quiet respect vs. Erin's blunt skepticism, per The Old Parish
+Church's spec).
+
+- **`scripts/systems/dialog_tree.gd`** (no `class_name` — preload()+untyped
+  `var DialogTreeScript`, same convention as `LootBox`/`Doorway`, see
+  [[feedback-godot-technical]]) defines the shape: a tree is
+  `Dictionary[String, Dictionary]`, node id → node. A node has `lines`
+  (paged text), optional `next` (auto-advance) **or** `choices` (mutually
+  exclusive with `next`), and optional `effects`. A choice has `text`,
+  optional `best_with` (a character name), `next`/`next_alt`, and optional
+  `effects`. Effects are `{set_flag, flag_value, consume_item, grant_items}`.
+  Two static helpers: `from_pages(pages, last_node_effects = {})` builds a
+  linear `start→n1→n2→...` chain (the mechanical converter for all the old
+  paged dialog — the *text* didn't change, only the wrapping); and
+  `resolve_choice(choice, active_character)` returns `next_alt` if
+  `best_with` is set, doesn't match `active_character`, and `next_alt`
+  exists, else `next`.
+- **`DialogBox`** tracks `_tree`/`_node_id`/`_node`/`_line_index`/
+  `_active_character`/`_effects`/`_choice_mode`/`_choice_index`.
+  `advance()` pages through `_node["lines"]`; on the last page it enters
+  choice mode (if `_node` has `choices`), follows `_node["next"]`, or closes
+  and emits `closed(effects: Array)`. `move_choice_cursor(delta)` /
+  `select_choice()` (move/select while `is_choice_mode()`) mirror
+  `achievements_overlay.gd`'s cursor-wrap idiom; `select_choice()` resolves
+  the chosen option's next node via `DialogTree.resolve_choice` and plays
+  `Audio.play("ui_select")`. `_draw()` renders the choice list (`>` cursor,
+  `NAME_COLOR` highlight) in place of the normal text/prompt when in choice
+  mode.
+- **Effects application** generalizes the old `_pending_turn_in` mechanism:
+  `overworld_map.gd._apply_dialog_effects(effects: Array)` and
+  `pipe_organ_works.gd._on_manager_dialog_closed(effects: Array)` both walk
+  the `effects` collected while traversing a tree (one dict per node/choice
+  that carried `effects`) and apply each `consume_item`/`grant_items`/
+  `set_flag` once the conversation is fully closed — never mid-conversation.
+- **Input/movement gating**: `overworld_player.gd` gained `input_locked:
+  bool` (checked at the top of `_physics_process`, alongside
+  `GameManager.is_paused()`) and `character_name: String` (set via
+  `setup()`, needed so `_talk_to_npc`/`_apply_dialog_effects` can resolve
+  `DialogTree.resolve_choice`'s `active_character` and the effects'
+  item-holder for overworld players, which — unlike in-level `Player` — have
+  no `data: CharacterData`). `overworld_map.gd._process()` sets
+  `_active_player.input_locked = _dialog_box.is_open()` every frame and, when
+  `is_choice_mode()`, routes `move_up`/`move_down`/`ui_accept`/`attack` to
+  `move_choice_cursor()`/`select_choice()` instead of movement/launch.
+- **Worked example — Father Aldric** (`scripts/levels/old_parish_church.gd`):
+  a stationary NPC near the altar (`ALDRIC_POS`, clear of the BLUE/RED pillar
+  radii and the secret-passage lever). His `FATHER_ALDRIC_TREE` "ask" node
+  offers a Quinn-flavored respectful response (`best_with: "Quinn"`, →
+  `"pleased"` if Quinn is active, → `"amused"` via `next_alt` if Erin is
+  active — politeness lands well either way) and an Erin-flavored blunt one
+  (`best_with: "Erin"`, → `"annoyed"` regardless of who's active — bluntness
+  reads as rude no matter who delivers it). The outcome is persisted as
+  `level_progress["old_parish_church"]["father_aldric_impression"]`
+  (`"good"`/`"cool"`); a return visit shows `ALDRIC_RETURN_GOOD_TREE` or
+  `ALDRIC_RETURN_COOL_TREE` (simple `from_pages()` flavor, no further
+  choices) instead of re-asking. Pure lore/flavor — no item gates or puzzle
+  changes.
+- Migration covered all 12 `QuestData` quests and Mr. Bellows
+  (`MANAGER_INTRO_TREE`/`MANAGER_ERIN_TREE`/`MANAGER_REMINDER_TREE`/
+  `MANAGER_AFTER_TREE` in `pipe_organ_works.gd` — Erin's fast-talk for the
+  `tuning_key` is now a tree whose terminal `effects` grant the item and set
+  `tuning_key_given`). Verified via headless boot check, full GUT suite
+  (24/24), and a temporary autoload functional test exercising
+  `from_pages`/`resolve_choice`, the Gus and Tobias quest lifecycles, the
+  three Father Aldric branches (Quinn/respectful → pleased, Erin/respectful →
+  amused, blunt → annoyed regardless), and both Mr. Bellows trees' effects.
 
 ### Quest Log *(implemented)*
 A pause-menu screen listing the player's discovered NPC quests (the 12

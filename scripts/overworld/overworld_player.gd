@@ -16,6 +16,8 @@ const TELEPORT_DISTANCE: float = 300.0
 var mode: Mode = Mode.ACTIVE
 var follow_target: Vector2 = Vector2.ZERO
 var facing: Vector2 = Vector2.DOWN
+var input_locked: bool = false
+var character_name: String = ""
 
 var sprite: AnimatedSprite2D
 
@@ -28,16 +30,17 @@ func _ready() -> void:
 	add_child(shape)
 
 
-func setup(frames: SpriteFrames, sprite_scale: float = 1.0) -> void:
+func setup(frames: SpriteFrames, sprite_scale: float = 1.0, name_in: String = "") -> void:
 	sprite = AnimatedSprite2D.new()
 	sprite.sprite_frames = frames
 	sprite.scale = Vector2.ONE * sprite_scale
 	sprite.play("idle")
 	add_child(sprite)
+	character_name = name_in
 
 
 func _physics_process(_delta: float) -> void:
-	if GameManager.is_paused():
+	if GameManager.is_paused() or input_locked:
 		return
 	match mode:
 		Mode.ACTIVE:

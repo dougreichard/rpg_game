@@ -177,10 +177,6 @@ var _font: Font
 var _name_label: Label
 var _status_label: Label
 var _dialog_box = null
-# Set by _talk_to_npc() when a turn-in dialog is opened; applied (item
-# consume/grant, spoon grant, flag -> "complete") only once that dialog is
-# fully read and closed -- see _on_dialog_closed().
-var _pending_turn_in: Dictionary = {}
 var _active_player = null
 var _standby_player = null
 var _inventory_overlay = null
@@ -314,7 +310,7 @@ func _spawn_duo() -> void:
 
 	_active_player = PlayerScript.new()
 	add_child(_active_player)
-	_active_player.setup(_load_player_frames(active_name), _player_sprite_scale(active_name))
+	_active_player.setup(_load_player_frames(active_name), _player_sprite_scale(active_name), active_name)
 	_active_player.global_position = spawn
 	_active_player.mode = PlayerScript.Mode.ACTIVE
 
@@ -327,7 +323,7 @@ func _spawn_duo() -> void:
 		var standby_name: String = String(names[1]).capitalize()
 		_standby_player = PlayerScript.new()
 		add_child(_standby_player)
-		_standby_player.setup(_load_player_frames(standby_name), _player_sprite_scale(standby_name))
+		_standby_player.setup(_load_player_frames(standby_name), _player_sprite_scale(standby_name), standby_name)
 		_standby_player.global_position = spawn + Vector2(-TILE, 0.0)
 		_standby_player.mode = PlayerScript.Mode.FOLLOW
 		_inventory_overlay.call("setup", active_name, standby_name)
@@ -490,8 +486,18 @@ func _process(_delta: float) -> void:
 		_standby_player.follow_target = _active_player.global_position - _active_player.facing * (TILE * 0.9)
 	if is_instance_valid(_active_player):
 		camera.global_position = _active_player.global_position
+		_active_player.input_locked = _dialog_box.is_open()
 	_update_nearby()
 	_update_nearby_npc()
+	if _dialog_box.is_open() and _dialog_box.is_choice_mode():
+		if Input.is_action_just_pressed("move_up"):
+			_dialog_box.move_choice_cursor(-1)
+		elif Input.is_action_just_pressed("move_down"):
+			_dialog_box.move_choice_cursor(1)
+		elif Input.is_action_just_pressed("ui_accept") or Input.is_action_just_pressed("attack"):
+			_dialog_box.select_choice()
+		queue_redraw()
+		return
 	if Input.is_action_just_pressed("swap") and not _dialog_box.is_open():
 		_swap_duo()
 	if Input.is_action_just_pressed("ui_accept") or Input.is_action_just_pressed("attack"):
@@ -536,9 +542,10 @@ func _update_nearby_npc() -> void:
 # consumes want_item, grants give_item if any). Reminder shown while active
 # and the player hasn't found the item yet; after shown once complete.
 #
-# A quest only flips to "complete" -- and only then are the want_item
-# consumed and give_item/spoon granted -- once the player has read through
-# the turn-in dialog and closed it; see _on_dialog_closed().
+# Each tree's terminal node carries the "effects" (flag transitions, item
+# grant/consume) for that conversation -- see QuestData and
+# _apply_dialog_effects(), applied once the dialog is fully read and closed
+# via _on_dialog_closed().
 func _talk_to_npc(idx: int) -> void:
 	var npc = _npcs[idx]
 	var quest: Dictionary = QuestData.get_quest(npc.quest_id)
@@ -546,51 +553,35 @@ func _talk_to_npc(idx: int) -> void:
 		return
 	var flag_key: String = "quest_" + npc.quest_id
 	var state: String = GameManager.get_level_flag(TOWN_ID, flag_key, "not_started")
-	var lines: PackedStringArray
-	_pending_turn_in = {}
+	var tree: Dictionary
 	match state:
 		"complete":
-			lines = quest["after"]
+			tree = quest["after"]
 		"active":
-			var holder: String = _find_item_holder(quest["want_item"])
-			if holder != "":
-				_pending_turn_in = {"flag_key": flag_key, "holder": holder, "quest": quest}
-				lines = quest["turn_in"]
-			else:
-				lines = quest["reminder"]
+			tree = quest["turn_in"] if _find_item_holder(quest["want_item"]) != "" else quest["reminder"]
 		_:
-			# A quest with no want_item (Tobias/Agnes -- "freed" by a secret
-			# passage found elsewhere) completes on the very first
-			# conversation: its "intro" doubles as the turn-in/thanks.
-			if quest["want_item"] == "":
-				_pending_turn_in = {
-					"flag_key": flag_key,
-					"holder": GameManager.unlocked_characters[0],
-					"quest": quest,
-					"no_want_item": true,
-				}
-			else:
-				GameManager.set_level_flag(TOWN_ID, flag_key, "active")
-			lines = quest["intro"]
+			tree = quest["intro"]
 	Audio.play("ui_select")
-	_dialog_box.open(npc.npc_name, npc.color, lines)
+	_dialog_box.open(npc.npc_name, npc.color, tree, "start", _active_player.character_name)
 
-# Applies a pending turn-in (if any) once its dialog has been fully read and
-# closed -- see the comment on _talk_to_npc() above.
-func _on_dialog_closed() -> void:
-	if _pending_turn_in.is_empty():
-		return
-	var flag_key: String = _pending_turn_in["flag_key"]
-	var holder: String = _pending_turn_in["holder"]
-	var quest: Dictionary = _pending_turn_in["quest"]
-	if not _pending_turn_in.get("no_want_item", false):
-		GameManager.consume_item(holder, quest["want_item"])
-		if quest["give_item"] != "":
-			GameManager.grant_item(holder, quest["give_item"])
-	if quest.get("spoon", "") != "":
-		GameManager.grant_item(holder, quest["spoon"])
-	GameManager.set_level_flag(TOWN_ID, flag_key, "complete")
-	_pending_turn_in = {}
+# Applies the effects collected while walking a dialog tree (set_level_flag,
+# item consume/grant) once the conversation is fully read and closed -- see
+# scripts/systems/dialog_tree.gd and dialog_box.gd's closed(effects) signal.
+func _on_dialog_closed(effects: Array) -> void:
+	_apply_dialog_effects(effects)
+
+func _apply_dialog_effects(effects: Array) -> void:
+	for fx: Dictionary in effects:
+		var holder: String = _active_player.character_name.to_lower()
+		if fx.has("consume_item"):
+			var found: String = _find_item_holder(fx["consume_item"])
+			if found != "":
+				holder = found
+				GameManager.consume_item(holder, fx["consume_item"])
+		for item_id: String in fx.get("grant_items", []):
+			GameManager.grant_item(holder, item_id)
+		if fx.has("set_flag"):
+			GameManager.set_level_flag(TOWN_ID, fx["set_flag"], fx.get("flag_value", true))
 
 # Returns the lowercase name of the first unlocked character holding
 # `item_id`, or "" if none do -- mirrors GameManager.has_item's lowercase
