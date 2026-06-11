@@ -591,13 +591,13 @@ func _spawn_duo() -> void:
 
 	_active_player = PlayerScript.new()
 	add_child(_active_player)
-	_active_player.setup(_load_player_frames(active_name))
+	_active_player.setup(_load_player_frames(active_name), _player_sprite_scale(active_name))
 	_active_player.global_position = spawn
 	_active_player.mode = PlayerScript.Mode.ACTIVE
 
 	_standby_player = PlayerScript.new()
 	add_child(_standby_player)
-	_standby_player.setup(_load_player_frames(standby_name))
+	_standby_player.setup(_load_player_frames(standby_name), _player_sprite_scale(standby_name))
 	_standby_player.global_position = spawn + Vector2(-TILE, 0.0)
 	_standby_player.mode = PlayerScript.Mode.FOLLOW
 
@@ -609,6 +609,13 @@ func _load_player_frames(character_name: String) -> SpriteFrames:
 	if loaded != null:
 		return loaded
 	return PlaceholderArt.make_player_frames(CHAR_DATA[character_name].sprite_color, character_name)
+
+# 64x64 real sheets are 2x-oversampled (DESIGN.md SS2.0) and need scaling down
+# to the 32x32 gameplay footprint; 32x32 placeholder frames render at 1:1.
+func _player_sprite_scale(character_name: String) -> float:
+	if SpriteLoader.try_load_player(character_name) != null:
+		return SpriteLoader.PLAYER_SPRITE_SCALE
+	return 1.0
 
 # NPC_DATA_2 entries may carry a "requires_flag" ({location, flag}) -- those
 # townsfolk represent characters "freed" by a secret-passage discovery

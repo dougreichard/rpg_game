@@ -9,6 +9,12 @@ extends RefCounted
 
 const TILE_SIZE: int = 32
 
+# Player sheets are authored at 64x64 (2x oversample over the 32x32 gameplay
+# tile, per DESIGN.md SS2.0/SS3) — try_load_player scales the AnimatedSprite2D
+# down via PLAYER_SPRITE_SCALE so the on-screen footprint stays 32x32.
+const PLAYER_TILE_SIZE: int = 64
+const PLAYER_SPRITE_SCALE: float = 0.5
+
 # Player animation layout — row order from sprites.md.
 const PLAYER_ANIMS: Array = [
 	{name="idle",         row=0,  frames=6,  fps=8.0,  loop=true},
@@ -64,7 +70,7 @@ static func try_load_player(character_name: String) -> SpriteFrames:
 	var tex: Texture2D = load(path)
 	if tex == null:
 		return null
-	var result: SpriteFrames = _build(tex.get_image(), PLAYER_ANIMS, TILE_SIZE, TILE_SIZE)
+	var result: SpriteFrames = _build(tex.get_image(), PLAYER_ANIMS, PLAYER_TILE_SIZE, PLAYER_TILE_SIZE)
 	_player_cache[key] = result
 	return result
 

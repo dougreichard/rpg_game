@@ -67,8 +67,11 @@ func _ready() -> void:
 	hitbox.hit_landed.connect(register_hit_landed)
 	if sprite.sprite_frames == null:
 		var loaded: SpriteFrames = SpriteLoader.try_load_player(data.character_name)
-		sprite.sprite_frames = loaded if loaded != null \
-			else PlaceholderArt.make_player_frames(data.sprite_color, data.character_name)
+		if loaded != null:
+			sprite.sprite_frames = loaded
+			sprite.scale = Vector2.ONE * SpriteLoader.PLAYER_SPRITE_SCALE
+		else:
+			sprite.sprite_frames = PlaceholderArt.make_player_frames(data.sprite_color, data.character_name)
 	sprite.play("idle")
 
 func _physics_process(delta: float) -> void:

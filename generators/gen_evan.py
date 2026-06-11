@@ -1,160 +1,222 @@
 #!/usr/bin/env python3
 """
-Evan sprite sheet — PIL fallback.
-320 × 544 px RGBA  (17 rows × 10 cols × 32×32).
+Evan sprite sheet — PIL procedural, 64x64 spec.
+640 x 1088 px RGBA  (17 rows x 10 cols x 64x64).
 
-Evan: teenage boy, BROAD/wide build (widest character). Olive t-shirt,
-brown cargo shorts, hiking boots, warm skin. Fists only — no tool.
-Frosty (small white dog) at feet in idle. Slowest but hits hardest.
+Extended-palette / "Stranger Things: 1984"-style rebuild (DESIGN.md SS2.0,
+sprites.md "Evan"). Same animation structure and frame counts as the
+original 32x32 generator, doubled onto the 64x64 canvas, plus:
+  - extended-palette colors (olive/khaki t-shirt w/ highlight+shadow bands,
+    brown cargo shorts w/ highlight, worn boots w/ cuff highlight, warm skin
+    w/ blush, dark-brown hair w/ highlight)
+  - eye-white + pupil + eyebrow detail on the face (front/side/closeup),
+    matching the Quinn/Erin rebuilds
+  - Frosty (small white dog at Evan's feet in idle) gains a shaded underside
+
+Proportions (per sprites.md "Style Guide", "Evan is 2px wider each side than
+Quinn" doubled): head ~20x14, torso ~32x20, legs wide stance — broadest
+silhouette of the five characters.
 """
 from PIL import Image, ImageDraw
 import os
 
-# ── Palette ───────────────────────────────────────────────────────────────────
-BL = (  0,   0,   0, 255)   # black   outline
-OL = (108, 121,  67, 255)   # olive   t-shirt
-BN = ( 95,  87,  79, 255)   # brown   cargo shorts / boots
-SK = (255, 204, 170, 255)   # warm    skin (arms, face, legs)
-DK = ( 55,  50,  35, 255)   # dark    boot / shadow
-WH = (255, 241, 232, 255)   # near-white  Frosty fur
-TR = (  0,   0,   0,   0)   # transparent
+# -- Extended palette (DESIGN.md SS2.0 / sprites.md "Evan -> Palette slots") --
+INK       = ( 26,  26,  34, 255)  # ink-black: outline
+OLIVE     = (156, 138,  78, 255)  # #9C8A4E olive/khaki t-shirt
+OLIVE_HI  = (189, 174, 118, 255)  # olive highlight seam
+OLIVE_SH  = (122, 107,  58, 255)  # olive shadow band
+BROWN     = (110,  74,  46, 255)  # #6E4A2E brown cargo shorts
+BROWN_HI  = (140, 100,  68, 255)  # cargo highlight
+BOOT      = ( 70,  47,  29, 255)  # worn boot brown (#6E4A2E darkened)
+BOOT_HI   = ( 95,  68,  46, 255)  # boot cuff highlight
+SKIN      = (217, 163, 110, 255)  # #D9A36E warm skin
+SKIN_SH   = (191, 138,  90, 255)  # skin shadow / blush
+HAIR      = ( 92,  62,  38, 255)  # short dark-brown hair
+HAIR_HI   = (122,  87,  56, 255)  # hair highlight
+HAIR_SH   = ( 64,  42,  25, 255)  # hair shadow / eyebrows
+EYE_WHITE = (244, 240, 230, 255)  # eye whites
+FROSTY    = (250, 248, 245, 255)  # near-white Frosty fur
+FROSTY_SH = (214, 210, 204, 255)  # Frosty fur shadow
+TR        = (  0,   0,   0,   0)
 
-T = 32
+T = 64
 
-# ── Shared helpers ────────────────────────────────────────────────────────────
+# -- Primitives -----------------------------------------------------------------
 
 def tile():
     return Image.new('RGBA', (T, T), TR)
 
 def add_outline(im):
-    px = im.load(); out = im.copy(); opx = out.load()
+    """1-pixel ink-black border around the whole character silhouette."""
+    px  = im.load()
+    out = im.copy()
+    opx = out.load()
     for y in range(T):
         for x in range(T):
-            if px[x, y][3] > 0: continue
-            for dx, dy in ((1,0),(-1,0),(0,1),(0,-1)):
-                nx, ny = x+dx, y+dy
+            if px[x, y][3] > 0:
+                continue
+            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                nx, ny = x + dx, y + dy
                 if 0 <= nx < T and 0 <= ny < T and px[nx, ny][3] > 0:
-                    opx[x, y] = BL; break
+                    opx[x, y] = INK
+                    break
     return out
 
-# ── Body parts — Evan is 2 px wider each side than Quinn ──────────────────────
-# Head:   y 3–11  (no hat — short dark hair)
-# Torso:  y 11–21 (t-shirt, wide shoulders x 8–24)
-# Legs:   y 21–31 (shorts + boots, wide stance)
+# -- Body-part helpers (all coords are the v1 32x32 coords x2) ------------------
+# Head:   y 8-22  (no hat — short dark hair)
+# Torso:  y 22-42 (t-shirt, wide shoulders x 16-48)
+# Legs:   y 42-62 (shorts + boots, wide stance)
 
 def draw_hair_front(d):
-    d.rectangle([11, 1, 21, 4], fill=BN)   # short dark hair
+    d.rectangle([22, 2, 42, 8], fill=HAIR)    # short dark hair
+    d.line([(24, 3), (38, 3)], fill=HAIR_HI)  # highlight streak
 
 def draw_hair_back(d):
-    d.rectangle([10, 1, 22, 5], fill=BN)
+    d.rectangle([20, 2, 44, 10], fill=HAIR)
+    d.line([(22, 3), (40, 3)], fill=HAIR_HI)
 
 def draw_hair_side(d):
-    d.rectangle([13, 1, 22, 5], fill=BN)
+    d.rectangle([26, 2, 44, 10], fill=HAIR)
+    d.line([(28, 3), (42, 3)], fill=HAIR_HI)
 
 def draw_face_front(d, expr="neutral"):
-    d.rectangle([11, 4, 21, 11], fill=SK)   # wider head
-    d.rectangle([12, 7, 14,  9], fill=BL)   # left eye
-    d.rectangle([18, 7, 20,  9], fill=BL)   # right eye
-    d.point((13, 8), fill=SK)
-    d.point((19, 8), fill=SK)
-    if   expr == "shout": d.arc([13,9,19,12], 0, 180, fill=BL)
-    elif expr == "hurt":  d.line([(13,10),(19,10)], fill=BL)
-    elif expr == "strain":d.line([(12,10),(20,10)], fill=BL); d.line([(15,9),(17,9)], fill=BL)
+    d.rectangle([22, 8, 42, 22], fill=SKIN)              # wide head
+    d.line([(24, 12), (28, 11)], fill=HAIR_SH)           # left eyebrow
+    d.line([(36, 11), (40, 12)], fill=HAIR_SH)           # right eyebrow
+    d.rectangle([24, 14, 28, 18], fill=EYE_WHITE)        # left eye
+    d.rectangle([36, 14, 40, 18], fill=EYE_WHITE)        # right eye
+    d.rectangle([25, 15, 27, 17], fill=INK)              # left pupil
+    d.rectangle([37, 15, 39, 17], fill=INK)              # right pupil
+    d.ellipse([22, 17, 26, 20], fill=SKIN_SH)            # blush
+    d.ellipse([38, 17, 42, 20], fill=SKIN_SH)
+    if   expr == "shout":
+        d.arc([26, 18, 38, 24], 0, 180, fill=INK, width=2)
+    elif expr == "hurt":
+        d.line([(26, 20), (38, 20)], fill=INK, width=2)
+    elif expr == "strain":
+        d.line([(24, 20), (40, 20)], fill=INK, width=2)
+        d.line([(30, 18), (34, 18)], fill=INK, width=2)
+    else:
+        d.line([(28, 20), (36, 20)], fill=SKIN_SH)
 
 def draw_face_side(d):
-    d.rectangle([14, 4, 22, 11], fill=SK)
-    d.rectangle([19, 7, 21,  9], fill=BL)
-    d.point((20, 8), fill=SK)
+    d.rectangle([28, 8, 44, 22], fill=SKIN)
+    d.line([(36, 11), (42, 11)], fill=HAIR_SH)           # eyebrow
+    d.rectangle([38, 14, 42, 18], fill=EYE_WHITE)
+    d.rectangle([39, 15, 41, 17], fill=INK)              # pupil
+    d.ellipse([34, 17, 38, 20], fill=SKIN_SH)            # blush
 
 def draw_torso_front(d):
-    # Wide t-shirt
-    d.rectangle([8, 11, 24, 21], fill=OL)
-    d.line([(8,11),(8,21)],  fill=DK)   # left shadow
-    d.line([(24,11),(24,21)], fill=DK)  # right shadow
+    d.rectangle([16, 22, 48, 42], fill=OLIVE)
+    d.rectangle([16, 22, 20, 42], fill=OLIVE_SH)         # left shadow band
+    d.rectangle([44, 22, 48, 42], fill=OLIVE_SH)         # right shadow band
+    d.line([(32, 24), (32, 40)], fill=OLIVE_HI, width=2) # center highlight seam
+    d.rectangle([28, 20, 36, 24], fill=OLIVE)            # collar
 
 def draw_torso_back(d):
-    d.rectangle([8, 11, 24, 21], fill=OL)
-    d.line([(8,11),(8,21)],  fill=DK)
-    d.line([(24,11),(24,21)], fill=DK)
+    d.rectangle([16, 22, 48, 42], fill=OLIVE)
+    d.rectangle([16, 22, 20, 42], fill=OLIVE_SH)
+    d.rectangle([44, 22, 48, 42], fill=OLIVE_SH)
+    d.line([(32, 24), (32, 40)], fill=OLIVE_HI, width=2)
 
 def draw_torso_side(d):
-    d.rectangle([12, 11, 22, 21], fill=OL)
-    d.line([(12,11),(12,21)], fill=DK)
+    d.rectangle([24, 22, 44, 42], fill=OLIVE)
+    d.rectangle([24, 22, 28, 42], fill=OLIVE_SH)
+    d.line([(40, 24), (40, 40)], fill=OLIVE_HI, width=2)
 
-def draw_arms_front(d, ldy=0, rdy=0, wide=False, raised=False, strain=False):
+def draw_arms_front(d, ldy=0, rdy=0, wide=False, raised=False):
     if wide:
-        d.rectangle([ 1, 12,  8, 17], fill=SK)
-        d.rectangle([24, 12, 31, 17], fill=SK)
+        d.rectangle([2, 24, 16, 34], fill=SKIN)
+        d.rectangle([48, 24, 62, 34], fill=SKIN)
+        d.rectangle([2, 30, 16, 34], fill=SKIN_SH)
+        d.rectangle([48, 30, 62, 34], fill=SKIN_SH)
     elif raised:
-        d.rectangle([ 5, 11,  9, 21], fill=SK)
-        d.rectangle([23,  6, 27, 16], fill=SK)
+        d.rectangle([10, 22, 18, 42], fill=SKIN)
+        d.rectangle([46, 12, 54, 32], fill=SKIN)
     else:
-        ly0 = 11 + max(ldy, 0); ly1 = 21 + ldy
-        ry0 = 11 + max(rdy, 0); ry1 = 21 + rdy
-        d.rectangle([ 5, ly0,  9, ly1], fill=SK)
-        d.rectangle([23, ry0, 27, ry1], fill=SK)
+        ly0 = 22 + max(ldy, 0) * 2
+        ly1 = 42 + ldy * 2
+        ry0 = 22 + max(rdy, 0) * 2
+        ry1 = 42 + rdy * 2
+        d.rectangle([10, ly0, 18, ly1], fill=SKIN)
+        d.rectangle([46, ry0, 54, ry1], fill=SKIN)
+        d.rectangle([10, ly1 - 4, 18, ly1], fill=SKIN_SH)
+        d.rectangle([46, ry1 - 4, 54, ry1], fill=SKIN_SH)
 
 def draw_arm_side(d, arm_dy=0):
-    y0 = 11 + max(arm_dy, 0); y1 = 21 + arm_dy
-    d.rectangle([22, y0, 26, y1], fill=SK)
+    y0 = 22 + max(arm_dy, 0) * 2
+    y1 = 42 + arm_dy * 2
+    d.rectangle([44, y0, 52, y1], fill=SKIN)
+    d.rectangle([44, y1 - 4, 52, y1], fill=SKIN_SH)
 
 def draw_legs_front(d, phase=0, run=False, crouch=False):
     if crouch:
-        d.rectangle([ 9, 21, 14, 25], fill=BN)
-        d.rectangle([18, 21, 23, 25], fill=BN)
-        d.rectangle([ 8, 25, 16, 31], fill=DK)
-        d.rectangle([16, 25, 24, 31], fill=DK)
+        d.rectangle([18, 42, 28, 50], fill=BROWN)
+        d.rectangle([36, 42, 46, 50], fill=BROWN)
+        d.rectangle([16, 50, 32, 62], fill=BOOT)
+        d.rectangle([32, 50, 48, 62], fill=BOOT)
+        d.rectangle([16, 50, 32, 52], fill=BOOT_HI)
+        d.rectangle([32, 50, 48, 52], fill=BOOT_HI)
         return
-    s = 3 if run else 2
-    if   phase == 0: lx,rx,ld,rd = 10,17,  0, 0
-    elif phase == 1: lx,rx,ld,rd =  9,18,  s, 0
-    elif phase == 2: lx,rx,ld,rd = 11,16,  0, s
-    else:            lx,rx,ld,rd =  9,18,  0, 0
-    # Shorts (BN) then boots (DK) — wide stance
-    d.rectangle([lx,   21, lx+4, 25+ld], fill=BN)
-    d.rectangle([lx-1, 25+ld, lx+5, 31], fill=DK)
-    d.rectangle([rx,   21, rx+4, 25+rd], fill=BN)
-    d.rectangle([rx-1, 25+rd, rx+5, 31], fill=DK)
+    s = 6 if run else 4
+    if   phase == 0: lx, rx, ld, rd = 20, 34, 0, 0
+    elif phase == 1: lx, rx, ld, rd = 18, 36, s, 0
+    elif phase == 2: lx, rx, ld, rd = 22, 32, 0, s
+    else:            lx, rx, ld, rd = 18, 36, 0, 0
+    d.rectangle([lx, 42, lx + 8, 50 + ld], fill=BROWN)
+    d.rectangle([lx, 42, lx + 2, 50 + ld], fill=BROWN_HI)
+    d.rectangle([lx - 2, 50 + ld, lx + 10, 62], fill=BOOT)
+    d.rectangle([lx - 2, 50 + ld, lx + 10, 52 + ld], fill=BOOT_HI)
+    d.rectangle([rx, 42, rx + 8, 50 + rd], fill=BROWN)
+    d.rectangle([rx, 42, rx + 2, 50 + rd], fill=BROWN_HI)
+    d.rectangle([rx - 2, 50 + rd, rx + 10, 62], fill=BOOT)
+    d.rectangle([rx - 2, 50 + rd, rx + 10, 52 + rd], fill=BOOT_HI)
 
 def draw_legs_side(d, phase=0, run=False, crouch=False):
-    s = 4 if run else 2
+    s = 8 if run else 4
     if crouch:
-        d.rectangle([13,21,17,25], fill=BN)
-        d.rectangle([17,21,21,25], fill=DK)
-        d.rectangle([12,25,19,31], fill=DK)
-        d.rectangle([17,25,23,30], fill=DK)
+        d.rectangle([26, 42, 34, 50], fill=BROWN)
+        d.rectangle([34, 42, 42, 50], fill=BOOT)
+        d.rectangle([24, 50, 38, 62], fill=BOOT)
+        d.rectangle([34, 50, 46, 60], fill=BOOT)
+        d.rectangle([24, 50, 38, 52], fill=BOOT_HI)
         return
     if phase in (0, 2):
-        d.rectangle([14,21,18,27], fill=BN)
-        d.rectangle([17,21,21,27], fill=BN)
-        d.rectangle([13,26,20,31], fill=DK)
-        d.rectangle([16,26,23,30], fill=DK)
+        d.rectangle([28, 42, 36, 54], fill=BROWN)
+        d.rectangle([34, 42, 42, 54], fill=BROWN)
+        d.rectangle([26, 52, 40, 62], fill=BOOT)
+        d.rectangle([32, 52, 46, 60], fill=BOOT)
+        d.rectangle([26, 52, 40, 54], fill=BOOT_HI)
     elif phase == 1:
-        d.rectangle([17,21,21,26+s], fill=BN)
-        d.rectangle([13,21,17,25],   fill=BN)
-        d.rectangle([16,25+s,23,31], fill=DK)
-        d.rectangle([12,25,18,29],   fill=DK)
+        d.rectangle([34, 42, 42, 52 + s], fill=BROWN)
+        d.rectangle([26, 42, 34, 50],     fill=BROWN)
+        d.rectangle([32, 50 + s, 46, 62], fill=BOOT)
+        d.rectangle([24, 50, 36, 58],     fill=BOOT)
+        d.rectangle([32, 50 + s, 46, 52 + s], fill=BOOT_HI)
     else:
-        d.rectangle([13,21,17,26+s], fill=BN)
-        d.rectangle([17,21,21,25],   fill=BN)
-        d.rectangle([12,25+s,18,31], fill=DK)
-        d.rectangle([16,25,23,29],   fill=DK)
+        d.rectangle([26, 42, 34, 52 + s], fill=BROWN)
+        d.rectangle([34, 42, 42, 50],     fill=BROWN)
+        d.rectangle([24, 50 + s, 36, 62], fill=BOOT)
+        d.rectangle([32, 50, 46, 58],     fill=BOOT)
+        d.rectangle([24, 50 + s, 36, 52 + s], fill=BOOT_HI)
 
 def draw_frosty(d):
     """Small white dog at Evan's feet — idle only."""
-    d.rectangle([6, 26, 13, 30], fill=WH)   # body
-    d.rectangle([6, 24, 9,  27], fill=WH)   # head
-    d.rectangle([5, 29, 7,  31], fill=WH)   # front legs
-    d.rectangle([11,29,13, 31], fill=WH)    # back legs
-    d.point((7, 25), fill=BL)               # eye
-    d.rectangle([13,26,16,27], fill=WH)     # tail up
+    d.rectangle([12, 52, 26, 60], fill=FROSTY)   # body
+    d.rectangle([12, 48, 18, 54], fill=FROSTY)   # head
+    d.rectangle([10, 58, 14, 62], fill=FROSTY)   # front legs
+    d.rectangle([22, 58, 26, 62], fill=FROSTY)   # back legs
+    d.rectangle([12, 56, 26, 60], fill=FROSTY_SH)  # belly shadow
+    d.rectangle([14, 50, 16, 52], fill=INK)      # eye
+    d.rectangle([26, 52, 32, 54], fill=FROSTY)   # tail up
 
-# ── Frame assemblers ──────────────────────────────────────────────────────────
+# -- Frame assemblers ------------------------------------------------------------
 
 def f_front(leg=0, ldy=0, rdy=0, expr="neutral", wide=False,
-            raised=False, run=False, crouch=False, frosty=False):
+             raised=False, run=False, crouch=False, frosty=False):
     im = tile(); d = ImageDraw.Draw(im)
-    if frosty: draw_frosty(d)
+    if frosty:
+        draw_frosty(d)
     draw_legs_front(d, phase=leg, run=run, crouch=crouch)
     draw_arms_front(d, ldy, rdy, wide=wide, raised=raised)
     draw_torso_front(d)
@@ -181,21 +243,33 @@ def f_side(leg=0, arm_dy=0, run=False, crouch=False):
 
 def f_closeup(expr="neutral"):
     im = tile(); d = ImageDraw.Draw(im)
-    d.rectangle([ 7, 0, 25,  4], fill=BN)   # hair
-    d.rectangle([ 7, 4, 25, 22], fill=SK)   # wide face
-    d.rectangle([ 8,12,13, 16], fill=BL)    # left eye
-    d.rectangle([19,12,24, 16], fill=BL)
-    d.point((11,14), fill=SK); d.point((22,14), fill=SK)
-    if   expr == "shout": d.arc([11,18,21,23], 0, 180, fill=BL)
-    elif expr == "talk":  d.line([(11,19),(21,19)], fill=BL)
-    d.rectangle([4, 23, 28, 31], fill=OL)   # t-shirt collar wide
+    d.rectangle([14, 0, 50, 8], fill=HAIR)               # hair top
+    d.line([(18, 2), (46, 2)], fill=HAIR_HI)             # highlight streak
+    d.rectangle([14, 8, 50, 44], fill=SKIN)              # wide face
+    d.line([(18, 16), (28, 14)], fill=HAIR_SH)           # eyebrows
+    d.line([(36, 14), (46, 16)], fill=HAIR_SH)
+    d.rectangle([18, 20, 28, 28], fill=EYE_WHITE)        # left eye
+    d.rectangle([36, 20, 46, 28], fill=EYE_WHITE)
+    d.rectangle([21, 22, 25, 26], fill=INK)              # left pupil
+    d.rectangle([39, 22, 43, 26], fill=INK)              # right pupil
+    d.ellipse([16, 30, 24, 36], fill=SKIN_SH)            # blush
+    d.ellipse([40, 30, 48, 36], fill=SKIN_SH)
+    if   expr == "shout":
+        d.arc([22, 36, 42, 46], 0, 180, fill=INK, width=2)
+    elif expr == "talk":
+        d.line([(22, 38), (42, 38)], fill=INK, width=2)
+    else:
+        d.line([(24, 38), (40, 38)], fill=SKIN_SH, width=2)
+    d.rectangle([8, 46, 56, 62], fill=OLIVE)             # wide t-shirt collar
+    d.rectangle([8, 46, 56, 50], fill=OLIVE_HI)          # collar highlight
     return add_outline(im)
 
-# ── Walk cycle ────────────────────────────────────────────────────────────────
-_WL = [0, 1, 3, 2, 0, 1, 3, 2]
-_WA = [0,-1, 0, 1, 0,-1, 0, 1]
+# -- Walk cycle -------------------------------------------------------------------
 
-# ── Animations ────────────────────────────────────────────────────────────────
+_WL = [0, 1, 3, 2, 0, 1, 3, 2]
+_WA = [0, -1, 0, 1, 0, -1, 0, 1]
+
+# -- Animation generators -----------------------------------------------------------
 
 def anim_idle():
     return [f_front(frosty=(i < 4)) for i in range(6)]
@@ -211,13 +285,13 @@ def anim_walk_right():
 
 def anim_run_down():
     # Evan runs heavy — less arm swing than Erin
-    return [f_front(leg=_WL[i], ldy=_WA[i]*2, rdy=-_WA[i]*2, run=True) for i in range(8)]
+    return [f_front(leg=_WL[i], ldy=_WA[i] * 2, rdy=-_WA[i] * 2, run=True) for i in range(8)]
 
 def anim_run_up():
-    return [f_back(leg=_WL[i], ldy=_WA[i]*2, rdy=-_WA[i]*2, run=True) for i in range(8)]
+    return [f_back(leg=_WL[i], ldy=_WA[i] * 2, rdy=-_WA[i] * 2, run=True) for i in range(8)]
 
 def anim_run_right():
-    return [f_side(leg=_WL[i], arm_dy=_WA[i]*2, run=True) for i in range(8)]
+    return [f_side(leg=_WL[i], arm_dy=_WA[i] * 2, run=True) for i in range(8)]
 
 def anim_attack():
     # Straight punch — fist extends past tile edge
@@ -232,7 +306,7 @@ def anim_attack():
 
 def anim_special():
     # Two-finger whistle then pointing gesture
-    exprs = ["neutral","neutral","shout","shout","shout","neutral","neutral","neutral"]
+    exprs = ["neutral", "neutral", "shout", "shout", "shout", "neutral", "neutral", "neutral"]
     wide  = [False, False, True, True, False, False, False, False]
     return [f_front(wide=wide[i], expr=exprs[i]) for i in range(8)]
 
@@ -249,12 +323,12 @@ def anim_lift():
     return frames
 
 def anim_talk():
-    exprs = ["neutral","shout","neutral","talk","neutral","neutral"]
+    exprs = ["neutral", "shout", "neutral", "talk", "neutral", "neutral"]
     wide  = [False, True, False, False, False, False]
     return [f_front(wide=wide[i], expr=exprs[i]) for i in range(6)]
 
 def anim_talk_closeup():
-    exprs = ["neutral","talk","shout","talk","neutral","talk","neutral","neutral"]
+    exprs = ["neutral", "talk", "shout", "talk", "neutral", "talk", "neutral", "neutral"]
     return [f_closeup(expr=exprs[i]) for i in range(8)]
 
 def anim_hurt():
@@ -267,19 +341,19 @@ def anim_down():
             frames.append(f_front(expr="hurt"))
         elif i <= 3:
             im = tile(); d = ImageDraw.Draw(im)
-            d.rectangle([ 2,11, 10,15], fill=OL)
-            d.rectangle([ 4,14, 28,20], fill=OL)
-            d.rectangle([ 4,14, 10,20], fill=SK)
-            d.rectangle([ 3,19, 20,23], fill=BN)
-            d.rectangle([19,20, 28,23], fill=DK)
+            d.rectangle([4, 22, 20, 30], fill=OLIVE)
+            d.rectangle([8, 28, 56, 40], fill=OLIVE)
+            d.rectangle([8, 28, 20, 40], fill=SKIN)
+            d.rectangle([6, 38, 40, 46], fill=BROWN)
+            d.rectangle([38, 40, 56, 46], fill=BOOT)
             frames.append(add_outline(im))
         else:
             im = tile(); d = ImageDraw.Draw(im)
-            fy = min(10 + (i-3)*3, 19)
-            d.rectangle([ 1,fy,    8, fy+3], fill=BN)
-            d.rectangle([ 2,fy+3, 30, fy+8], fill=OL)
-            d.rectangle([ 2,fy+3,  8, fy+8], fill=SK)
-            d.rectangle([22,fy+4, 30, fy+8], fill=DK)
+            fy = min(20 + (i - 3) * 6, 38)
+            d.rectangle([2, fy, 16, fy + 6], fill=BROWN)
+            d.rectangle([4, fy + 6, 60, fy + 16], fill=OLIVE)
+            d.rectangle([4, fy + 6, 16, fy + 16], fill=SKIN)
+            d.rectangle([44, fy + 8, 60, fy + 16], fill=BOOT)
             frames.append(add_outline(im))
     return frames
 
@@ -291,32 +365,24 @@ def anim_revive():
 def anim_dash():
     frames = []
     for i in range(5):
+        lean = i * 2
         im = tile(); d = ImageDraw.Draw(im)
-        lean = i
         draw_legs_side(d, phase=1, run=True)
-        d.rectangle([12+lean,11, 22+lean,21], fill=OL)
-        d.line([(12+lean,11),(12+lean,21)], fill=DK)
-        d.rectangle([22+lean,11,27+lean,18], fill=SK)
-        d.rectangle([11,12,12,20], fill=DK)
+        d.rectangle([24 + lean, 22, 44 + lean, 42], fill=OLIVE)
+        d.line([(24 + lean, 22), (24 + lean, 42)], fill=OLIVE_SH, width=2)
+        d.rectangle([44 + lean, 22, 54 + lean, 36], fill=SKIN)
+        d.rectangle([22, 24, 24, 40], fill=BOOT)
         draw_hair_side(d)
-        d.rectangle([14+lean,4,22+lean,11], fill=SK)
-        d.rectangle([19+lean,7,21+lean, 9], fill=BL)
+        d.rectangle([28 + lean, 8, 44 + lean, 22], fill=SKIN)
+        d.rectangle([38 + lean, 14, 42 + lean, 18], fill=INK)
         frames.append(add_outline(im))
     return frames
 
 def anim_brace():
     # Wide stance, arms spread bracing — "Hold" animation
-    frames = []
-    for i in range(6):
-        sway = [0,1,0,-1,0,1][i]
-        im = tile(); d = ImageDraw.Draw(im)
-        draw_legs_front(d, phase=0)
-        draw_arms_front(d, ldy=0, rdy=0, wide=True)
-        draw_torso_front(d)
-        draw_hair_front(d)
-        draw_face_front(d, expr="strain")
-        frames.append(add_outline(im))
-    return frames
+    return [f_front(wide=True, expr="strain") for _ in range(6)]
+
+# -- Sheet assembly ----------------------------------------------------------------
 
 ANIMS = [
     ("idle",         anim_idle),
@@ -339,13 +405,15 @@ ANIMS = [
 ]
 
 if __name__ == "__main__":
-    sheet = Image.new('RGBA', (T*10, T*len(ANIMS)), (0,0,0,0))
+    sheet = Image.new('RGBA', (T * 10, T * len(ANIMS)), TR)
     for row, (name, fn) in enumerate(ANIMS):
         for col, frame in enumerate(fn()):
-            sheet.paste(frame, (col*T, row*T))
-    out = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                       "assets", "art", "sprites", "evan.png")
+            sheet.paste(frame, (col * T, row * T))
+
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    out = os.path.join(root, "assets", "art", "sprites", "evan.png")
     os.makedirs(os.path.dirname(out), exist_ok=True)
     sheet.save(out)
-    print(f"Saved 320x{T*len(ANIMS)} -> {out}")
-    for n, f in ANIMS: print(f"  {n:<16} {len(f())} frames")
+    print(f"Saved 640x{T*len(ANIMS)} -> {out}")
+    for n, f in ANIMS:
+        print(f"  {n:<16} {len(f())} frames")

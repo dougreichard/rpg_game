@@ -28,9 +28,10 @@ func _ready() -> void:
 	add_child(shape)
 
 
-func setup(frames: SpriteFrames) -> void:
+func setup(frames: SpriteFrames, sprite_scale: float = 1.0) -> void:
 	sprite = AnimatedSprite2D.new()
 	sprite.sprite_frames = frames
+	sprite.scale = Vector2.ONE * sprite_scale
 	sprite.play("idle")
 	add_child(sprite)
 
