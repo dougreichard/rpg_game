@@ -5,8 +5,9 @@ extends CanvasLayer
 # input is handled in _unhandled_input with accept_event() to prevent the
 # same keypress reaching level scripts (e.g. the clear-overlay ui_accept check).
 
-const OPTIONS: Array[String] = ["Resume", "Achievements", "Options", "Quit to Map", "Quit to Title"]
-const PANEL_RECT := Rect2(440.0, 240.0, 400.0, 260.0)
+const OPTIONS_LEVEL: Array[String] = ["Resume", "Achievements", "Options", "Quit to Map", "Quit to Title"]
+const OPTIONS_OVERWORLD: Array[String] = ["Resume", "Achievements", "Options", "Quit to Title"]
+const PANEL_RECT := Rect2(440.0, 180.0, 400.0, 380.0)
 const BORDER_COLOR: Color = Color(0.55, 0.45, 0.75)
 const TITLE_COLOR: Color = Color(0.95, 0.85, 0.2)
 const SELECTED_COLOR: Color = Color(0.95, 0.85, 0.2)
@@ -21,6 +22,12 @@ const OPT_RECT := Rect2(380.0, 180.0, 520.0, 360.0)
 const OPT_ROW_COUNT: int = 3
 const SLIDER_STEPS: int = 10
 
+# Set true (before _ready, e.g. right after instantiating) when this menu is
+# placed in the overworld rather than a level — drops "Quit to Map" since
+# there's no level to quit out of.
+@export var in_overworld: bool = false
+
+var _options: Array[String] = []
 var _option_labels: Array = []
 var _cursor: int = 0
 var _in_options: bool = false
@@ -40,10 +47,15 @@ func _ready() -> void:
 	layer = 25
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	visible = false
+	_options = OPTIONS_OVERWORLD if in_overworld else OPTIONS_LEVEL
 	_build_ui()
 	GameManager.paused.connect(_on_paused)
 	GameManager.unpaused.connect(_on_unpaused)
+	GameManager.register_pause_menu(self)
 	_achievements_overlay.closed.connect(_on_achievements_closed)
+
+func _exit_tree() -> void:
+	GameManager.unregister_pause_menu(self)
 
 func _build_ui() -> void:
 	_build_main_panel()
@@ -87,11 +99,11 @@ func _build_main_panel() -> void:
 	add_child(title)
 	_main_panel_nodes.append(title)
 
-	for i in OPTIONS.size():
+	for i in _options.size():
 		var lbl := Label.new()
 		lbl.position = PANEL_RECT.position + Vector2(40.0, 96.0 + float(i) * 44.0)
 		lbl.size = Vector2(PANEL_RECT.size.x - 80.0, 38.0)
-		lbl.add_theme_font_size_override("font_size", 22)
+		lbl.add_theme_font_size_override("font_size", 18)
 		add_child(lbl)
 		_option_labels.append(lbl)
 		_main_panel_nodes.append(lbl)
@@ -253,13 +265,13 @@ func _unhandled_input(event: InputEvent) -> void:
 		_handle_main_input(event)
 
 func _handle_main_input(event: InputEvent) -> void:
-	if event.is_action_pressed("move_up"):
-		_cursor = (_cursor - 1 + OPTIONS.size()) % OPTIONS.size()
+	if event.is_action_pressed("move_up") or event.is_action_pressed("ui_up"):
+		_cursor = (_cursor - 1 + _options.size()) % _options.size()
 		_refresh_options()
 		Audio.play("ui_move")
 		get_viewport().set_input_as_handled()
-	elif event.is_action_pressed("move_down"):
-		_cursor = (_cursor + 1) % OPTIONS.size()
+	elif event.is_action_pressed("move_down") or event.is_action_pressed("ui_down"):
+		_cursor = (_cursor + 1) % _options.size()
 		_refresh_options()
 		Audio.play("ui_move")
 		get_viewport().set_input_as_handled()
@@ -268,20 +280,20 @@ func _handle_main_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 func _handle_options_input(event: InputEvent) -> void:
-	if event.is_action_pressed("move_up"):
+	if event.is_action_pressed("move_up") or event.is_action_pressed("ui_up"):
 		_opt_cursor = (_opt_cursor - 1 + OPT_ROW_COUNT) % OPT_ROW_COUNT
 		_refresh_sliders()
 		Audio.play("ui_move")
 		get_viewport().set_input_as_handled()
-	elif event.is_action_pressed("move_down"):
+	elif event.is_action_pressed("move_down") or event.is_action_pressed("ui_down"):
 		_opt_cursor = (_opt_cursor + 1) % OPT_ROW_COUNT
 		_refresh_sliders()
 		Audio.play("ui_move")
 		get_viewport().set_input_as_handled()
-	elif event.is_action_pressed("move_left") and _opt_cursor < 2:
+	elif (event.is_action_pressed("move_left") or event.is_action_pressed("ui_left")) and _opt_cursor < 2:
 		_adjust_volume(_opt_cursor, -1)
 		get_viewport().set_input_as_handled()
-	elif event.is_action_pressed("move_right") and _opt_cursor < 2:
+	elif (event.is_action_pressed("move_right") or event.is_action_pressed("ui_right")) and _opt_cursor < 2:
 		_adjust_volume(_opt_cursor, +1)
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("ui_accept") or event.is_action_pressed("ui_cancel"):
@@ -306,29 +318,29 @@ func _adjust_volume(slot: int, delta: int) -> void:
 	_refresh_sliders()
 
 func _select_main() -> void:
-	match _cursor:
-		0:
+	match _options[_cursor]:
+		"Resume":
 			GameManager.toggle_pause()
-		1:
+		"Achievements":
 			_in_achievements = true
 			for n: Node in _main_panel_nodes:
 				n.visible = false
 			_achievements_overlay.open()
 			Audio.play("ui_select")
-		2:
+		"Options":
 			_show_options()
 			Audio.play("ui_select")
-		3:
+		"Quit to Map":
 			GameManager.toggle_pause()
 			TransitionManager.change_scene("res://scenes/overworld/OverworldMap.tscn")
-		4:
+		"Quit to Title":
 			GameManager.toggle_pause()
 			TransitionManager.change_scene("res://scenes/ui/TitleScreen.tscn")
 
 func _refresh_options() -> void:
 	for i in _option_labels.size():
 		var lbl: Label = _option_labels[i]
-		lbl.text = (">  " if i == _cursor else "    ") + OPTIONS[i]
+		lbl.text = (">  " if i == _cursor else "    ") + _options[i]
 		lbl.add_theme_color_override("font_color", SELECTED_COLOR if i == _cursor else NORMAL_COLOR)
 
 func _refresh_sliders() -> void:

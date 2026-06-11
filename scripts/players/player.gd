@@ -75,6 +75,8 @@ func _ready() -> void:
 	sprite.play("idle")
 
 func _physics_process(delta: float) -> void:
+	if GameManager.is_paused():
+		return
 	_tick_timers(delta)
 	if _flash_timer <= 0.0:
 		sprite.modulate = HIDDEN_MODULATE if is_hidden else Color.WHITE

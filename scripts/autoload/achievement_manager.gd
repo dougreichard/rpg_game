@@ -60,10 +60,19 @@ func _ready() -> void:
 	GameManager.bies_activated.connect(_on_bies_activated)
 	GameManager.characters_swapped.connect(_on_characters_swapped)
 	GameManager.noise_emitted.connect(_on_noise_emitted)
-	# Run after GameManager._ready()/SaveManager.load_game() so a save that
-	# already satisfies a condition (e.g. all 13 locations cleared before
-	# this system existed) retroactively unlocks it.
+	# At boot (before a save slot is chosen) this is a no-op since nothing is
+	# completed yet. SaveManager.load_game() also calls this directly after
+	# loading a slot, so a save that already satisfies a condition (e.g. all
+	# 13 locations cleared before this system existed) retroactively unlocks it.
 	call_deferred("_check_retroactive")
+
+# Used by GameManager.reset_progress() for New Game — clears persisted
+# unlock state back to fresh-start so a reused slot doesn't carry over a
+# previous playthrough's achievements.
+func reset() -> void:
+	unlocked = {}
+	bies_activation_count = 0
+	companion_types_seen = {}
 
 func is_unlocked(id: String) -> bool:
 	return unlocked.get(id, false)

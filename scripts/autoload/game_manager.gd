@@ -121,8 +121,15 @@ func set_level_flag(location_id: String, key: String, value) -> void:
 	SaveManager.save_game()
 	level_flag_set.emit(location_id, key, value)
 
-func _ready() -> void:
-	SaveManager.load_game()
+# Resets to a fresh-start state — used by SaveManager.start_new_game(). Does
+# NOT touch current_slot or write a save; the caller handles persistence.
+func reset_progress() -> void:
+	completed_locations = []
+	unlocked_characters = ["quinn", "erin"]
+	inventories = {}
+	level_progress = {}
+	last_location_id = ""
+	AchievementManager.reset()
 
 func complete_location(id: String) -> void:
 	if id not in completed_locations:
@@ -147,6 +154,7 @@ var _reloading: bool = false
 var _game_over_layer: CanvasLayer = null
 var _paused: bool = false
 var _pre_pause_time_scale: float = 1.0
+var _pause_menu: Node = null
 
 func _process(delta: float) -> void:
 	if _game_over_active:
@@ -154,7 +162,7 @@ func _process(delta: float) -> void:
 			_retry_level()
 		return
 
-	if is_instance_valid(active_player) and Input.is_action_just_pressed("ui_cancel"):
+	if is_instance_valid(_pause_menu) and Input.is_action_just_pressed("ui_cancel"):
 		toggle_pause()
 	if _paused:
 		return
@@ -194,6 +202,16 @@ func _tick_revive(delta: float) -> void:
 			player_revived.emit()
 	else:
 		standby_player.revive_progress = maxf(standby_player.revive_progress - delta * REVIVE_DECAY_RATE, 0.0)
+
+# A scene's PauseMenu registers itself here so the global ui_cancel handler
+# above knows pausing is possible (and has somewhere to show itself) — works
+# in levels AND the overworld without GameManager caring which.
+func register_pause_menu(menu: Node) -> void:
+	_pause_menu = menu
+
+func unregister_pause_menu(menu: Node) -> void:
+	if _pause_menu == menu:
+		_pause_menu = null
 
 func toggle_pause() -> void:
 	if _game_over_active:

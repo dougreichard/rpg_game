@@ -37,6 +37,8 @@ func setup(frames: SpriteFrames, sprite_scale: float = 1.0) -> void:
 
 
 func _physics_process(_delta: float) -> void:
+	if GameManager.is_paused():
+		return
 	match mode:
 		Mode.ACTIVE:
 			_tick_active()

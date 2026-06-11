@@ -28,6 +28,9 @@ const TOWN_ID: String = "town"
 const PlayerScript: Script = preload("res://scripts/overworld/overworld_player.gd")
 const NpcScript: Script = preload("res://scripts/overworld/town_npc.gd")
 const DialogBoxScript: Script = preload("res://scripts/ui/dialog_box.gd")
+const PauseMenuScript: Script = preload("res://scripts/ui/pause_menu.gd")
+const AchievementsOverlayScript: Script = preload("res://scripts/ui/achievements_overlay.gd")
+const AchievementToastScript: Script = preload("res://scripts/ui/achievement_toast.gd")
 
 const CHAR_DATA: Dictionary = {
 	"Quinn": preload("res://data/characters/quinn.tres"),
@@ -692,6 +695,23 @@ func _build_ui() -> void:
 	_dialog_box = DialogBoxScript.new()
 	canvas.add_child(_dialog_box)
 
+	# Pause menu (ESC) — same trio of CanvasLayers as the in-level HUD
+	# (PauseMenu.gd looks up "../AchievementsOverlay" as a sibling, so add
+	# that one first). "Quit to Map" is dropped in the overworld via
+	# in_overworld — there's nowhere to quit "back" to.
+	var achievements_overlay = AchievementsOverlayScript.new()
+	achievements_overlay.name = "AchievementsOverlay"
+	add_child(achievements_overlay)
+
+	var achievement_toast = AchievementToastScript.new()
+	achievement_toast.name = "AchievementToast"
+	add_child(achievement_toast)
+
+	var pause_menu = PauseMenuScript.new()
+	pause_menu.name = "PauseMenu"
+	pause_menu.in_overworld = true
+	add_child(pause_menu)
+
 func _update_info() -> void:
 	if _nearby_idx < 0:
 		_name_label.text = "Hunkle Bunkle"
@@ -724,6 +744,8 @@ func _is_completed(idx: int) -> bool:
 	return LOCS[idx]["id"] in GameManager.completed_locations
 
 func _process(_delta: float) -> void:
+	if GameManager.is_paused():
+		return
 	if is_instance_valid(_standby_player):
 		_standby_player.follow_target = _active_player.global_position - _active_player.facing * (TILE * 0.9)
 	if is_instance_valid(_active_player):
