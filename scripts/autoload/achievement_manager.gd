@@ -34,10 +34,6 @@ const ACHIEVEMENT_LIST: Array[AchievementData] = [
 const TIME_LORD_TARGET: int = 25
 const PACK_RAT_TARGET: int = 10
 const COMPANION_TYPES: Array[String] = ["frosty", "twinkle", "calvin_coolidge", "william_mary", "lizard"]
-const TOWN_QUEST_IDS: Array[String] = [
-	"gus", "moira", "reggie", "fanny", "penny", "otis",
-	"wendell", "clara", "ambrose", "dottie", "tobias", "agnes",
-]
 const SPOON_COUNT: int = 12
 const SECRET_DESCRIPTION: String = "???"
 
@@ -191,8 +187,8 @@ func _check_collectible_achievements() -> void:
 		_unlock("complete_set")
 
 	var all_quests_done: bool = true
-	for quest_id: String in TOWN_QUEST_IDS:
-		if GameManager.get_level_flag("town", "quest_" + quest_id, "not_started") != "complete":
+	for quest_id: String in QuestData.TOWN_QUEST_IDS:
+		if GameManager.get_level_flag(QuestData.TOWN_ID, "quest_" + quest_id, "not_started") != "complete":
 			all_quests_done = false
 			break
 	if all_quests_done:

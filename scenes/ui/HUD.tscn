@@ -1,4 +1,4 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene load_steps=9 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/hud.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/ui/duo_panel.gd" id="2"]
@@ -7,6 +7,7 @@
 [ext_resource type="Script" path="res://scripts/ui/achievements_overlay.gd" id="5"]
 [ext_resource type="Script" path="res://scripts/ui/achievement_toast.gd" id="6"]
 [ext_resource type="Script" path="res://scripts/ui/inventory_overlay.gd" id="7"]
+[ext_resource type="Script" path="res://scripts/ui/quest_log_overlay.gd" id="8"]
 
 [node name="HUD" type="CanvasLayer"]
 layer = 10
@@ -28,6 +29,9 @@ script = ExtResource("5")
 
 [node name="InventoryOverlay" type="CanvasLayer" parent="."]
 script = ExtResource("7")
+
+[node name="QuestLogOverlay" type="CanvasLayer" parent="."]
+script = ExtResource("8")
 
 [node name="AchievementToast" type="CanvasLayer" parent="."]
 script = ExtResource("6")

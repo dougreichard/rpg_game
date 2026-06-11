@@ -1233,6 +1233,51 @@ and how each ties into the Uncle Doug mystery).
   placed as loot boxes in earlier passes — no level changes needed for those
   four.
 
+### Quest Log *(implemented)*
+A pause-menu screen listing the player's discovered NPC quests (the 12
+`QuestData.TOWN_QUEST_IDS` from "NPC dialog & quests" above) with their
+active/completed status and a one-line objective — the "what was I supposed to
+bring back, and to whom?" answer for players returning to town after a level.
+
+- **`QuestData`** (`scripts/systems/quest_data.gd`, `class_name QuestData
+  extends RefCounted`) is the quest data previously private to
+  `overworld_map.gd`, extracted so both the overworld and in-level HUDs can
+  read it: `TOWN_ID`, `NPC_DATA`/`NPC_DATA_2`, `QUESTS`/`QUESTS_2`,
+  `TOWN_QUEST_IDS`, plus `get_quest(quest_id)` and `get_npc(quest_id)` static
+  helpers. `overworld_map.gd` and `achievement_manager.gd` (the
+  `friend_of_the_town` check) both reference `QuestData.*` instead of holding
+  their own copies.
+- **`QuestLogOverlay`** (`scripts/ui/quest_log_overlay.gd`, no `class_name` —
+  `extends CanvasLayer`, sibling of `AchievementsOverlay`/`InventoryOverlay`
+  in `HUD.tscn` and in `overworld_map.gd._build_ui()`'s programmatic sibling
+  list, `layer = 26`) mirrors `achievements_overlay.gd`'s construction
+  exactly. Unlike `InventoryOverlay`, it needs no `setup()` — quest progress
+  is global `GameManager.level_progress["town"]` state, identical in both
+  contexts. Opened via Pause Menu → **"Quests"** (new entry between
+  "Inventory" and "Achievements" — `pause_menu.gd`'s `OPTIONS_LEVEL`/
+  `OPTIONS_OVERWORLD` and `_select_main()` extended the same way
+  Inventory/Achievements were).
+- **No spoilers**: only quests with
+  `GameManager.get_level_flag(QuestData.TOWN_ID, "quest_<id>", "not_started")
+  != "not_started"` are listed — an NPC the player hasn't talked to yet
+  doesn't appear. Each row shows the NPC's name/color and an `ACTIVE`/
+  `COMPLETE` tag; a header line shows "N active · M completed".
+- **Objective text is derived, not authored** — `_objective_text()` builds a
+  line purely from each quest's existing `want_item`/`give_item` fields plus
+  `ItemData.display_name` lookups (`load("res://data/items/<id>.tres")`): "Find:
+  X. Bring it to Y." while active, "Completed." or "Completed. Reward: Z." once
+  done, or "Talk to Y." for the `want_item == ""` Tobias/Agnes quests. No
+  changes to the 12 quest dialog blocks were needed.
+- Refreshes live via `GameManager.level_flag_set` (filtered to
+  `location_id == QuestData.TOWN_ID` and `key.begins_with("quest_")`), so
+  turning in a quest while the log isn't open is reflected next time it's
+  opened, and `_on_unpaused()` closes it if the player unpauses mid-browse.
+
+Verified via a temp-autoload functional check (3 quest states set —
+active/complete-with-reward/active-no-want_item — confirmed correct
+filtering, tags, and objective text for all three, plus that an untouched
+`not_started` quest stays hidden) plus a headless boot check and GUT 24/24.
+
 ### Save / Unlock system *(implemented)*
 `save_manager.gd` (autoload `SaveManager`, loaded before `GameManager` so it's
 available in `GameManager._ready()`) persists `completed_locations` and
