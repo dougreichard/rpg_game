@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dmlerm3yeqtpy"
-path="res://.godot/imported/lizard.png-8c6d4d7a1c81b30699989a24a8a50a12.ctex"
+uid="uid://c3vwb60me3pvp"
+path="res://.godot/imported/quinn_pil_backup.png-fb0117e34d6f91a685b0f1cb64c6eff7.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://gem/lizard.png"
-dest_files=["res://.godot/imported/lizard.png-8c6d4d7a1c81b30699989a24a8a50a12.ctex"]
+source_file="res://assets/art/sprites/quinn_pil_backup.png"
+dest_files=["res://.godot/imported/quinn_pil_backup.png-fb0117e34d6f91a685b0f1cb64c6eff7.ctex"]
 
 [params]
 
