@@ -754,3 +754,95 @@ regressions. `_build_walls()`/`_build_floor()` needed zero script changes —
 12 wall nodes and `FLOOR_COLS`/`FLOOR_ROWS` bumped to 20×17.
 **This is the 13th and final location — the entire Doorway/camera-follow/
 multi-room rollout across all 13 locations is now COMPLETE.**
+
+---
+
+## Collectibles & Inventory rollout
+
+**Vertical slice — Bellows & Sons Pipe Organ Works** (`pipe_organ_works.gd`)
+proved the full loop end-to-end first: two loot boxes spawn at
+`PIPE_LOOT_POS`/`SPOON_LOOT_POS` — one holding `brass_organ_pipe`
+(functional), one holding `bent_spoon` (junk). `_on_special_used` tries the
+loot boxes first, then falls through to the organ-repair check. Verified
+functionally end-to-end via a temp-autoload script driving `special_used`
+signal emissions directly: loot box open → item granted → `inventories`
+updated → puzzle gate passes → re-opening an already-looted box is a
+confirmed no-op.
+
+**Follow-up pass — full 13-location rollout.** All 26 remaining items placed
+as loot boxes across the other 12 locations; 7 items wired into existing
+puzzle-prop gates (`sheet_music_page`/`tuning_fork` → Clocktower bells hard
+gate; `library_card` → Library librarian desk; `backstage_pass` → Carnival
+curtain; `crowbar` → Harbor container; `security_badge` → Underground hatch
+pip pre-fill; `film_reel` → Cinema projector hard gate); the 5-ticket Cinema
+entry gate implemented as `_has_all_tickets()` on the completion condition.
+Subsequent passes implemented: `rusty_key` → Underground Tunnels shortcut
+door (consume on use, immediate overworld exit); `guard_whistle` → one-shot
+`try_use_whistle()` fallback in all 13 `_on_special_used` functions (any
+character, consumed from whichever duo member holds it); `bies_charm` → +10%
+starting Bies charge via `register_players_with_preference`; `animal_treat`
+→ halves companion cooldown via `GameManager.companion_cooldown_scale()`
+checked at level `_ready()`. Rolled out the same way the Doorway/camera/
+floor/stealth passes were: prototype proven at Pipe Organ Works, mechanically
+repeated 12 more times. GUT 16/16 unaffected throughout.
+
+**`InventoryOverlay` verification** — verified via temp-autoload functional
+checks in both contexts: PipeOrganWorks (granted 16 items to the active
+character and 2 to standby — correct counts, scroll engages and keeps the
+cursor in view past row 14, tab-switch shows the standby's distinct item set,
+description label matches the selected item's `.tres` data) and OverworldMap
+(granted items to Quinn/Erin, confirmed `setup()` receives the right names and
+each tab's `_ids` reflects that character's `GameManager.inventories` entry).
+Boot check and GUT 24/24 unaffected.
+
+---
+
+## Numbered spoon set rollout
+
+Verified via a temp-autoload functional script: with neither secret passage
+found, exactly 10 NPCs spawn (Tobias/Agnes absent); with both
+`secret_revealed` flags set, all 12 spawn. Driving all 12 quests to
+completion (granting each `want_item` then re-talking for fetch quests;
+single conversation for Tobias/Agnes) confirms all 12 `numbered_spoon_NN`
+ids end up granted, each fetch quest's `want_item` is consumed, and
+`give_item`s (Hand-Stitched Patch, Sailor's Knot Bracelet) still grant
+alongside the new spoon. Boot check and GUT 16/16 unaffected.
+
+**Gotcha hit during verification**: the dev save file (`user://savegame.cfg`)
+already had `quest_gus`/`quest_otis` marked `"complete"` from an earlier
+session's pre-spoon verification run — running the check against that save
+silently skipped granting spoons 01/06 (the `"complete"` branch shows `after`
+and never re-grants). Fixed by resetting `GameManager.level_progress = {}` /
+`inventories = {}` at the top of the test script (backed up and restored
+`savegame.cfg` around the run). Worth remembering for future quest-system
+changes: **a stale `"complete"` quest state in a dev save will mask
+newly-added turn-in rewards** — always reset `level_progress`/`inventories`
+in temp-autoload checks rather than relying on the loaded save's state.
+
+The Wendell/Clara/Ambrose/Dottie quests were placed on the overworld's grass
+padding — the area outside the original 40×19 `LOCS` grid, fully painted by
+`_build_floor()`'s padded `GRID_COLS x GRID_ROWS` (60×35) grass pass but never
+given colliders by `_build_building_colliders()`, so it's guaranteed-clear
+open ground for new NPC homes with zero collision risk. Each reuses an
+**already-placed** junk item from another location as its `want_item`:
+Wendell wants the Carnival's `ticket_stub_torn`, Clara the Recording Studio's
+`tangled_headphone_cable`, Ambrose Harbor & Docks' `faded_treasure_map`,
+Dottie The Drop's `rabbits_foot_keychain`.
+
+---
+
+## Quest Log rollout
+
+Verified via a temp-autoload functional check (3 quest states set —
+active/complete-with-reward/active-no-want_item — confirmed correct
+filtering, tags, and objective text for all three, plus that an untouched
+`not_started` quest stays hidden) plus a headless boot check and GUT 24/24.
+
+A second temp-autoload check drove the deferred-completion path end-to-end:
+with `quest_gus = "active"` and Quinn holding `bent_spoon`, calling
+`_talk_to_npc()` for Gus opens the `turn_in` dialog but leaves the flag at
+`"active"` and `bent_spoon` un-consumed; only after `_dialog_box.advance()`-ing
+through to close does the flag flip to `"complete"`, `bent_spoon` get
+consumed, and `numbered_spoon_01` get granted — confirming the Quest Log
+can't show `COMPLETE` mid-conversation and the spoon reward never arrives
+before completion.

@@ -90,7 +90,7 @@ the standby character. Both modes share the same scenes and input map.
 
 ---
 
-## Collectibles & Inventory *(core implemented — vertical slice at Pipe Organ Works)*
+## Collectibles & Inventory *(implemented — full 13-location rollout)*
 
 A cross-location item system: loot boxes scattered through the 13 locations
 hold collectibles that gate puzzles, unlock shortcuts, or buff characters —
@@ -98,135 +98,66 @@ giving players a reason to revisit earlier locations and explore off the
 critical path. The headline use: each character has their own movie ticket,
 and all five are required to enter The Grand Marquee Cinema (Location 13).
 
-**Architecture** *(implemented)*:
-- `ItemData` Resource (`scripts/systems/item_data.gd`, `data/items/*.tres` —
-  29 `.tres` files) — `id`, `display_name`, `description`, `icon_color`,
-  `owner_character` (empty = shared item, or a name like `"Quinn"` for
-  character-bound items such as the five tickets), `is_junk`. Mirrors the
-  `CharacterData`/`EnemyData` Resource convention exactly — same `.tres` text
-  format, same `class_name` + `@export` pattern. Icons generated at runtime
-  via `PlaceholderArt.make_item_icon(color, is_junk)` (16×16 gem shape,
-  darkened/desaturated for junk) — keeps the original-IP/no-imported-assets
-  guarantee.
+**Architecture**:
+- `ItemData` Resource (`scripts/systems/item_data.gd`, `data/items/*.tres`) —
+  `id`, `display_name`, `description`, `icon_color`, `owner_character` (empty
+  = shared item, or a name like `"Quinn"` for character-bound items such as
+  the five tickets), `is_junk`. Mirrors the `CharacterData`/`EnemyData`
+  Resource convention exactly. Icons generated at runtime via
+  `PlaceholderArt.make_item_icon(color, is_junk)` (16×16 gem shape,
+  darkened/desaturated for junk).
 - Inventory state lives on `GameManager` (`inventories: Dictionary`, lowercase
   character name → `Array[String]` of held item ids), persisted via
-  `SaveManager` (`cfg.set_value("progress", "inventories", ...)`) alongside
-  `unlocked_characters`. Exposed via `GameManager.has_item()` / `grant_item()`
-  (idempotent — re-opening an already-looted box is a no-op) and the
+  `SaveManager` alongside `unlocked_characters`. Exposed via
+  `GameManager.has_item()` / `grant_item()` (idempotent — re-opening an
+  already-looted box is a no-op) / `consume_item()` and the
   `item_collected(character_name, item_id)` signal — never reach into
   internals.
 - `LootBox` (`scripts/systems/loot_box.gd`, `Node2D`, no `class_name` — same
   preload()+untyped-var pattern as `HidingSpot`/`AnimalCompanion`, see
   [[feedback-godot-technical]]) — a chest prop with `setup(item, pos)` /
-  `try_open(character_name, character_pos) -> bool`. `try_open` returns
-  `true`/`false` so a level's existing `_on_special_used` `if`/`elif` ladder
-  can chain it in alongside its other puzzle-gate checks (try loot boxes
-  first, fall through to puzzle conditions) — composes with the established
-  proximity-gate template rather than replacing it. On open: grants the item,
-  plays `"special"` SFX, flips to its open palette via `_draw()`/
-  `queue_redraw()`, and stops responding.
+  `try_open(character_name, character_pos) -> bool`. A level's existing
+  `_on_special_used` `if`/`elif` ladder tries loot boxes first, then falls
+  through to its other puzzle-gate checks. On open: grants the item, plays
+  `"special"` SFX, flips to its open palette via `_draw()`/`queue_redraw()`,
+  and stops responding.
 - `InventoryPanel` (`scripts/ui/inventory_panel.gd`, `class_name`, sibling to
-  `DuoPanel` in `HUD.tscn` at `(1112, 136)` — directly below `DuoPanel`'s
-  `(1112, 16)`) — draws each duo member's held item icons as a row via
-  `_draw()`/`queue_redraw()`, redrawing on `GameManager.item_collected`/
-  `characters_swapped`. Functional items get a gold border
-  (`FUNCTIONAL_BORDER`), junk items a dim grey one (`JUNK_BORDER`) — so
-  players can tell "might matter later" from "keepsake" at a glance. Wired
-  into `hud.gd` via the established `class_name`-on-UI-widget-but-referenced-
-  untyped pattern: `@onready var inventory_panel: Node = $InventoryPanel`,
-  `inventory_panel.call("setup", a, b)`.
-- **`InventoryOverlay`** (`scripts/ui/inventory_overlay.gd`, no `class_name` —
+  `DuoPanel` in `HUD.tscn` at `(1112, 136)`) — draws each duo member's held
+  item icons as a row via `_draw()`/`queue_redraw()`, redrawing on
+  `GameManager.item_collected`/`characters_swapped`. Functional items get a
+  gold border (`FUNCTIONAL_BORDER`), junk items a dim grey one
+  (`JUNK_BORDER`).
+- `InventoryOverlay` (`scripts/ui/inventory_overlay.gd`, no `class_name` —
   `extends CanvasLayer`, sibling of `AchievementsOverlay` in `HUD.tscn`,
-  `layer = 26`) — a full-screen, scrollable list view that solves the "what
-  does this item actually do?" gap the always-on `InventoryPanel` row can't:
-  a fixed icon swatch can't show a name or description, and with 46 possible
-  items a single character's row would run off-screen. Mirrors
-  `achievements_overlay.gd`'s construction exactly (same panel rect/colors,
-  `PROCESS_MODE_ALWAYS`, `_unhandled_input` + `set_input_as_handled()`).
-  Opened via Pause Menu → **"Inventory"** (new second option, between
-  "Resume" and "Achievements" — `pause_menu.gd`'s `OPTIONS_LEVEL`/
-  `OPTIONS_OVERWORLD` and `_select_main()` match are extended the same way
-  Achievements was). It looks up
-  `GameManager.inventories[character_name.to_lower()]` exactly like
-  `InventoryPanel`, but takes the duo's two character names via an explicit
-  `setup(name_a, name_b)` rather than reading `GameManager.active_player`/
-  `standby_player` — those are level-`Player`-only and **unset in the
-  overworld** (`overworld_player.gd` is a separate `CharacterBody2D`, never
-  registered with `GameManager`), so the first cut showed an empty inventory
-  on the overworld even though it worked in levels. `hud.gd.setup(a, b)`
-  calls `inventory_overlay.call("setup", a.data.character_name,
-  b.data.character_name)`; `overworld_map.gd._spawn_duo()` calls
-  `_inventory_overlay.call("setup", active_name, standby_name)` with the same
-  names it uses to spawn the overworld duo sprites. Duo membership is stable
-  per level/overworld session (swap only toggles active/follow roles, not
-  which two characters are in the duo), so `setup()` runs once. Left/right
-  switches between the two duo members' tabs; up/down moves a cursor through
-  up to `ROWS_VISIBLE` (14) visible rows with scroll-to-keep-cursor-visible
-  (`_scroll` offset, same idea as the Achievements list but with scrolling
-  since item counts are unbounded); each row shows the item's
-  `make_item_icon` swatch, `display_name`, and a FUNCTIONAL/JUNK tag, with the
-  selected item's `description` shown in a panel at the bottom.
-  `pause_menu.gd._on_unpaused()` closes it (alongside Achievements) if the
-  player unpauses mid-browse.
-
-  **Overworld wiring gotcha**: `OverworldMap.tscn` has no static `PauseMenu`/
-  overlay nodes — `overworld_map.gd._build_ui()` builds `PauseMenu` and
-  `AchievementsOverlay` programmatically as siblings at runtime (`PauseMenu`
-  looks them up via `get_node("../Name")`). `InventoryOverlay` had to be added
-  to that same programmatic-sibling list (`InventoryOverlayScript.new()`,
-  named `"InventoryOverlay"`, added before `PauseMenu`) — missing this caused
-  `pause_menu.gd`'s `@onready var _inventory_overlay = get_node
-  ("../InventoryOverlay")` to resolve to null and crash in `_ready()` the
-  moment the overworld loaded (i.e. on "Continue" from the title screen).
-  Any future overlay added to `HUD.tscn` that `PauseMenu` looks up as a
-  sibling needs the same addition in `overworld_map.gd._build_ui()`.
-
-  Verified via temp-autoload functional checks in both contexts: PipeOrganWorks
-  (granted 16 items to the active character and 2 to standby — correct counts,
-  scroll engages and keeps the cursor in view past row 14, tab-switch shows the
-  standby's distinct item set, description label matches the selected item's
-  `.tres` data) and OverworldMap (granted items to Quinn/Erin, confirmed
-  `setup()` receives the right names and each tab's `_ids` reflects that
-  character's `GameManager.inventories` entry). Boot check and GUT 24/24
-  unaffected.
+  `layer = 26`) — a full-screen, scrollable list view (icon, `display_name`,
+  FUNCTIONAL/JUNK tag, and a description panel for the selected item).
+  Mirrors `achievements_overlay.gd`'s construction. Opened via Pause Menu →
+  **"Inventory"**. Takes the duo's two character names via `setup(name_a,
+  name_b)` rather than reading `GameManager.active_player`/`standby_player`,
+  since those are level-`Player`-only and unset on the overworld
+  (`overworld_player.gd` never registers with `GameManager`).
+  **Gotcha**: any new `HUD.tscn` overlay that `PauseMenu` looks up as a
+  sibling (`get_node("../Name")`) must also be added to
+  `overworld_map.gd._build_ui()`'s programmatic sibling list —
+  `OverworldMap.tscn` has no static overlay nodes, so a missing entry
+  resolves to null and crashes `pause_menu.gd._ready()` on "Continue" from
+  the title screen.
 - Gating: level scripts add `GameManager.has_item(char_name, "id")` as an
   extra condition alongside existing `distance_to` + Special checks — the
   same multi-condition pattern Clocktower/The Drop/Grand Marquee already use.
 
-**Vertical slice — Bellows & Sons Pipe Organ Works** (`pipe_organ_works.gd`):
-proves the full loop end-to-end. Two loot boxes spawn at `PIPE_LOOT_POS`/
-`SPOON_LOOT_POS` — one holding `brass_organ_pipe` (functional: the "scattered
-part" the location's spec already calls for), one holding `bent_spoon` (junk:
-"Quinn insists it has a story"). `_on_special_used` tries the loot boxes
-first, then falls through to the organ-repair check, which now additionally
-requires `GameManager.has_item("Quinn", ...) or GameManager.has_item("Erin",
-...)` — either duo member finding the shared part counts. The hint label
-(`_update_hint`, this location's first — it previously had none) walks the
-player through "clear enemies → check crates → repair the organ" in sequence.
-Verified functionally end-to-end via a temp-autoload script driving
-`special_used` signal emissions directly: loot box open → item granted →
-`inventories` updated → puzzle gate passes → re-opening an already-looted box
-is a confirmed no-op.
-
-**Follow-up pass: COMPLETE.** All 26 remaining items placed as loot boxes
-across the other 12 locations; 7 items wired into existing puzzle-prop gates
-(`sheet_music_page`/`tuning_fork` → Clocktower bells hard gate; `library_card`
-→ Library librarian desk; `backstage_pass` → Carnival curtain; `crowbar` →
-Harbor container; `security_badge` → Underground hatch pip pre-fill;
-`film_reel` → Cinema projector hard gate); the 5-ticket Cinema entry gate
-implemented as `_has_all_tickets()` on the completion condition. Items without
-new-mechanic dependencies placed as collectibles only — their CLAUDE.md
-"uses" reference systems that didn't exist yet at the time. Subsequent passes
-have implemented: `rusty_key` → Underground Tunnels shortcut door (consume on
-use, immediate overworld exit); `guard_whistle` → one-shot `try_use_whistle()`
-fallback in all 13 `_on_special_used` functions (any character, consumed from
-whichever duo member holds it); `bies_charm` → +10% starting Bies charge via
-`register_players_with_preference`; `animal_treat` → halves companion cooldown
-via `GameManager.companion_cooldown_scale()` checked at level `_ready()`.
-Remaining collectible-only: `pocket_lantern`, `crane_crank_handle`,
-`vr_override_chip`, all character tickets, all 6 junk items. Rolled out the same way the Doorway/camera/floor/stealth passes were:
-prototype proven at Pipe Organ Works, mechanically repeated 12 more times.
-GUT 16/16 unaffected.
+> **Status: COMPLETE — full 13-location rollout.** All 13 locations have loot
+> boxes; 7 items are wired into puzzle-prop gates (sheet music/tuning fork →
+> Clocktower bells; library card → Library desk; backstage pass → Carnival
+> curtain; crowbar → Harbor container; security badge → Underground hatch;
+> film reel → Cinema projector); the 5-ticket Cinema entry gate
+> (`_has_all_tickets()`) is the headline capstone. `rusty_key` opens an
+> Underground shortcut (consumed); `guard_whistle` is a shared one-shot
+> `try_use_whistle()` noise distraction; `bies_charm` grants +10% starting
+> Bies charge; `animal_treat` halves companion cooldowns via
+> `GameManager.companion_cooldown_scale()`. Full rollout narrative +
+> verification:
+> [docs/implementation_history.md](docs/implementation_history.md#collectibles--inventory-rollout).
 
 ### Functional collectibles (gate or buff something)
 | Item | Use |
@@ -271,85 +202,33 @@ Visually distinguish the two categories in the `InventoryPanel` (e.g. a dimmer
 icon border for junk items) so players can tell "this might matter later" from
 "this is just a keepsake," without it being a complete non-clue.
 
-> **Status: COMPLETE — full 13-location rollout done.** `ItemData`,
-> `GameManager` inventory state/signals, `LootBox`, `InventoryPanel`, and all
-> 29 `.tres` item resources implemented and placed. All 13 locations have loot
-> boxes; 7 items are wired into puzzle-prop gates; the 5-ticket Cinema
-> completion gate (`_has_all_tickets()`) is the headline capstone. See the
-> "Follow-up pass: COMPLETE" note above for the per-item placement map.
-
 ### Numbered spoon set (NPC quest rewards) *(implemented)*
-A 12-piece junk/lore set, layered on top of the existing town quest-givers:
-finishing **any** of the 12 town NPC quests (see "NPC dialog & quests" below)
-also grants one `numbered_spoon_NN` (`data/items/numbered_spoon_01.tres`
-through `_12.tres`, `is_junk = true`, following the `ItemData` convention
-exactly). Each spoon's `description` is its own little riff on Quinn's "Bent
-spoon...has a story" joke from the junk table above, escalating across the set
-toward an explicit Easter-egg hint: early entries read as plain flavor text
-("Stamped with a small '1' on the handle...feels like it's part of a set"),
-middle entries plant the payoff ("Reggie swears he's seen one just like it
-bolted to the side of an old arcade cabinet" — tying back to his arcade-token
-quest item and its "planted rumor for a future location" note), and the final
-entries spell it out ("One more, and the set's complete...", "...Definitely a
-game piece — but for which game?"). No mechanical gate depends on collecting
-the set — pure lore/completionist hook, in the same spirit as Penny's
-Hand-Stitched Patch or Otis's Sailor's Knot Bracelet.
+A 12-piece junk/lore set: finishing any of the 12 town NPC quests (see "NPC
+dialog & quests" below) also grants one `numbered_spoon_NN`
+(`data/items/numbered_spoon_01.tres`–`_12.tres`, `is_junk = true`). Each
+spoon's description riffs on Quinn's "Bent spoon...has a story" joke,
+escalating toward an explicit Easter-egg hint about an old arcade cabinet
+(tying back to Reggie's `arcade_token`). Pure lore/completionist hook — no
+mechanical gate depends on the set.
 
-- **Quest → spoon mapping**: every entry in `QUESTS` and `QUESTS_2`
-  (`overworld_map.gd`) gained a `"spoon": "numbered_spoon_0N"` key — gus→01,
-  moira→02, reggie→03, fanny→04, penny→05, otis→06, wendell→07, clara→08,
-  ambrose→09, dottie→10, tobias→11, agnes→12. `_talk_to_npc()` grants the
-  spoon (via `GameManager.grant_item()`, idempotent like every other item
-  grant) at the same moment it grants a quest's `give_item` — one extra
-  `if quest.get("spoon", "") != ""` check alongside the existing turn-in
-  logic, so the established `not_started → active → complete` state machine
-  and dialog flow are otherwise untouched.
-- **6 new NPCs** (`NPC_DATA_2` in `overworld_map.gd`, alongside the existing
-  `NPC_DATA` six) round the roster up to 12 quest-givers — the user's explicit
-  call to "add more NPCs so there are enough to give out 12 spoons... some in
-  other locations, some freed from hidden/secret rooms":
-  - **Wendell, Clara, Ambrose, Dottie** — ordinary fetch-quest NPCs homed in
-    the overworld's grass padding (the area outside the original 40×19
-    `LOCS` grid — fully painted by `_build_floor()`'s padded `GRID_COLS x
-    GRID_ROWS` (60×35) grass pass but never given colliders by
-    `_build_building_colliders()`, so it's guaranteed-clear open ground for
-    new NPC homes with zero collision risk). Each quest reuses an
-    **already-placed** junk item from another location as its `want_item`
-    rather than introducing a new collectible/loot box: Wendell wants the
-    Carnival's `ticket_stub_torn`, Clara the Recording Studio's
-    `tangled_headphone_cable`, Ambrose Harbor & Docks' `faded_treasure_map`,
-    Dottie The Drop's `rabbits_foot_keychain` — all four already had loot-box
-    placements and `ItemData` entries from the original 29-item rollout, so
-    no level scenes changed.
-  - **Tobias and Agnes** — one-shot "freed" NPCs gated by `requires_flag` (a
-    new optional `NPC_DATA_2` key: `{"location": ..., "flag": ...}`, checked
-    in `_spawn_npcs()` via `GameManager.get_level_flag()` before an NPC is
-    even instantiated). Tobias requires
-    `level_progress["pipe_organ_works"]["secret_revealed"]`; Agnes requires
-    `level_progress["old_parish_church"]["secret_revealed"]` — reusing the
-    secret-passage flags those two locations already set when their hidden
-    rooms are found (see their implementation notes above), so finding either
-    secret passage literally "frees" the corresponding NPC into town. Their
-    `QUESTS_2` entries have `want_item == ""` and empty `reminder`/`turn_in`
-    arrays — `_talk_to_npc()` special-cases `want_item == ""` in the
-    `not_started` branch: the very first conversation (`intro`, doubling as
-    their thanks for being freed) grants their spoon directly to
-    `GameManager.unlocked_characters[0]` (always `"quinn"`) and jumps straight
-    to `complete`, skipping the `active`/`reminder` states entirely.
-- **`town_npc.gd`** gained a `color: Color` field, set via `setup()`'s new
-  `npc_color` param — needed because `_npcs` is no longer guaranteed parallel
-  to `NPC_DATA + NPC_DATA_2` once `requires_flag` entries are conditionally
-  skipped; `_talk_to_npc()` reads `npc.color` directly for the dialog
-  portrait instead of indexing back into the data table.
+- `QUESTS`/`QUESTS_2` (`overworld_map.gd`) each carry a `"spoon":
+  "numbered_spoon_0N"` key (gus→01 ... agnes→12); `_talk_to_npc()` grants it
+  via `GameManager.grant_item()` alongside any `give_item` on turn-in.
+- 6 new NPCs (`NPC_DATA_2`) round the roster to 12: **Wendell/Clara/
+  Ambrose/Dottie** are ordinary fetch-quests homed in the overworld's grass
+  padding, each wanting an already-placed junk item from another location
+  (no new loot boxes). **Tobias/Agnes** are one-shot NPCs gated by
+  `requires_flag` (`NPC_DATA_2` key, checked via
+  `GameManager.get_level_flag()`) — Tobias needs Pipe Organ Works'
+  `secret_revealed`, Agnes needs Old Parish Church's — finding either secret
+  passage "frees" the corresponding NPC into town. Their quests have
+  `want_item == ""`; the first conversation grants the spoon directly and
+  jumps to `complete`.
+- `town_npc.gd` gained a `color: Color` field (set via `setup()`) since `_npcs`
+  is no longer parallel to `NPC_DATA + NPC_DATA_2` once `requires_flag`
+  entries are conditionally skipped.
 
-Verified via a temp-autoload functional script: with neither secret passage
-found, exactly 10 NPCs spawn (Tobias/Agnes absent); with both
-`secret_revealed` flags set, all 12 spawn. Driving all 12 quests to
-completion (granting each `want_item` then re-talking for fetch quests;
-single conversation for Tobias/Agnes) confirms all 12 `numbered_spoon_NN`
-ids end up granted, each fetch quest's `want_item` is consumed, and
-`give_item`s (Hand-Stitched Patch, Sailor's Knot Bracelet) still grant
-alongside the new spoon. Boot check and GUT 16/16 unaffected.
+Full verification: [docs/implementation_history.md](docs/implementation_history.md#numbered-spoon-set-rollout).
 
 ---
 
@@ -1315,19 +1194,7 @@ bring back, and to whom?" answer for players returning to town after a level.
   turning in a quest while the log isn't open is reflected next time it's
   opened, and `_on_unpaused()` closes it if the player unpauses mid-browse.
 
-Verified via a temp-autoload functional check (3 quest states set —
-active/complete-with-reward/active-no-want_item — confirmed correct
-filtering, tags, and objective text for all three, plus that an untouched
-`not_started` quest stays hidden) plus a headless boot check and GUT 24/24.
-
-A second temp-autoload check drove the deferred-completion path end-to-end:
-with `quest_gus = "active"` and Quinn holding `bent_spoon`, calling
-`_talk_to_npc()` for Gus opens the `turn_in` dialog but leaves the flag at
-`"active"` and `bent_spoon` un-consumed; only after `_dialog_box.advance()`-ing
-through to close does the flag flip to `"complete"`, `bent_spoon` get
-consumed, and `numbered_spoon_01` get granted — confirming the Quest Log
-can't show `COMPLETE` mid-conversation and the spoon reward never arrives
-before completion.
+Full verification: [docs/implementation_history.md](docs/implementation_history.md#quest-log-rollout).
 
 ### Save / Unlock system *(implemented)*
 `save_manager.gd` (autoload `SaveManager`, loaded before `GameManager` so it's
@@ -1452,13 +1319,9 @@ A 19-achievement tracker — a mix of visible milestones and secret discoveries
   `ACHIEVEMENT_LIST`, and a locked secret achievement's name/description are
   hidden via `get_display_name()`/`get_description()`.
 
-> **Gotcha**: a freshly-added `class_name` Resource script (like
-> `AchievementData`) isn't visible to other scripts under `--headless
-> --quit-after` until the global script class cache is rebuilt — same trap as
-> GUT's addon scripts (see "GUT unit tests" below). Run
-> `godot --headless --editor --path . --quit-after 2000` once after adding a
-> new `class_name` Resource type to populate
-> `.godot/global_script_class_cache.cfg` before the next boot check.
+> **Gotcha**: same fresh-`class_name`-needs-editor-rescan trap as GUT's addon
+> scripts (e.g. for `AchievementData`) — see "GUT unit tests" below for the
+> fix.
 
 ### Audio (autoload `Audio`)
 `audio.gd` generates short SFX procedurally at runtime as `AudioStreamWAV`
