@@ -1,6 +1,10 @@
 class_name Player
 extends CharacterBody2D
 
+const ProjectileScript: Script = preload("res://scripts/systems/projectile.gd")
+const PLAYER_HIT_LAYER: int = 8
+const PLAYER_HIT_MASK: int = 64
+
 signal hp_changed(current: float, maximum: float)
 signal bies_charge_changed(charge: float)
 signal special_used(character_name: String)
@@ -34,9 +38,10 @@ var _iframe_timer: float = 0.0
 var _flash_timer: float = 0.0
 var _knockback: Vector2 = Vector2.ZERO
 var _dash_vel: Vector2 = Vector2.ZERO
+var _buffered_action: String = ""
 
 const DASH_DURATION: float = 0.2
-const HURT_DURATION: float = 0.3
+const HURT_DURATION: float = 0.18
 const FLASH_DURATION: float = 0.1
 const KNOCKBACK_FRICTION: float = 800.0
 const BIES_GAIN_PER_HIT: float = 0.1
@@ -66,7 +71,15 @@ func _ready() -> void:
 	assert(data != null, name + " requires a CharacterData resource")
 	hp = data.max_hp
 	hitbox.damage = data.attack_damage
+	hitbox.collision_layer = PLAYER_HIT_LAYER
+	hitbox.collision_mask = PLAYER_HIT_MASK
 	hitbox.monitoring = false
+	# Duplicate the hitbox shape so we can resize it per-character without
+	# modifying the shared sub-resource in Player.tscn.
+	var col_shape := hitbox.get_node("CollisionShape2D") as CollisionShape2D
+	var rect := col_shape.shape.duplicate() as RectangleShape2D
+	rect.size = data.attack_hitbox_size
+	col_shape.shape = rect
 	hurtbox.hit.connect(_on_hurtbox_hit)
 	hitbox.hit_landed.connect(register_hit_landed)
 	if sprite.sprite_frames == null:
@@ -84,6 +97,13 @@ func _physics_process(delta: float) -> void:
 	_tick_timers(delta)
 	if _flash_timer <= 0.0:
 		sprite.modulate = HIDDEN_MODULATE if is_hidden else Color.WHITE
+	if is_active and _state in [State.ATTACK, State.HURT]:
+		if Input.is_action_just_pressed(action_prefix + "attack"):
+			_buffered_action = "attack"
+		elif Input.is_action_just_pressed(action_prefix + "dash"):
+			_buffered_action = "dash"
+		elif Input.is_action_just_pressed(action_prefix + "special"):
+			_buffered_action = "special"
 	match _state:
 		State.IDLE:   _tick_idle()
 		State.WALK:   _tick_walk(delta)
@@ -103,11 +123,15 @@ func _tick_idle() -> void:
 	velocity = Vector2.ZERO
 	if not is_active:
 		return
-	if Input.is_action_just_pressed(action_prefix + "attack"):
+	var do_attack := _buffered_action == "attack" or Input.is_action_just_pressed(action_prefix + "attack")
+	var do_dash   := _buffered_action == "dash"   or Input.is_action_just_pressed(action_prefix + "dash")
+	var do_special := _buffered_action == "special" or Input.is_action_just_pressed(action_prefix + "special")
+	_buffered_action = ""
+	if do_attack:
 		_enter_attack()
-	elif Input.is_action_just_pressed(action_prefix + "dash"):
+	elif do_dash:
 		_enter_dash()
-	elif Input.is_action_just_pressed(action_prefix + "special"):
+	elif do_special:
 		_use_special()
 	elif _get_move().length_squared() > 0.0:
 		_set_state(State.WALK)
@@ -131,10 +155,19 @@ func _tick_walk(delta: float) -> void:
 
 func _tick_attack() -> void:
 	velocity = Vector2.ZERO
-	hitbox.monitoring = _attack_timer > data.attack_cooldown * 0.5
+	if not data.is_ranged:
+		var move := _get_move()
+		if is_active and move.length_squared() > 0.0:
+			facing = move.normalized()
+			sprite.flip_h = facing.x < 0.0
+			hitbox_pivot.position = facing * data.attack_reach
+		hitbox.monitoring = _attack_timer > data.attack_cooldown * 0.5
+	queue_redraw()
 	if _attack_timer == 0.0:
-		hitbox.monitoring = false
+		if not data.is_ranged:
+			hitbox.monitoring = false
 		_set_state(State.IDLE)
+		queue_redraw()
 
 func _tick_dash() -> void:
 	velocity = _dash_vel
@@ -154,11 +187,24 @@ func _tick_down() -> void:
 	queue_redraw()
 
 func _enter_attack() -> void:
-	hitbox_pivot.position = facing * 24.0
 	_attack_timer = data.attack_cooldown
 	Audio.play("attack")
 	GameManager.emit_noise(global_position, ATTACK_NOISE_RADIUS)
+	if data.is_ranged:
+		_fire_projectile()
+	else:
+		hitbox_pivot.position = facing * data.attack_reach
 	_set_state(State.ATTACK)
+
+func _fire_projectile() -> void:
+	var p = ProjectileScript.new()
+	p.collision_layer = PLAYER_HIT_LAYER
+	p.collision_mask = PLAYER_HIT_MASK
+	p.damage = data.attack_damage
+	p.knockback_force = hitbox.knockback_force
+	p.velocity = facing * data.projectile_speed
+	p.global_position = global_position + facing * 16.0
+	get_tree().current_scene.add_child(p)
 
 func _enter_dash() -> void:
 	var dir := _get_move()
@@ -230,7 +276,7 @@ func register_hit_landed() -> void:
 	bies_charge_changed.emit(bies_charge)
 
 func leash_to(target_pos: Vector2) -> void:
-	if is_active:
+	if is_active or is_down():
 		return
 	if global_position.distance_squared_to(target_pos) > STANDBY_LEASH * STANDBY_LEASH:
 		global_position = target_pos + Vector2(48.0, 0.0)
@@ -252,8 +298,40 @@ func revive() -> void:
 	queue_redraw()
 
 func _draw() -> void:
-	if _state != State.DOWN or revive_progress <= 0.0:
+	if _state == State.ATTACK:
+		var half := data.attack_cooldown * 0.5
+		if _attack_timer > half:
+			var t := (_attack_timer - half) / half
+			if data.is_ranged:
+				_draw_ranged_flash(t)
+			else:
+				_draw_attack_arc(t, data.attack_reach + 8.0,
+						data.attack_arc_spread * 0.5, data.attack_arc_color)
+	if _state != State.DOWN:
 		return
-	var t: float = revive_progress / REVIVE_HOLD_DURATION
+	draw_arc(Vector2.ZERO, GameManager.REVIVE_RADIUS, 0.0, TAU, 28,
+			Color(0.4, 1.0, 0.6, 0.18), 1.5)
+	if revive_progress <= 0.0:
+		return
+	var revive_t: float = revive_progress / REVIVE_HOLD_DURATION
 	draw_arc(REVIVE_RING_OFFSET, REVIVE_RING_RADIUS, 0.0, TAU, 28, REVIVE_RING_BG_COLOR, 4.0)
-	draw_arc(REVIVE_RING_OFFSET, REVIVE_RING_RADIUS, -PI * 0.5, -PI * 0.5 + TAU * t, 28, REVIVE_RING_FILL_COLOR, 4.0)
+	draw_arc(REVIVE_RING_OFFSET, REVIVE_RING_RADIUS, -PI * 0.5, -PI * 0.5 + TAU * revive_t, 28, REVIVE_RING_FILL_COLOR, 4.0)
+
+func _draw_attack_arc(t: float, radius: float, half_angle: float, color: Color) -> void:
+	const ARC_SEGS: int = 10
+	var angle := facing.angle()
+	var fill := Color(color.r, color.g, color.b, t * 0.42)
+	var rim  := Color(color.r * 1.1, color.g * 1.1, color.b * 1.1, t * 0.75)
+	var pts  := PackedVector2Array()
+	pts.append(Vector2.ZERO)
+	for i in range(ARC_SEGS + 1):
+		var a := angle - half_angle + (float(i) / ARC_SEGS) * half_angle * 2.0
+		pts.append(Vector2(cos(a), sin(a)) * radius)
+	draw_colored_polygon(pts, fill)
+	draw_arc(Vector2.ZERO, radius, angle - half_angle, angle + half_angle, ARC_SEGS, rim, 2.0)
+
+func _draw_ranged_flash(t: float) -> void:
+	var c := data.attack_arc_color
+	var beam_end := facing * (data.attack_reach + 48.0)
+	draw_line(Vector2.ZERO, beam_end, Color(c.r, c.g, c.b, t * 0.8), 3.0)
+	draw_circle(beam_end, 5.0, Color(c.r, c.g, c.b, t * 0.65))

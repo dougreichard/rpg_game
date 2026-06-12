@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=3]
+[gd_scene load_steps=10 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/hud.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/ui/duo_panel.gd" id="2"]
@@ -8,10 +8,14 @@
 [ext_resource type="Script" path="res://scripts/ui/achievement_toast.gd" id="6"]
 [ext_resource type="Script" path="res://scripts/ui/inventory_overlay.gd" id="7"]
 [ext_resource type="Script" path="res://scripts/ui/quest_log_overlay.gd" id="8"]
+[ext_resource type="Script" path="res://scripts/ui/revive_indicator.gd" id="9"]
 
 [node name="HUD" type="CanvasLayer"]
 layer = 10
 script = ExtResource("1")
+
+[node name="ReviveIndicator" type="Node2D" parent="."]
+script = ExtResource("9")
 
 [node name="DuoPanel" type="Node2D" parent="."]
 position = Vector2(1112.0, 16.0)

@@ -64,8 +64,56 @@ const ENEMY_TILE_OVERRIDES: Dictionary = {
 	"boss":  Vector2i(128, 128),
 }
 
+# NPC sheets — 64x64 tiles, 0.5x scale (same convention as players/enemies).
+const NPC_TILE_SIZE: int = 64
+const NPC_SPRITE_SCALE: float = 0.5
+
+# Town NPC animation layout (all 12 overworld quest-givers).
+const NPC_TOWN_ANIMS: Array = [
+	{name="idle",         row=0, frames=6, fps=8.0,  loop=true},
+	{name="walk_right",   row=1, frames=8, fps=10.0, loop=true},
+	{name="walk_down",    row=2, frames=8, fps=10.0, loop=true},
+	{name="talk_closeup", row=3, frames=6, fps=8.0,  loop=true},
+]
+
+# Mr. Bellows (Pipe Organ Works) — seated desk NPC with item hand-off row.
+const NPC_MR_BELLOWS_ANIMS: Array = [
+	{name="idle",           row=0, frames=6, fps=8.0,  loop=true},
+	{name="talk",           row=1, frames=6, fps=8.0,  loop=true},
+	{name="talk_closeup",   row=2, frames=8, fps=8.0,  loop=true},
+	{name="relieved",       row=3, frames=6, fps=8.0,  loop=true},
+	{name="hand_over_item", row=4, frames=4, fps=8.0,  loop=false},
+]
+
+# Father Aldric (Old Parish Church) — three emotion-specific closeup rows
+# replacing the standard walk rows; played by name to match impression flag.
+const NPC_ALDRIC_ANIMS: Array = [
+	{name="idle",         row=0, frames=6, fps=8.0, loop=true},
+	{name="talk",         row=1, frames=6, fps=8.0, loop=true},
+	{name="talk_pleased", row=2, frames=8, fps=8.0, loop=true},
+	{name="talk_amused",  row=3, frames=8, fps=8.0, loop=true},
+	{name="talk_annoyed", row=4, frames=6, fps=8.0, loop=true},
+]
+
+# Uncle Doug (Grand Marquee Cinema projection booth).
+const NPC_UNCLE_DOUG_ANIMS: Array = [
+	{name="idle",         row=0, frames=6, fps=8.0,  loop=true},
+	{name="wave",         row=1, frames=8, fps=10.0, loop=true},
+	{name="talk",         row=2, frames=6, fps=8.0,  loop=true},
+	{name="talk_closeup", row=3, frames=8, fps=8.0,  loop=true},
+]
+
+# Shared layout for gate NPCs (Librarian and Carnival Guard share identical rows).
+const NPC_GATEKEEPER_ANIMS: Array = [
+	{name="idle",         row=0, frames=6, fps=8.0,  loop=true},
+	{name="refuse",       row=1, frames=6, fps=8.0,  loop=true},
+	{name="step_aside",   row=2, frames=8, fps=10.0, loop=false},
+	{name="talk_closeup", row=3, frames=6, fps=8.0,  loop=true},
+]
+
 static var _player_cache: Dictionary = {}
 static var _enemy_cache: Dictionary = {}
+static var _npc_cache: Dictionary = {}
 
 # Returns a SpriteFrames built from assets/art/sprites/<character_name>.png,
 # or null if the file is absent (caller should use PlaceholderArt instead).
@@ -99,6 +147,32 @@ static func try_load_enemy(enemy_name: String) -> SpriteFrames:
 	var result: SpriteFrames = _build(tex.get_image(), ENEMY_ANIMS, tile.x, tile.y)
 	_enemy_cache[key] = result
 	return result
+
+# Returns a SpriteFrames built from assets/art/sprites/<npc_name>.png using the
+# animation table registered for that NPC, or null if the file is absent.
+# Names not in the registry use NPC_TOWN_ANIMS (all 12 town quest-givers).
+static func try_load_npc(npc_name: String) -> SpriteFrames:
+	var key: String = npc_name.to_lower()
+	if key in _npc_cache:
+		return _npc_cache[key]
+	var path: String = "res://assets/art/sprites/%s.png" % key
+	if not ResourceLoader.exists(path):
+		return null
+	var tex: Texture2D = load(path)
+	if tex == null:
+		return null
+	var result: SpriteFrames = _build(tex.get_image(), _npc_anims(key), NPC_TILE_SIZE, NPC_TILE_SIZE)
+	_npc_cache[key] = result
+	return result
+
+static func _npc_anims(key: String) -> Array:
+	match key:
+		"mr_bellows":     return NPC_MR_BELLOWS_ANIMS
+		"father_aldric":  return NPC_ALDRIC_ANIMS
+		"uncle_doug":     return NPC_UNCLE_DOUG_ANIMS
+		"librarian":      return NPC_GATEKEEPER_ANIMS
+		"carnival_guard": return NPC_GATEKEEPER_ANIMS
+		_:                return NPC_TOWN_ANIMS
 
 static func _build(img: Image, anims: Array, tile_w: int, tile_h: int) -> SpriteFrames:
 	var frames := SpriteFrames.new()

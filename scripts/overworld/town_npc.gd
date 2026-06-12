@@ -59,6 +59,6 @@ func _process(delta: float) -> void:
 	sprite.flip_h = dir.x < 0.0
 	var anim: String = "walk_right"
 	if abs(dir.y) > abs(dir.x):
-		anim = "walk_down" if dir.y > 0.0 else "walk_up"
+		anim = "walk_down"  # NPC sheets have no walk_up row; walk_down covers both
 	sprite.play(anim)
 	global_position += dir * WANDER_SPEED * delta

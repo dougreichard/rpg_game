@@ -172,6 +172,7 @@ var _erin_done: bool  = false
 var _secret_revealed: bool = false
 var _quinn_sprite: Sprite2D
 var _erin_sprite: Sprite2D
+var _aldric_sprite: AnimatedSprite2D
 var _secret_wall_shape: CollisionShape2D
 var _secret_wall_sprite: Sprite2D
 var _organ_prop: Sprite2D
@@ -222,6 +223,7 @@ func _restore_progress() -> void:
 		_erin_sprite.modulate = Color(0.3, 1.0, 0.3)
 	if _secret_revealed:
 		_open_secret_passage(false)
+	_update_aldric_animation()
 	if _quinn_done and _erin_done:
 		hint_label.text = ""
 		clear_label.text = "PARISH CLEARED!\n\nPress ENTER for the Map"
@@ -395,11 +397,13 @@ func _create_doorway() -> void:
 # Control as overworld_map.gd's NPC dialog and pipe_organ_works.gd's Mr.
 # Bellows (CLAUDE.md "NPC dialog & quests").
 func _create_father_aldric() -> void:
-	var sprite := AnimatedSprite2D.new()
-	sprite.sprite_frames = PlaceholderArt.make_player_frames(ALDRIC_COLOR, "")
-	sprite.play("idle")
-	sprite.position = ALDRIC_POS
-	add_child(sprite)
+	_aldric_sprite = AnimatedSprite2D.new()
+	var loaded: SpriteFrames = SpriteLoader.try_load_npc("father_aldric")
+	_aldric_sprite.sprite_frames = loaded if loaded != null else PlaceholderArt.make_player_frames(ALDRIC_COLOR, "")
+	_aldric_sprite.scale = Vector2(SpriteLoader.NPC_SPRITE_SCALE, SpriteLoader.NPC_SPRITE_SCALE) if loaded != null else Vector2.ONE
+	_aldric_sprite.play("idle")
+	_aldric_sprite.position = ALDRIC_POS
+	add_child(_aldric_sprite)
 
 	var dialog_layer := CanvasLayer.new()
 	dialog_layer.layer = 19
@@ -429,6 +433,21 @@ func _on_aldric_dialog_closed(effects: Array) -> void:
 	for fx: Dictionary in effects:
 		if fx.has("set_flag"):
 			GameManager.set_level_flag(LOCATION_ID, fx["set_flag"], fx.get("flag_value", true))
+	_update_aldric_animation()
+
+func _update_aldric_animation() -> void:
+	if not is_instance_valid(_aldric_sprite):
+		return
+	var impression: String = GameManager.get_level_flag(LOCATION_ID, "father_aldric_impression", "")
+	match impression:
+		"good":
+			if _aldric_sprite.sprite_frames.has_animation("talk_pleased"):
+				_aldric_sprite.play("talk_pleased")
+		"cool":
+			if _aldric_sprite.sprite_frames.has_animation("talk_amused"):
+				_aldric_sprite.play("talk_amused")
+		_:
+			_aldric_sprite.play("idle")
 
 func _on_special_used(char_name: String) -> void:
 	if _dialog_box.is_open():

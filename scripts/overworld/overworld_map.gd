@@ -369,7 +369,13 @@ func _spawn_npcs() -> void:
 		var npc = NpcScript.new()
 		add_child(npc)
 		var home: Vector2 = Vector2(Vector2i(data["home"]) + MAP_OFFSET) * TILE + Vector2(TILE / 2.0, TILE / 2.0)
-		npc.setup(PlaceholderArt.make_player_frames(data["color"], ""), home, data["name"], data["quest_id"], data["color"])
+		var npc_key: String = data["name"].to_lower()
+		var npc_frames: SpriteFrames = SpriteLoader.try_load_npc(npc_key)
+		var npc_scale: float = SpriteLoader.NPC_SPRITE_SCALE if npc_frames != null else 1.0
+		if npc_frames == null:
+			npc_frames = PlaceholderArt.make_player_frames(data["color"], "")
+		npc.setup(npc_frames, home, data["name"], data["quest_id"], data["color"])
+		npc.sprite.scale = Vector2(npc_scale, npc_scale)
 		_npcs.append(npc)
 
 func _build_ui() -> void:

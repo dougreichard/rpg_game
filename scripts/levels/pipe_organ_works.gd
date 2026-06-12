@@ -112,6 +112,7 @@ var _secret_revealed: bool = false
 var _manager_met: bool = false
 var _tuning_key_given: bool = false
 var _cleared: bool = false
+var _manager_sprite: AnimatedSprite2D
 var _organ_sprite: Sprite2D
 var _loot_boxes: Array = []
 var _secret_wall_shape: CollisionShape2D
@@ -343,11 +344,13 @@ func _create_visual_props() -> void:
 # _dialog_box is the same generic, reusable Control as overworld_map.gd's NPC
 # dialog (see CLAUDE.md "NPC dialog & quests").
 func _create_manager() -> void:
-	var sprite := AnimatedSprite2D.new()
-	sprite.sprite_frames = PlaceholderArt.make_player_frames(MANAGER_COLOR, "")
-	sprite.play("idle")
-	sprite.position = MANAGER_POS
-	add_child(sprite)
+	_manager_sprite = AnimatedSprite2D.new()
+	var loaded: SpriteFrames = SpriteLoader.try_load_npc("mr_bellows")
+	_manager_sprite.sprite_frames = loaded if loaded != null else PlaceholderArt.make_player_frames(MANAGER_COLOR, "")
+	_manager_sprite.scale = Vector2(SpriteLoader.NPC_SPRITE_SCALE, SpriteLoader.NPC_SPRITE_SCALE) if loaded != null else Vector2.ONE
+	_manager_sprite.play("idle")
+	_manager_sprite.position = MANAGER_POS
+	add_child(_manager_sprite)
 
 	# The dialog box's _draw() uses screen-space coordinates (PANEL_RECT), so
 	# it must live in a CanvasLayer -- otherwise the following Camera2D's
@@ -398,6 +401,8 @@ func _on_manager_dialog_closed(effects: Array) -> void:
 					_manager_met = value
 				"tuning_key_given":
 					_tuning_key_given = value
+					if value and is_instance_valid(_manager_sprite) and _manager_sprite.sprite_frames.has_animation("hand_over_item"):
+						_manager_sprite.play("hand_over_item")
 
 # The organ repair now needs both the brass pipe (a workshop-floor loot box)
 # and the tuning key (Mr. Bellows, via Erin's Fast Talk)  --  see CLAUDE.md

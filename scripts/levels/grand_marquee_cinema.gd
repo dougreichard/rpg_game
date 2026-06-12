@@ -81,6 +81,7 @@ var _organ_played: bool = false
 var _cleared: bool = false
 var _projector_sprite: Sprite2D
 var _organ_sprite: Sprite2D
+var _uncle_doug_sprite: AnimatedSprite2D
 var _loot_boxes: Array = []
 var _doorway = null
 
@@ -131,6 +132,10 @@ func _restore_progress() -> void:
 		hint_label.text = ""
 		clear_label.text = "THE FINAL REEL!\n\nThe house lights rise  --  and there, in the\nprojection booth, stands Uncle Doug.\n\nPress ENTER to continue"
 		clear_label.visible = true
+		if is_instance_valid(_uncle_doug_sprite):
+			_uncle_doug_sprite.visible = true
+			if _uncle_doug_sprite.sprite_frames.has_animation("wave"):
+				_uncle_doug_sprite.play("wave")
 
 # Tile-mapped retro floor (Zelda-style two-tone grid), generated at runtime
 # via PlaceholderArt to keep the original-IP guarantee  --  no imported tile art.
@@ -170,6 +175,15 @@ func _create_projector() -> void:
 	_projector_sprite.texture = PlaceholderArt.make_gate_texture(Color(0.42, 0.32, 0.5), 48, 48)
 	_projector_sprite.position = PROJECTOR_POS
 	add_child(_projector_sprite)
+	# Uncle Doug — hidden until the level is cleared; appears in the booth
+	_uncle_doug_sprite = AnimatedSprite2D.new()
+	var loaded: SpriteFrames = SpriteLoader.try_load_npc("uncle_doug")
+	_uncle_doug_sprite.sprite_frames = loaded if loaded != null else PlaceholderArt.make_player_frames(Color(0.70, 0.63, 0.48), "")
+	_uncle_doug_sprite.scale = Vector2(SpriteLoader.NPC_SPRITE_SCALE, SpriteLoader.NPC_SPRITE_SCALE) if loaded != null else Vector2.ONE
+	_uncle_doug_sprite.play("idle")
+	_uncle_doug_sprite.position = PROJECTOR_POS + Vector2(48.0, 0.0)
+	_uncle_doug_sprite.visible = false
+	add_child(_uncle_doug_sprite)
 
 func _create_organ() -> void:
 	_organ_sprite = Sprite2D.new()
@@ -262,6 +276,10 @@ func _process(_delta: float) -> void:
 		hint_label.text = ""
 		clear_label.text = "THE FINAL REEL!\n\nThe house lights rise  --  and there, in the\nprojection booth, stands Uncle Doug.\n\nPress ENTER to continue"
 		clear_label.visible = true
+		if is_instance_valid(_uncle_doug_sprite):
+			_uncle_doug_sprite.visible = true
+			if _uncle_doug_sprite.sprite_frames.has_animation("wave"):
+				_uncle_doug_sprite.play("wave")
 	if _cleared and Input.is_action_just_pressed("ui_accept"):
 		GameManager.complete_location(LOCATION_ID)
 		TransitionManager.change_scene("res://scenes/ui/ResultScreen.tscn")

@@ -82,6 +82,7 @@ var _cleared: bool = false
 var _desk_shape: CollisionShape2D
 var _desk_sprite: Sprite2D
 var _terminal_sprite: Sprite2D
+var _librarian_sprite: AnimatedSprite2D
 var _loot_boxes: Array = []
 var _doorway = null
 var _guinea_pig_cooldown_timer: float = 0.0
@@ -175,17 +176,31 @@ func _create_librarian_desk() -> void:
 	_desk_sprite = Sprite2D.new()
 	_desk_sprite.texture = PlaceholderArt.make_gate_texture(Color(0.42, 0.18, 0.2), 48, 40)
 	_librarian_desk.add_child(_desk_sprite)
+	# Librarian character sprite — stands at the desk in idle until talked down
+	_librarian_sprite = AnimatedSprite2D.new()
+	var loaded: SpriteFrames = SpriteLoader.try_load_npc("librarian")
+	_librarian_sprite.sprite_frames = loaded if loaded != null else PlaceholderArt.make_player_frames(Color(0.48, 0.55, 0.60), "")
+	_librarian_sprite.scale = Vector2(SpriteLoader.NPC_SPRITE_SCALE, SpriteLoader.NPC_SPRITE_SCALE) if loaded != null else Vector2.ONE
+	_librarian_sprite.play("idle")
+	_librarian_sprite.position = LIBRARIAN_POS + Vector2(0.0, -16.0)  # just above desk
+	add_child(_librarian_sprite)
 
 func _step_aside_librarian(animate: bool) -> void:
 	_desk_shape.disabled = true
 	if animate:
+		if is_instance_valid(_librarian_sprite) and _librarian_sprite.sprite_frames.has_animation("step_aside"):
+			_librarian_sprite.play("step_aside")
 		var tween := create_tween()
 		tween.set_parallel(true)
 		tween.tween_property(_desk_sprite, "scale", LIBRARIAN_DESK_SCALE_TARGET, 0.6)
 		tween.tween_property(_desk_sprite, "modulate:a", 0.0, 0.6)
+		tween.tween_property(_librarian_sprite, "position:x", LIBRARIAN_POS.x + 80.0, 0.7)
 	else:
 		_desk_sprite.scale = LIBRARIAN_DESK_SCALE_TARGET
 		_desk_sprite.modulate.a = 0.0
+		if is_instance_valid(_librarian_sprite):
+			_librarian_sprite.position.x = LIBRARIAN_POS.x + 80.0
+			_librarian_sprite.modulate.a = 0.0
 
 func _create_terminal() -> void:
 	_terminal_sprite = Sprite2D.new()

@@ -10,6 +10,7 @@ extends CanvasLayer
 @onready var duo_panel: Node = $DuoPanel
 @onready var inventory_panel: Node = $InventoryPanel
 @onready var inventory_overlay: Node = $InventoryOverlay
+@onready var revive_indicator: Node = $ReviveIndicator
 
 var _a: Player = null
 var _b: Player = null
@@ -34,6 +35,7 @@ func setup(a: Player, b: Player) -> void:
 	duo_panel.call("setup", a, b)
 	inventory_panel.call("setup", a, b)
 	inventory_overlay.call("setup", a.data.character_name, b.data.character_name)
+	revive_indicator.call("setup", a, b)
 	_update_active_labels()
 
 func _on_a_hp(current: float, _maximum: float) -> void:

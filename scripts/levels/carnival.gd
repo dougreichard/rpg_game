@@ -91,6 +91,7 @@ var _cleared: bool = false
 var _ride_sprite: Sprite2D
 var _gate_shape: CollisionShape2D
 var _gate_sprite: Sprite2D
+var _guard_sprite: AnimatedSprite2D
 var _doug_poster: Sprite2D
 var _loot_boxes: Array = []
 var _doorway = null
@@ -196,6 +197,14 @@ func _create_backstage_gate() -> void:
 	_gate_sprite = Sprite2D.new()
 	_gate_sprite.texture = PlaceholderArt.make_gate_texture(BACKSTAGE_GATE_COLOR, 300, 16)
 	_backstage_gate.add_child(_gate_sprite)
+	# Carnival guard sprite — stands at the curtain in idle until talked down
+	_guard_sprite = AnimatedSprite2D.new()
+	var loaded: SpriteFrames = SpriteLoader.try_load_npc("carnival_guard")
+	_guard_sprite.sprite_frames = loaded if loaded != null else PlaceholderArt.make_player_frames(Color(0.8, 0.2, 0.2), "")
+	_guard_sprite.scale = Vector2(SpriteLoader.NPC_SPRITE_SCALE, SpriteLoader.NPC_SPRITE_SCALE) if loaded != null else Vector2.ONE
+	_guard_sprite.play("idle")
+	_guard_sprite.position = BACKSTAGE_POS + Vector2(0.0, 8.0)
+	add_child(_guard_sprite)
 	_doug_poster = Sprite2D.new()
 	_doug_poster.texture = PlaceholderArt.make_gate_texture(DOUG_POSTER_COLOR, 32, 40)
 	_doug_poster.position = DOUG_POSTER_POS
@@ -204,13 +213,19 @@ func _create_backstage_gate() -> void:
 func _raise_curtain(animate: bool) -> void:
 	_gate_shape.disabled = true
 	if animate:
+		if is_instance_valid(_guard_sprite) and _guard_sprite.sprite_frames.has_animation("step_aside"):
+			_guard_sprite.play("step_aside")
 		var tween := create_tween()
 		tween.set_parallel(true)
 		tween.tween_property(_gate_sprite, "position", BACKSTAGE_GATE_RISE_OFFSET, 0.6)
 		tween.tween_property(_gate_sprite, "scale", BACKSTAGE_GATE_SCALE_TARGET, 0.6)
+		tween.tween_property(_guard_sprite, "position:x", BACKSTAGE_POS.x + 80.0, 0.7)
 	else:
 		_gate_sprite.position = BACKSTAGE_GATE_RISE_OFFSET
 		_gate_sprite.scale = BACKSTAGE_GATE_SCALE_TARGET
+		if is_instance_valid(_guard_sprite):
+			_guard_sprite.position.x = BACKSTAGE_POS.x + 80.0
+			_guard_sprite.modulate.a = 0.0
 
 # Stealth: a shadowed alcove the duo can duck into to let a patrol pass
 # rather than fight through it  --  see CLAUDE.md "Stealth & awareness".
