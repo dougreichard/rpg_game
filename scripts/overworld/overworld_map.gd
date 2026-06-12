@@ -27,6 +27,24 @@ const CAMERA_SMOOTHING_SPEED: float = 5.0
 # Log overlay can read them too.
 const TOWN_ID: String = QuestData.TOWN_ID
 
+# Ambient speech-bubble text for each town NPC. "pre" fires until their quest
+# is complete; "post" fires after. Text is kept short so it wraps inside the
+# 160px-wide speech bubble (see scripts/systems/speech_bubble.gd).
+const NPC_BUBBLE_TEXT: Dictionary = {
+	"gus":     {"pre": "Haven't touched a pipe organ since Doug...",     "post": "That old spoon's home now."},
+	"moira":   {"pre": "I keep thinking about that key...",              "post": "Found it at last. Small mercies."},
+	"reggie":  {"pre": "One of these days I'll finish that cabinet.",    "post": "Cabinet's almost running again!"},
+	"fanny":   {"pre": "I do miss that little bottle...",                "post": "Keeping it close. Won't lose it again."},
+	"penny":   {"pre": "I keep dropping things in that church...",       "post": "Made it right, I think. Mostly."},
+	"otis":    {"pre": "Lost something down at the docks...",            "post": "Still doesn't point north. Still mine."},
+	"wendell": {"pre": "...Still missing that ticket stub.",             "post": "Collection's whole again. More or less."},
+	"clara":   {"pre": "That cable's knotted around something by now.",  "post": "Radio's picking up something, at least."},
+	"ambrose": {"pre": "I do love a good map, even a wrong one.",        "post": "Map makes no sense. Perfect specimen."},
+	"dottie":  {"pre": "There's a rabbit's foot out there with my name on it.", "post": "Shelf is complete. Well. Enough."},
+	"tobias":  {"pre": "...Is anyone out there?",                        "post": "Fresh air! Should've found my way out sooner."},
+	"agnes":   {"pre": "Just me and the organ up here...",               "post": "That organ could use some company."},
+}
+
 const PlayerScript: Script = preload("res://scripts/overworld/overworld_player.gd")
 const NpcScript: Script = preload("res://scripts/overworld/town_npc.gd")
 const DialogBoxScript: Script = preload("res://scripts/ui/dialog_box.gd")
@@ -376,6 +394,9 @@ func _spawn_npcs() -> void:
 			npc_frames = PlaceholderArt.make_player_frames(data["color"], "")
 		npc.setup(npc_frames, home, data["name"], data["quest_id"], data["color"])
 		npc.sprite.scale = Vector2(npc_scale, npc_scale)
+		var bubble_txt: Dictionary = NPC_BUBBLE_TEXT.get(data["quest_id"], {})
+		if not bubble_txt.is_empty():
+			npc.setup_bubble(bubble_txt["pre"], bubble_txt["post"])
 		_npcs.append(npc)
 
 func _build_ui() -> void:
