@@ -38,6 +38,23 @@ const LOOT_FLAG_KEYS := ["music_loot_open", "fork_loot_open"]
 const DoorwayScript: Script = preload("res://scripts/systems/doorway.gd")
 const DOORWAY_POS := Vector2(440.0, 560.0)
 
+const DialogBoxScript: Script = preload("res://scripts/ui/dialog_box.gd")
+const DialogTreeScript: Script = preload("res://scripts/systems/dialog_tree.gd")
+
+const HIERONYMUS_COLOR := Color(0.44, 0.39, 0.35)
+const HIERONYMUS_POS := Vector2(280.0, 500.0)
+const HIERONYMUS_RADIUS: float = 64.0
+static var HIERONYMUS_INTRO_TREE: Dictionary = DialogTreeScript.from_pages([
+	"\"The guardian woke when I tried to fix the gear floor myself. I'm afraid I'm more theorist than fighter.\"",
+	"\"Quinn — the escapement on the gear floor needs your tools. Ben, the belfry bells want a pitch sequence; check my notes or the tuning fork up there.\""
+])
+static var HIERONYMUS_REMINDER_TREE: Dictionary = DialogTreeScript.from_pages([
+	"\"The gear mechanism and the belfry bells both need attention before the tower unlocks.\""
+])
+static var HIERONYMUS_AFTER_TREE: Dictionary = DialogTreeScript.from_pages([
+	"\"Remarkable. Thirty years I couldn't silence that guardian. You've done it in one visit.\""
+])
+
 # Multi-room layout bounding box  --  a vertical shaft of three stacked floors
 # (landing -> gear floor -> bell tower), connected by stairwell gaps. Feeds
 # the camera's pan limits  --  see CLAUDE.md "Doorways, camera-follow & multi-
@@ -65,6 +82,9 @@ var _gear_sprite: Sprite2D
 var _bell_sprite: Sprite2D
 var _loot_boxes: Array = []
 var _doorway = null
+var _hieronymus_sprite: AnimatedSprite2D
+var _dialog_box = null
+var _hieronymus_met: bool = false
 
 func _ready() -> void:
 	_build_floor()
@@ -78,6 +98,7 @@ func _ready() -> void:
 	_create_loot_boxes()
 	_create_hiding_spot()
 	_create_doorway()
+	_create_hieronymus_npc()
 	_setup_camera()
 	_restore_progress()
 	if not _cleared:
@@ -104,6 +125,7 @@ func _restore_progress() -> void:
 	_enemies_cleared = GameManager.get_level_flag(LOCATION_ID, "enemies_cleared", false)
 	_gear_repaired = GameManager.get_level_flag(LOCATION_ID, "gear_repaired", false)
 	_bells_played = GameManager.get_level_flag(LOCATION_ID, "bells_played", false)
+	_hieronymus_met = GameManager.get_level_flag(LOCATION_ID, "hieronymus_met", false)
 	if _gear_repaired:
 		_gear_sprite.modulate = Color(0.4, 1.0, 0.5)
 	if _bells_played:
@@ -183,6 +205,37 @@ func _create_doorway() -> void:
 	_doorway.setup(DOORWAY_POS)
 	add_child(_doorway)
 
+func _create_hieronymus_npc() -> void:
+	_hieronymus_sprite = AnimatedSprite2D.new()
+	var loaded: SpriteFrames = SpriteLoader.try_load_npc("hieronymus")
+	_hieronymus_sprite.sprite_frames = loaded if loaded != null else PlaceholderArt.make_player_frames(HIERONYMUS_COLOR, "")
+	_hieronymus_sprite.scale = Vector2(SpriteLoader.NPC_SPRITE_SCALE, SpriteLoader.NPC_SPRITE_SCALE) if loaded != null else Vector2.ONE
+	_hieronymus_sprite.play("idle")
+	_hieronymus_sprite.position = HIERONYMUS_POS
+	add_child(_hieronymus_sprite)
+	var dialog_layer := CanvasLayer.new()
+	dialog_layer.layer = 19
+	add_child(dialog_layer)
+	_dialog_box = DialogBoxScript.new()
+	dialog_layer.add_child(_dialog_box)
+	_dialog_box.closed.connect(_on_hieronymus_dialog_closed)
+
+func _talk_to_hieronymus() -> void:
+	var p: Player = GameManager.active_player
+	var tree: Dictionary
+	if _cleared:
+		tree = HIERONYMUS_AFTER_TREE
+	elif not _hieronymus_met:
+		tree = HIERONYMUS_INTRO_TREE
+	else:
+		tree = HIERONYMUS_REMINDER_TREE
+	_dialog_box.open("Hieronymus", HIERONYMUS_COLOR, tree, "start", p.data.character_name)
+
+func _on_hieronymus_dialog_closed(_effects: Array) -> void:
+	if not _hieronymus_met:
+		_hieronymus_met = true
+		GameManager.set_level_flag(LOCATION_ID, "hieronymus_met", true)
+
 func _spawn() -> void:
 	_add(GRUNT_SCENE, Vector2(340.0, 520.0))
 	_add(GRUNT_SCENE, Vector2(560.0, 260.0))
@@ -195,11 +248,16 @@ func _add(scene: PackedScene, pos: Vector2) -> void:
 	enemies.add_child(e)
 
 func _on_special_used(char_name: String) -> void:
+	if _dialog_box.is_open():
+		return
 	var p: Player = quinn if char_name == "Quinn" else ben
 	for i in _loot_boxes.size():
 		if _loot_boxes[i].try_open(char_name, p.global_position):
 			GameManager.set_level_flag(LOCATION_ID, LOOT_FLAG_KEYS[i], true)
 			return
+	if p.global_position.distance_to(HIERONYMUS_POS) < HIERONYMUS_RADIUS:
+		_talk_to_hieronymus()
+		return
 	if char_name == "Quinn" and not _gear_repaired:
 		if quinn.global_position.distance_to(GEAR_POS) < GEAR_RADIUS:
 			_gear_repaired = true
@@ -221,6 +279,18 @@ func _on_special_used(char_name: String) -> void:
 		Audio.play("special")
 
 func _process(_delta: float) -> void:
+	GameManager.set_dialog_active(_dialog_box.is_open())
+	if _dialog_box.is_open():
+		if _dialog_box.is_choice_mode():
+			if Input.is_action_just_pressed("move_up"):
+				_dialog_box.move_choice_cursor(-1)
+			elif Input.is_action_just_pressed("move_down"):
+				_dialog_box.move_choice_cursor(1)
+			elif Input.is_action_just_pressed("ui_accept") or Input.is_action_just_pressed("attack"):
+				_dialog_box.select_choice()
+		elif Input.is_action_just_pressed("ui_accept") or Input.is_action_just_pressed("attack"):
+			_dialog_box.advance()
+		return
 	if is_instance_valid(GameManager.active_player):
 		var active_pos: Vector2 = GameManager.active_player.global_position
 		camera.global_position = active_pos
@@ -257,17 +327,17 @@ func _update_hint() -> void:
 	if _cleared:
 		hint_label.text = ""
 	elif not _enemies_cleared:
-		hint_label.text = "The clockwork guardian holds the stairs, flanked by patrols  --  find a gap or clear a path and bring it down!"
+		hint_label.text = "Patrols guard the stairs — talk to Hieronymus, then clear a path  [ press G ]"
 	elif not _gear_repaired:
-		hint_label.text = "Quinn: repair the gear floor's mechanism  [ approach it, press G ]"
+		hint_label.text = "Quinn: repair the gear mechanism  [ approach it, press G ]"
 	elif not _bells_played:
 		var has_sequence: bool = GameManager.has_item("Ben", SheetMusicItem.id) or \
 			GameManager.has_item("Quinn", SheetMusicItem.id) or \
 			GameManager.has_item("Ben", TuningForkItem.id) or \
 			GameManager.has_item("Quinn", TuningForkItem.id)
 		if has_sequence:
-			hint_label.text = "Ben: climb to the belfry and play the pitch sequence  [ approach it, press G ]"
+			hint_label.text = "Ben: play the pitch sequence at the belfry  [ approach it, press G ]"
 		else:
-			hint_label.text = "Ben: the correct bell sequence is unknown  --  find the sheet music or tuning fork first"
+			hint_label.text = "Ben: find the sheet music or tuning fork to identify the bell sequence"
 	else:
 		hint_label.text = ""

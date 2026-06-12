@@ -32,6 +32,27 @@ const LOOT_FLAG_KEYS   := ["ticket_loot_open", "cable_loot_open"]
 # Doorway: the level's entrance/exit  --  see CLAUDE.md "Doorways, camera-follow
 # & multi-room levels". The duo spawns beside it in the lobby; walking away
 # and back exits to the overworld at any time, cleared or not.
+const DialogBoxScript: Script = preload("res://scripts/ui/dialog_box.gd")
+const DialogTreeScript: Script = preload("res://scripts/systems/dialog_tree.gd")
+
+const ETHAN_COLOR := Color(0.38, 0.52, 0.45)
+const ETHAN_POS := Vector2(580.0, 100.0)  # inside booth — same as old _ethan_prop
+const ETHAN_INTERACT_RADIUS: float = 120.0  # large enough to reach through the glass
+
+static var ETHAN_INTRO_TREE: Dictionary = DialogTreeScript.from_pages([
+	"\"Quinn! Ben! Can you hear me?! The soundboard is scrambled — every channel's inverted.\"",
+	"\"Ben, retune it from the console. The runners like to flank — don't let them split you up.\"",
+])
+static var ETHAN_CONSOLE_TREE: Dictionary = DialogTreeScript.from_pages([
+	"\"Ben — the console! Get to it. The door's locked from this side until it's fixed.\"",
+])
+static var ETHAN_FREE_TREE: Dictionary = DialogTreeScript.from_pages([
+	"\"Door's opening! I've been crouched under this mixing desk for two hours.\"",
+])
+static var ETHAN_CLEAR_TREE: Dictionary = DialogTreeScript.from_pages([
+	"\"Their whole setup was reversed on purpose. Someone knew what they were doing.\"",
+])
+
 const DoorwayScript: Script = preload("res://scripts/systems/doorway.gd")
 const DOORWAY_POS := Vector2(140.0, 340.0)
 
@@ -75,9 +96,11 @@ var _cleared: bool = false
 var _console_sprite: Sprite2D
 var _booth_door_shape: CollisionShape2D
 var _booth_door_sprite: Sprite2D
-var _ethan_prop: Sprite2D
+var _ethan_sprite: AnimatedSprite2D
 var _loot_boxes: Array = []
 var _doorway = null
+var _dialog_box = null
+var _ethan_met: bool = false
 
 func _ready() -> void:
 	_build_floor()
@@ -88,6 +111,7 @@ func _ready() -> void:
 	ben.special_used.connect(_on_special_used)
 	_create_console()
 	_create_booth_door()
+	_create_ethan_npc()
 	_create_loot_boxes()
 	_create_hiding_spot()
 	_create_doorway()
@@ -114,6 +138,7 @@ func _setup_camera() -> void:
 func _restore_progress() -> void:
 	_enemies_cleared = GameManager.get_level_flag(LOCATION_ID, "enemies_cleared", false)
 	_console_tuned = GameManager.get_level_flag(LOCATION_ID, "console_tuned", false)
+	_ethan_met = GameManager.get_level_flag(LOCATION_ID, "ethan_met", false)
 	if _console_tuned:
 		_console_sprite.modulate = Color(0.4, 1.0, 0.5)
 		_open_booth_door(false)
@@ -168,15 +193,12 @@ func _create_booth_door() -> void:
 	_booth_door_sprite = Sprite2D.new()
 	_booth_door_sprite.texture = PlaceholderArt.make_gate_texture(Color(0.30, 0.55, 0.65), 200, 16)
 	_booth_door.add_child(_booth_door_sprite)
-	_ethan_prop = Sprite2D.new()
-	_ethan_prop.texture = PlaceholderArt.make_gate_texture(Color(0.5, 0.45, 0.3), 32, 48)
-	_ethan_prop.position = ETHAN_PROP_POS
-	_ethan_prop.visible = _console_tuned
-	add_child(_ethan_prop)
+	# _ethan_sprite is set up by _create_ethan_npc() called after this
 
 func _open_booth_door(animate: bool) -> void:
 	_booth_door_shape.disabled = true
-	_ethan_prop.visible = true
+	if is_instance_valid(_ethan_sprite):
+		_ethan_sprite.visible = true
 	if animate:
 		var tween := create_tween()
 		tween.tween_property(_booth_door_sprite, "position", BOOTH_DOOR_SLIDE_OFFSET, 0.6)
@@ -218,12 +240,52 @@ func _add(scene: PackedScene, pos: Vector2) -> void:
 	e.position = pos
 	enemies.add_child(e)
 
+func _create_ethan_npc() -> void:
+	_ethan_sprite = AnimatedSprite2D.new()
+	var loaded: SpriteFrames = SpriteLoader.try_load_player("ethan")
+	_ethan_sprite.sprite_frames = loaded if loaded != null else PlaceholderArt.make_player_frames(ETHAN_COLOR, "")
+	_ethan_sprite.scale = Vector2(SpriteLoader.NPC_SPRITE_SCALE, SpriteLoader.NPC_SPRITE_SCALE) if loaded != null else Vector2.ONE
+	_ethan_sprite.play("idle")
+	_ethan_sprite.position = ETHAN_POS
+	_ethan_sprite.visible = _console_tuned
+	add_child(_ethan_sprite)
+	var dialog_layer := CanvasLayer.new()
+	dialog_layer.layer = 19
+	add_child(dialog_layer)
+	_dialog_box = DialogBoxScript.new()
+	dialog_layer.add_child(_dialog_box)
+	_dialog_box.closed.connect(_on_ethan_dialog_closed)
+
+func _talk_to_ethan(char_name: String) -> void:
+	var p: Player = quinn if char_name == "Quinn" else ben
+	var tree: Dictionary
+	if _cleared:
+		tree = ETHAN_CLEAR_TREE
+	elif _console_tuned:
+		tree = ETHAN_FREE_TREE
+	elif _enemies_cleared:
+		tree = ETHAN_CONSOLE_TREE
+	else:
+		tree = ETHAN_INTRO_TREE
+	Audio.play("ui_select")
+	_dialog_box.open("Ethan", ETHAN_COLOR, tree, "start", p.data.character_name)
+
+func _on_ethan_dialog_closed(_effects: Array) -> void:
+	if not _ethan_met:
+		_ethan_met = true
+		GameManager.set_level_flag(LOCATION_ID, "ethan_met", true)
+
 func _on_special_used(char_name: String) -> void:
+	if _dialog_box.is_open():
+		return
 	var p: Player = quinn if char_name == "Quinn" else ben
 	for i in _loot_boxes.size():
 		if _loot_boxes[i].try_open(char_name, p.global_position):
 			GameManager.set_level_flag(LOCATION_ID, LOOT_FLAG_KEYS[i], true)
 			return
+	if p.global_position.distance_to(ETHAN_POS) < ETHAN_INTERACT_RADIUS:
+		_talk_to_ethan(char_name)
+		return
 	if char_name == "Ben" and not _console_tuned:
 		if ben.global_position.distance_to(CONSOLE_POS) < CONSOLE_RADIUS:
 			_console_tuned = true
@@ -235,6 +297,18 @@ func _on_special_used(char_name: String) -> void:
 		Audio.play("special")
 
 func _process(_delta: float) -> void:
+	GameManager.set_dialog_active(_dialog_box.is_open())
+	if _dialog_box.is_open():
+		if _dialog_box.is_choice_mode():
+			if Input.is_action_just_pressed("move_up"):
+				_dialog_box.move_choice_cursor(-1)
+			elif Input.is_action_just_pressed("move_down"):
+				_dialog_box.move_choice_cursor(1)
+			elif Input.is_action_just_pressed("ui_accept"):
+				_dialog_box.select_choice()
+		elif Input.is_action_just_pressed("ui_accept"):
+			_dialog_box.advance()
+		return
 	if is_instance_valid(GameManager.active_player):
 		var active_pos: Vector2 = GameManager.active_player.global_position
 		camera.global_position = active_pos
@@ -270,9 +344,11 @@ func _exit_to_overworld() -> void:
 func _update_hint() -> void:
 	if _cleared:
 		hint_label.text = ""
+	elif not _ethan_met:
+		hint_label.text = "Ethan's in the booth — approach the glass and press G to reach him"
 	elif not _enemies_cleared:
-		hint_label.text = "The intruders are still patrolling, unaware  --  slip between their routes or take them down before they regroup"
+		hint_label.text = "Clear the room  [ runners flank — watch your angles ]"
 	elif not _console_tuned:
-		hint_label.text = "Ben: tune the soundboard by ear  --  it also runs the booth door  [ approach it, press G ]"
+		hint_label.text = "Ben: tune the soundboard  [ approach it, press G ]"
 	else:
 		hint_label.text = ""

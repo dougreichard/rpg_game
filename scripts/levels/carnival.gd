@@ -62,6 +62,43 @@ const DOUG_POSTER_POS := Vector2(670.0, 86.0)
 # Doorway: the level's entrance/exit  --  see CLAUDE.md "Doorways, camera-follow
 # & multi-room levels". The duo spawns beside it on the midway; walking away
 # and back exits to the overworld at any time, cleared or not.
+const DialogBoxScript: Script = preload("res://scripts/ui/dialog_box.gd")
+const DialogTreeScript: Script = preload("res://scripts/systems/dialog_tree.gd")
+
+const MARCO_COLOR := Color(0.72, 0.42, 0.18)
+
+const MARCO_INTRO_TREE: Dictionary = {
+	"start": {
+		"lines": ["\"Backstage is for performers only. You two don't look like performers.\""],
+		"choices": [
+			{"text": "\"We're totally in the show.\" (Erin fast-talks)", "best_with": "Erin",
+				"next": "erin_wins", "next_alt": "blunt_fail"},
+			{"text": "\"We need to get backstage. Now.\"", "next": "blunt_fail"},
+		]
+	},
+	"erin_wins": {
+		"lines": [
+			"Erin: \"Look, I'm totally in the show — Quinn here is my roadie.\"",
+			"Marco squints... then his shoulders drop. \"...Roadie. Sure. Don't touch the rigging.\"",
+		],
+		"effects": {"set_flag": "marco_impression", "flag_value": "backstage_open"}
+	},
+	"blunt_fail": {
+		"lines": [
+			"Marco crosses his arms. \"Come back with credentials. Both of you.\"",
+			"He's not moving. Erin would have to do the talking.",
+		],
+		"effects": {"set_flag": "marco_impression", "flag_value": "talked"}
+	}
+}
+
+static var MARCO_AFTER_TREE: Dictionary = DialogTreeScript.from_pages([
+	"\"All right, you're professionals. You can stay.\"",
+])
+static var MARCO_CLEAR_TREE: Dictionary = DialogTreeScript.from_pages([
+	"\"Whatever that poster means to you, I hope you find him.\"",
+])
+
 const DoorwayScript: Script = preload("res://scripts/systems/doorway.gd")
 const DOORWAY_POS := Vector2(140.0, 340.0)
 
@@ -95,6 +132,7 @@ var _guard_sprite: AnimatedSprite2D
 var _doug_poster: Sprite2D
 var _loot_boxes: Array = []
 var _doorway = null
+var _dialog_box = null
 var _guinea_pig_cooldown_timer: float = 0.0
 
 var _cd_scale: float = 1.0
@@ -211,6 +249,12 @@ func _create_backstage_gate() -> void:
 	_doug_poster.texture = PlaceholderArt.make_gate_texture(DOUG_POSTER_COLOR, 32, 40)
 	_doug_poster.position = DOUG_POSTER_POS
 	add_child(_doug_poster)
+	var dialog_layer := CanvasLayer.new()
+	dialog_layer.layer = 19
+	add_child(dialog_layer)
+	_dialog_box = DialogBoxScript.new()
+	dialog_layer.add_child(_dialog_box)
+	_dialog_box.closed.connect(_on_marco_dialog_closed)
 
 func _raise_curtain(animate: bool) -> void:
 	_gate_shape.disabled = true
@@ -227,7 +271,6 @@ func _raise_curtain(animate: bool) -> void:
 		_gate_sprite.scale = BACKSTAGE_GATE_SCALE_TARGET
 		if is_instance_valid(_guard_sprite):
 			_guard_sprite.position.x = BACKSTAGE_POS.x + 80.0
-			_guard_sprite.modulate.a = 0.0
 
 # Stealth: a shadowed alcove the duo can duck into to let a patrol pass
 # rather than fight through it  --  see CLAUDE.md "Stealth & awareness".
@@ -268,32 +311,53 @@ func _add(scene: PackedScene, pos: Vector2) -> void:
 	e.position = pos
 	enemies.add_child(e)
 
+func _talk_to_marco(char_name: String) -> void:
+	var p: Player = quinn if char_name == "Quinn" else erin
+	var tree: Dictionary
+	if _cleared:
+		tree = MARCO_CLEAR_TREE
+	elif _backstage_talked:
+		tree = MARCO_AFTER_TREE
+	else:
+		tree = MARCO_INTRO_TREE
+	Audio.play("ui_select")
+	_dialog_box.open("Marco", MARCO_COLOR, tree, "start", p.data.character_name)
+
+func _on_marco_dialog_closed(effects: Array) -> void:
+	for fx: Dictionary in effects:
+		if fx.has("set_flag"):
+			GameManager.set_level_flag(LOCATION_ID, fx["set_flag"], fx.get("flag_value", true))
+	if GameManager.get_level_flag(LOCATION_ID, "marco_impression", "") == "backstage_open" and not _backstage_talked:
+		_backstage_talked = true
+		_raise_curtain(true)
+		Audio.play("special")
+		GameManager.set_level_flag(LOCATION_ID, "backstage_talked", true)
+
 func _on_special_used(char_name: String) -> void:
+	if _dialog_box.is_open():
+		return
 	var p: Player = quinn if char_name == "Quinn" else erin
 	for i in _loot_boxes.size():
 		if _loot_boxes[i].try_open(char_name, p.global_position):
 			GameManager.set_level_flag(LOCATION_ID, LOOT_FLAG_KEYS[i], true)
 			return
-	if char_name == "Quinn":
-		if not _ride_repaired and quinn.global_position.distance_to(RIDE_POS) < RIDE_RADIUS:
-			_ride_repaired = true
-			_ride_sprite.modulate = Color(0.4, 1.0, 0.5)
-			Audio.play("special")
-			GameManager.set_level_flag(LOCATION_ID, "ride_repaired", true)
-		elif not _backstage_talked and quinn.global_position.distance_to(BACKSTAGE_POS) < BACKSTAGE_RADIUS:
-			if GameManager.has_item("Quinn", BackstagePassItem.id) or GameManager.has_item("Erin", BackstagePassItem.id):
-				_backstage_talked = true
-				_raise_curtain(true)
-				Audio.play("special")
-				GameManager.set_level_flag(LOCATION_ID, "backstage_talked", true)
-	elif char_name == "Erin":
-		if not _backstage_talked and erin.global_position.distance_to(BACKSTAGE_POS) < BACKSTAGE_RADIUS:
+	if char_name == "Quinn" and not _ride_repaired and quinn.global_position.distance_to(RIDE_POS) < RIDE_RADIUS:
+		_ride_repaired = true
+		_ride_sprite.modulate = Color(0.4, 1.0, 0.5)
+		Audio.play("special")
+		GameManager.set_level_flag(LOCATION_ID, "ride_repaired", true)
+		return
+	if p.global_position.distance_to(BACKSTAGE_POS) < BACKSTAGE_RADIUS:
+		if not _backstage_talked and (GameManager.has_item("Quinn", BackstagePassItem.id) or GameManager.has_item("Erin", BackstagePassItem.id)):
 			_backstage_talked = true
 			_raise_curtain(true)
 			Audio.play("special")
 			GameManager.set_level_flag(LOCATION_ID, "backstage_talked", true)
-		elif _guinea_pig_cooldown_timer == 0.0:
-			_summon_guinea_pigs()
+		else:
+			_talk_to_marco(char_name)
+		return
+	if char_name == "Erin" and _guinea_pig_cooldown_timer == 0.0:
+		_summon_guinea_pigs()
 	elif GameManager.try_use_whistle():
 		Audio.play("special")
 
@@ -305,6 +369,18 @@ func _summon_guinea_pigs() -> void:
 
 func _process(delta: float) -> void:
 	_guinea_pig_cooldown_timer = maxf(_guinea_pig_cooldown_timer - delta, 0.0)
+	GameManager.set_dialog_active(_dialog_box.is_open())
+	if _dialog_box.is_open():
+		if _dialog_box.is_choice_mode():
+			if Input.is_action_just_pressed("move_up"):
+				_dialog_box.move_choice_cursor(-1)
+			elif Input.is_action_just_pressed("move_down"):
+				_dialog_box.move_choice_cursor(1)
+			elif Input.is_action_just_pressed("ui_accept"):
+				_dialog_box.select_choice()
+		elif Input.is_action_just_pressed("ui_accept"):
+			_dialog_box.advance()
+		return
 	if is_instance_valid(GameManager.active_player):
 		var active_pos: Vector2 = GameManager.active_player.global_position
 		camera.global_position = active_pos
@@ -341,10 +417,10 @@ func _update_hint() -> void:
 	if _cleared:
 		hint_label.text = ""
 	elif not _enemies_cleared:
-		hint_label.text = "The carnies haven't noticed you yet  --  work the midway quietly  [ Erin: press G to release the guinea pigs and flood the midway with chaos ]"
+		hint_label.text = "Talk to Marco at the curtain for help  [ Erin: G to flood the midway with guinea pigs ]"
 	elif not _ride_repaired:
 		hint_label.text = "Quinn: repair the broken ride  [ approach it, press G ]"
 	elif not _backstage_talked:
-		hint_label.text = "Erin: talk your way past the curtain guard into the backstage  [ approach it, press G ]"
+		hint_label.text = "Talk to Marco at the backstage curtain  [ approach, press G ]"
 	else:
 		hint_label.text = ""

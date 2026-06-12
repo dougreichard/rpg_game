@@ -53,6 +53,40 @@ const LOOT_FLAG_KEYS  := ["card_loot_open", "key_loot_open"]
 # Doorway: the level's entrance/exit  --  see CLAUDE.md "Doorways, camera-follow
 # & multi-room levels". The duo spawns beside it in the reading room; walking
 # away and back exits to the overworld at any time, cleared or not.
+const DialogBoxScript: Script = preload("res://scripts/ui/dialog_box.gd")
+const DialogTreeScript: Script = preload("res://scripts/systems/dialog_tree.gd")
+
+const PRISWICK_COLOR := Color(0.42, 0.50, 0.62)
+
+const PRISWICK_INTRO_TREE: Dictionary = {
+	"start": {
+		"lines": ["\"The Restricted Stacks are closed. Valid library card required.\""],
+		"choices": [
+			{"text": "\"Academic research on local history.\" (Erin fast-talks)", "best_with": "Erin",
+				"next": "erin_wins", "next_alt": "need_card"},
+			{"text": "\"We need access to the sealed records.\"", "next": "need_card"},
+		]
+	},
+	"erin_wins": {
+		"lines": [
+			"Erin: \"Hi — we're doing research on local history. Completely academic.\"",
+			"Ms. Priswick studies her clipboard. \"...Academic. Yes. The terminal is at the back. Be quiet.\"",
+		],
+		"effects": {"set_flag": "priswick_impression", "flag_value": "stepped_aside"}
+	},
+	"need_card": {
+		"lines": [
+			"\"A valid library card is required. No exceptions.\"",
+			"Perhaps look around the reading room first.",
+		],
+		"effects": {"set_flag": "priswick_impression", "flag_value": "blocked"}
+	}
+}
+
+static var PRISWICK_AFTER_TREE: Dictionary = DialogTreeScript.from_pages([
+	"\"I see you found what you needed. Please don't disturb the periodicals.\"",
+])
+
 const DoorwayScript: Script = preload("res://scripts/systems/doorway.gd")
 const DOORWAY_POS := Vector2(120.0, 340.0)
 
@@ -85,6 +119,7 @@ var _terminal_sprite: Sprite2D
 var _librarian_sprite: AnimatedSprite2D
 var _loot_boxes: Array = []
 var _doorway = null
+var _dialog_box = null
 var _guinea_pig_cooldown_timer: float = 0.0
 
 var _cd_scale: float = 1.0
@@ -186,6 +221,12 @@ func _create_librarian_desk() -> void:
 	_librarian_sprite.play("idle")
 	_librarian_sprite.position = LIBRARIAN_POS + Vector2(0.0, -16.0)  # just above desk
 	add_child(_librarian_sprite)
+	var dialog_layer := CanvasLayer.new()
+	dialog_layer.layer = 19
+	add_child(dialog_layer)
+	_dialog_box = DialogBoxScript.new()
+	dialog_layer.add_child(_dialog_box)
+	_dialog_box.closed.connect(_on_priswick_dialog_closed)
 
 func _step_aside_librarian(animate: bool) -> void:
 	_desk_shape.disabled = true
@@ -202,7 +243,6 @@ func _step_aside_librarian(animate: bool) -> void:
 		_desk_sprite.modulate.a = 0.0
 		if is_instance_valid(_librarian_sprite):
 			_librarian_sprite.position.x = LIBRARIAN_POS.x + 80.0
-			_librarian_sprite.modulate.a = 0.0
 
 func _create_terminal() -> void:
 	_terminal_sprite = Sprite2D.new()
@@ -243,33 +283,47 @@ func _add(scene: PackedScene, pos: Vector2) -> void:
 	e.position = pos
 	enemies.add_child(e)
 
+func _talk_to_priswick(char_name: String) -> void:
+	var p: Player = erin if char_name == "Erin" else ethan
+	var tree: Dictionary = PRISWICK_AFTER_TREE if _librarian_talked else PRISWICK_INTRO_TREE
+	Audio.play("ui_select")
+	_dialog_box.open("Ms. Priswick", PRISWICK_COLOR, tree, "start", p.data.character_name)
+
+func _on_priswick_dialog_closed(effects: Array) -> void:
+	for fx: Dictionary in effects:
+		if fx.has("set_flag"):
+			GameManager.set_level_flag(LOCATION_ID, fx["set_flag"], fx.get("flag_value", true))
+	if GameManager.get_level_flag(LOCATION_ID, "priswick_impression", "") == "stepped_aside" and not _librarian_talked:
+		_librarian_talked = true
+		_step_aside_librarian(true)
+		Audio.play("special")
+		GameManager.set_level_flag(LOCATION_ID, "librarian_talked", true)
+
 func _on_special_used(char_name: String) -> void:
+	if _dialog_box.is_open():
+		return
 	var p: Player = erin if char_name == "Erin" else ethan
 	for i in _loot_boxes.size():
 		if _loot_boxes[i].try_open(char_name, p.global_position):
 			GameManager.set_level_flag(LOCATION_ID, LOOT_FLAG_KEYS[i], true)
 			return
-	if char_name == "Erin":
-		if not _librarian_talked and erin.global_position.distance_to(LIBRARIAN_POS) < LIBRARIAN_RADIUS:
+	if char_name == "Ethan" and not _archive_hacked and ethan.global_position.distance_to(TERMINAL_POS) < TERMINAL_RADIUS:
+		_archive_hacked = true
+		_terminal_sprite.modulate = Color(0.4, 1.0, 0.5)
+		Audio.play("special")
+		GameManager.set_level_flag(LOCATION_ID, "archive_hacked", true)
+		return
+	if p.global_position.distance_to(LIBRARIAN_POS) < LIBRARIAN_RADIUS:
+		if not _librarian_talked and (GameManager.has_item("Erin", LibraryCardItem.id) or GameManager.has_item("Ethan", LibraryCardItem.id)):
 			_librarian_talked = true
 			_step_aside_librarian(true)
 			Audio.play("special")
 			GameManager.set_level_flag(LOCATION_ID, "librarian_talked", true)
-		elif _guinea_pig_cooldown_timer == 0.0:
-			_summon_guinea_pigs()
-	elif char_name == "Ethan" and not _librarian_talked:
-		if ethan.global_position.distance_to(LIBRARIAN_POS) < LIBRARIAN_RADIUS:
-			if GameManager.has_item("Erin", LibraryCardItem.id) or GameManager.has_item("Ethan", LibraryCardItem.id):
-				_librarian_talked = true
-				_step_aside_librarian(true)
-				Audio.play("special")
-				GameManager.set_level_flag(LOCATION_ID, "librarian_talked", true)
-	elif char_name == "Ethan" and not _archive_hacked:
-		if ethan.global_position.distance_to(TERMINAL_POS) < TERMINAL_RADIUS:
-			_archive_hacked = true
-			_terminal_sprite.modulate = Color(0.4, 1.0, 0.5)
-			Audio.play("special")
-			GameManager.set_level_flag(LOCATION_ID, "archive_hacked", true)
+		else:
+			_talk_to_priswick(char_name)
+		return
+	if char_name == "Erin" and _guinea_pig_cooldown_timer == 0.0:
+		_summon_guinea_pigs()
 	elif GameManager.try_use_whistle():
 		Audio.play("special")
 
@@ -281,6 +335,18 @@ func _summon_guinea_pigs() -> void:
 
 func _process(delta: float) -> void:
 	_guinea_pig_cooldown_timer = maxf(_guinea_pig_cooldown_timer - delta, 0.0)
+	GameManager.set_dialog_active(_dialog_box.is_open())
+	if _dialog_box.is_open():
+		if _dialog_box.is_choice_mode():
+			if Input.is_action_just_pressed("move_up"):
+				_dialog_box.move_choice_cursor(-1)
+			elif Input.is_action_just_pressed("move_down"):
+				_dialog_box.move_choice_cursor(1)
+			elif Input.is_action_just_pressed("ui_accept"):
+				_dialog_box.select_choice()
+		elif Input.is_action_just_pressed("ui_accept"):
+			_dialog_box.advance()
+		return
 	if is_instance_valid(GameManager.active_player):
 		var active_pos: Vector2 = GameManager.active_player.global_position
 		camera.global_position = active_pos
@@ -317,9 +383,9 @@ func _update_hint() -> void:
 	if _cleared:
 		hint_label.text = ""
 	elif not _enemies_cleared:
-		hint_label.text = "Quiet but dangerous  --  read their patrol routes, duck into shadow  [ Erin: press G to release the guinea pigs  --  they'll flood the room and draw every guard's attention ]"
+		hint_label.text = "Talk to Ms. Priswick at the desk for help  [ Erin: G to release guinea pigs ]"
 	elif not _librarian_talked:
-		hint_label.text = "Erin: talk your way past the librarian's desk to reach the Restricted Stacks  [ approach it, press G ]"
+		hint_label.text = "Talk to Ms. Priswick at the desk  [ approach, press G ]"
 	elif not _archive_hacked:
 		hint_label.text = "Ethan: hack the sealed archive terminal  [ approach it, press G ]"
 	else:

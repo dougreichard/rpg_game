@@ -43,6 +43,74 @@ const TicketEthanItem: ItemData = preload("res://data/items/ticket_ethan.tres")
 # back exits at any time, cleared or not  --  see _exit_to_overworld for this
 # finale location's destination branch (cleared -> ResultScreen, the endgame
 # trigger; not yet cleared -> OverworldMap, the standard early-exit path).
+const DialogBoxScript: Script = preload("res://scripts/ui/dialog_box.gd")
+const DialogTreeScript: Script = preload("res://scripts/systems/dialog_tree.gd")
+
+const UNCLE_DOUG_COLOR := Color(0.70, 0.63, 0.48)
+const UNCLE_DOUG_POS := Vector2(160.0, 260.0)  # PROJECTOR_POS + Vector2(48, 0)
+const UNCLE_DOUG_RADIUS: float = 72.0
+
+const UNCLE_DOUG_MEET_TREE: Dictionary = {
+	"start": {
+		"lines": ["\"I knew you'd find me. Took you long enough — I've been running this projector for three days.\""],
+		"choices": [
+			{"text": "\"What happened to you?\"", "next": "what_happened"},
+			{"text": "\"We need to go. Now.\"", "next": "farewell"},
+		]
+	},
+	"what_happened": {
+		"lines": [
+			"\"The Consortium locked me in here. They didn't want anyone to see what's on that reel.\"",
+			"\"There's evidence of everything they've been doing. All of it. Right here.\"",
+		],
+		"next": "farewell"
+	},
+	"farewell": {
+		"lines": ["\"Let's get out of here before they send more. I'll explain everything on the way.\""],
+		"effects": {"set_flag": "doug_talked", "flag_value": true}
+	}
+}
+
+const USHER_COLOR := Color(0.73, 0.11, 0.14)
+const USHER_POS := Vector2(480.0, 420.0)
+const USHER_RADIUS: float = 64.0
+
+const USHER_INTRO_TREE: Dictionary = {
+	"start": {
+		"lines": [
+			"\"Welcome to the Grand Marquee. I'm Cecil — chief usher.\" He sweeps his torch toward the lobby.",
+			"\"Rough night for a visit. Something's very wrong backstage.\""
+		],
+		"choices": [
+			{"text": "\"What's blocking the backstage?\"",       "next": "guardian_hint"},
+			{"text": "\"Is the projection booth still open?\"", "next": "booth_hint"},
+		]
+	},
+	"guardian_hint": {
+		"lines": [
+			"\"Machinery's gone haywire in the aisle. Whatever it is, it's been stopping everyone from getting through.\"",
+			"\"Clear that and the whole theatre's yours.\""
+		],
+		"effects": {"set_flag": "usher_met", "flag_value": true}
+	},
+	"booth_hint": {
+		"lines": [
+			"\"West corridor, up the stairs. Projector's untouched — whoever was running it cleared out in a hurry.\"",
+			"\"Equipment's still in there if you need it.\""
+		],
+		"effects": {"set_flag": "usher_met", "flag_value": true}
+	}
+}
+
+static var USHER_REMINDER_TREE: Dictionary = DialogTreeScript.from_pages([
+	"\"Still out here. The backstage won't be safe until you clear that aisle — whatever's in there isn't friendly.\""
+])
+
+static var USHER_CLEARED_TREE: Dictionary = DialogTreeScript.from_pages([
+	"\"Quite a performance.\" Cecil straightens his pillbox hat.",
+	"\"West corridor for the booth, if you still need it. I hope you find whoever you're looking for.\""
+])
+
 const DoorwayScript: Script = preload("res://scripts/systems/doorway.gd")
 const DOORWAY_POS := Vector2(400.0, 490.0)
 
@@ -84,6 +152,10 @@ var _organ_sprite: Sprite2D
 var _uncle_doug_sprite: AnimatedSprite2D
 var _loot_boxes: Array = []
 var _doorway = null
+var _dialog_box = null
+var _doug_talked: bool = false
+var _usher_sprite: AnimatedSprite2D
+var _usher_met: bool = false
 
 func _ready() -> void:
 	_build_floor()
@@ -93,6 +165,7 @@ func _ready() -> void:
 	quinn.special_used.connect(_on_special_used)
 	ben.special_used.connect(_on_special_used)
 	_create_projector()
+	_create_usher_npc()
 	_create_organ()
 	_create_loot_boxes()
 	_create_hiding_spot()
@@ -129,15 +202,20 @@ func _restore_progress() -> void:
 		_spawned = true
 	else:
 		_spawn()
+	_doug_talked = GameManager.get_level_flag(LOCATION_ID, "doug_talked", false)
+	_usher_met = GameManager.get_level_flag(LOCATION_ID, "usher_met", false)
 	if _enemies_cleared and _projector_repaired and _organ_played and _has_all_tickets():
 		_cleared = true
 		hint_label.text = ""
-		clear_label.text = "THE FINAL REEL!\n\nThe house lights rise  --  and there, in the\nprojection booth, stands Uncle Doug.\n\nPress ENTER to continue"
-		clear_label.visible = true
 		if is_instance_valid(_uncle_doug_sprite):
 			_uncle_doug_sprite.visible = true
 			if _uncle_doug_sprite.sprite_frames.has_animation("wave"):
 				_uncle_doug_sprite.play("wave")
+		if _doug_talked:
+			clear_label.text = "THE FINAL REEL!\n\nThe house lights rise  --  and there, in the\nprojection booth, stands Uncle Doug.\n\nPress ENTER to continue"
+			clear_label.visible = true
+		else:
+			hint_label.text = "Talk to Uncle Doug in the projection booth  [ approach, press G ]"
 
 # Tile-mapped retro floor (Zelda-style two-tone grid), generated at runtime
 # via PlaceholderArt to keep the original-IP guarantee  --  no imported tile art.
@@ -186,6 +264,12 @@ func _create_projector() -> void:
 	_uncle_doug_sprite.position = PROJECTOR_POS + Vector2(48.0, 0.0)
 	_uncle_doug_sprite.visible = false
 	add_child(_uncle_doug_sprite)
+	var dialog_layer := CanvasLayer.new()
+	dialog_layer.layer = 19
+	add_child(dialog_layer)
+	_dialog_box = DialogBoxScript.new()
+	dialog_layer.add_child(_dialog_box)
+	_dialog_box.closed.connect(_on_dialog_closed)
 
 func _create_organ() -> void:
 	_organ_sprite = Sprite2D.new()
@@ -240,12 +324,57 @@ func _add(scene: PackedScene, pos: Vector2) -> void:
 	e.position = pos
 	enemies.add_child(e)
 
+func _create_usher_npc() -> void:
+	_usher_sprite = AnimatedSprite2D.new()
+	var loaded: SpriteFrames = SpriteLoader.try_load_npc("usher")
+	_usher_sprite.sprite_frames = loaded if loaded != null else PlaceholderArt.make_player_frames(USHER_COLOR, "")
+	_usher_sprite.scale = Vector2(SpriteLoader.NPC_SPRITE_SCALE, SpriteLoader.NPC_SPRITE_SCALE) if loaded != null else Vector2.ONE
+	_usher_sprite.play("idle")
+	_usher_sprite.position = USHER_POS
+	add_child(_usher_sprite)
+
+func _talk_to_usher(char_name: String) -> void:
+	Audio.play("ui_select")
+	var tree: Dictionary
+	if _cleared:
+		tree = USHER_CLEARED_TREE
+	elif not _usher_met:
+		tree = USHER_INTRO_TREE
+	else:
+		tree = USHER_REMINDER_TREE
+	_dialog_box.open("Cecil", USHER_COLOR, tree, "start", char_name)
+
+func _talk_to_uncle_doug(char_name: String) -> void:
+	var p: Player = quinn if char_name == "Quinn" else ben
+	Audio.play("ui_select")
+	_dialog_box.open("Uncle Doug", UNCLE_DOUG_COLOR, UNCLE_DOUG_MEET_TREE, "start", p.data.character_name)
+
+func _on_dialog_closed(effects: Array) -> void:
+	for fx: Dictionary in effects:
+		if fx.has("set_flag"):
+			GameManager.set_level_flag(LOCATION_ID, fx["set_flag"], fx.get("flag_value", true))
+	if GameManager.get_level_flag(LOCATION_ID, "usher_met", false) and not _usher_met:
+		_usher_met = true
+	if GameManager.get_level_flag(LOCATION_ID, "doug_talked", false) and not _doug_talked:
+		_doug_talked = true
+		hint_label.text = ""
+		clear_label.text = "THE FINAL REEL!\n\nThe house lights rise  --  and there, in the\nprojection booth, stands Uncle Doug.\n\nPress ENTER to continue"
+		clear_label.visible = true
+
 func _on_special_used(char_name: String) -> void:
+	if _dialog_box.is_open():
+		return
 	var p: Player = quinn if char_name == "Quinn" else ben
 	for i in _loot_boxes.size():
 		if _loot_boxes[i].try_open(char_name, p.global_position):
 			GameManager.set_level_flag(LOCATION_ID, LOOT_FLAG_KEYS[i], true)
 			return
+	if p.global_position.distance_to(USHER_POS) < USHER_RADIUS:
+		_talk_to_usher(char_name)
+		return
+	if _cleared and not _doug_talked and p.global_position.distance_to(UNCLE_DOUG_POS) < UNCLE_DOUG_RADIUS:
+		_talk_to_uncle_doug(char_name)
+		return
 	if char_name == "Quinn" and not _projector_repaired:
 		if quinn.global_position.distance_to(PROJECTOR_POS) < PROJECTOR_RADIUS:
 			if GameManager.has_item("Quinn", FilmReelItem.id) or GameManager.has_item("Ben", FilmReelItem.id):
@@ -263,6 +392,18 @@ func _on_special_used(char_name: String) -> void:
 		Audio.play("special")
 
 func _process(_delta: float) -> void:
+	GameManager.set_dialog_active(_dialog_box.is_open())
+	if _dialog_box.is_open():
+		if _dialog_box.is_choice_mode():
+			if Input.is_action_just_pressed("move_up"):
+				_dialog_box.move_choice_cursor(-1)
+			elif Input.is_action_just_pressed("move_down"):
+				_dialog_box.move_choice_cursor(1)
+			elif Input.is_action_just_pressed("ui_accept"):
+				_dialog_box.select_choice()
+		elif Input.is_action_just_pressed("ui_accept"):
+			_dialog_box.advance()
+		return
 	_update_hint()
 	if is_instance_valid(GameManager.active_player):
 		var active_pos: Vector2 = GameManager.active_player.global_position
@@ -277,14 +418,12 @@ func _process(_delta: float) -> void:
 		_cleared = true
 		Audio.play("puzzle_complete")
 		Audio.play_music("victory")
-		hint_label.text = ""
-		clear_label.text = "THE FINAL REEL!\n\nThe house lights rise  --  and there, in the\nprojection booth, stands Uncle Doug.\n\nPress ENTER to continue"
-		clear_label.visible = true
+		hint_label.text = "Talk to Uncle Doug in the projection booth  [ approach, press G ]"
 		if is_instance_valid(_uncle_doug_sprite):
 			_uncle_doug_sprite.visible = true
 			if _uncle_doug_sprite.sprite_frames.has_animation("wave"):
 				_uncle_doug_sprite.play("wave")
-	if _cleared and Input.is_action_just_pressed("ui_accept"):
+	if _cleared and _doug_talked and Input.is_action_just_pressed("ui_accept"):
 		GameManager.complete_location(LOCATION_ID)
 		TransitionManager.change_scene("res://scenes/ui/ResultScreen.tscn")
 
@@ -305,7 +444,7 @@ func _exit_to_overworld() -> void:
 
 func _update_hint() -> void:
 	if _cleared:
-		hint_label.text = ""
+		return  # hint is managed by the clear/doug-talk flow; don't overwrite it
 	elif not _enemies_cleared:
 		hint_label.text = "A guardian holds the aisle, flanked by patrolling stagehands  --  find your opening and fight through!"
 	elif not _projector_repaired:

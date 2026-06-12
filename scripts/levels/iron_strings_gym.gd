@@ -36,6 +36,23 @@ const LOOT_FLAG_KEYS     := ["ticket_loot_open", "treat_loot_open"]
 # Doorway: the level's entrance/exit  --  see CLAUDE.md "Doorways, camera-follow
 # & multi-room levels". The duo spawns beside it in the locker room; walking
 # away and back exits to the overworld at any time, cleared or not.
+const DialogBoxScript: Script = preload("res://scripts/ui/dialog_box.gd")
+const DialogTreeScript: Script = preload("res://scripts/systems/dialog_tree.gd")
+
+const BEN_COLOR := Color(0.42, 0.60, 0.72)
+const BEN_POS := Vector2(700.0, 140.0)
+const BEN_INTERACT_RADIUS: float = 80.0
+
+static var BEN_INTRO_TREE: Dictionary = DialogTreeScript.from_pages([
+	"\"Hey! Over here! They grabbed me after the show — watch yourself, the big one telegraphs the left hook.\"",
+])
+static var BEN_AFTER_ENEMIES_TREE: Dictionary = DialogTreeScript.from_pages([
+	"\"Now shove that barbell rack, Evan — it's blocking the cage door. You've got this.\"",
+])
+static var BEN_FREE_TREE: Dictionary = DialogTreeScript.from_pages([
+	"\"Freedom! My fingers haven't touched keys in two days. Let's go — I have THOUGHTS.\"",
+])
+
 const DoorwayScript: Script = preload("res://scripts/systems/doorway.gd")
 const DOORWAY_POS := Vector2(140.0, 340.0)
 
@@ -76,6 +93,9 @@ var _barbell_shape: CollisionShape2D
 var _barbell_sprite: Sprite2D
 var _loot_boxes: Array = []
 var _doorway = null
+var _dialog_box = null
+var _ben_sprite: AnimatedSprite2D
+var _ben_met: bool = false
 var _frosty_cooldown_timer: float = 0.0
 
 var _cd_scale: float = 1.0
@@ -88,6 +108,7 @@ func _ready() -> void:
 	quinn.special_used.connect(_on_special_used)
 	evan.special_used.connect(_on_special_used)
 	_create_barbell()
+	_create_ben_npc()
 	_create_loot_boxes()
 	_create_hiding_spot()
 	_create_doorway()
@@ -114,6 +135,7 @@ func _setup_camera() -> void:
 func _restore_progress() -> void:
 	_enemies_cleared = GameManager.get_level_flag(LOCATION_ID, "enemies_cleared", false)
 	_barbell_moved = GameManager.get_level_flag(LOCATION_ID, "barbell_moved", false)
+	_ben_met = GameManager.get_level_flag(LOCATION_ID, "ben_met", false)
 	if _barbell_moved:
 		_move_barbell(false)
 	if _enemies_cleared:
@@ -203,12 +225,49 @@ func _add(scene: PackedScene, pos: Vector2) -> void:
 	e.position = pos
 	enemies.add_child(e)
 
+func _create_ben_npc() -> void:
+	_ben_sprite = AnimatedSprite2D.new()
+	var loaded: SpriteFrames = SpriteLoader.try_load_player("ben")
+	_ben_sprite.sprite_frames = loaded if loaded != null else PlaceholderArt.make_player_frames(BEN_COLOR, "")
+	_ben_sprite.scale = Vector2(SpriteLoader.NPC_SPRITE_SCALE, SpriteLoader.NPC_SPRITE_SCALE) if loaded != null else Vector2.ONE
+	_ben_sprite.play("idle")
+	_ben_sprite.position = BEN_POS
+	add_child(_ben_sprite)
+	var dialog_layer := CanvasLayer.new()
+	dialog_layer.layer = 19
+	add_child(dialog_layer)
+	_dialog_box = DialogBoxScript.new()
+	dialog_layer.add_child(_dialog_box)
+	_dialog_box.closed.connect(_on_ben_dialog_closed)
+
+func _talk_to_ben(char_name: String) -> void:
+	var p: Player = quinn if char_name == "Quinn" else evan
+	var tree: Dictionary
+	if _barbell_moved:
+		tree = BEN_FREE_TREE
+	elif _enemies_cleared:
+		tree = BEN_AFTER_ENEMIES_TREE
+	else:
+		tree = BEN_INTRO_TREE
+	Audio.play("ui_select")
+	_dialog_box.open("Ben", BEN_COLOR, tree, "start", p.data.character_name)
+
+func _on_ben_dialog_closed(_effects: Array) -> void:
+	if not _ben_met:
+		_ben_met = true
+		GameManager.set_level_flag(LOCATION_ID, "ben_met", true)
+
 func _on_special_used(char_name: String) -> void:
+	if _dialog_box.is_open():
+		return
 	var p: Player = quinn if char_name == "Quinn" else evan
 	for i in _loot_boxes.size():
 		if _loot_boxes[i].try_open(char_name, p.global_position):
 			GameManager.set_level_flag(LOCATION_ID, LOOT_FLAG_KEYS[i], true)
 			return
+	if p.global_position.distance_to(BEN_POS) < BEN_INTERACT_RADIUS:
+		_talk_to_ben(char_name)
+		return
 	if char_name == "Evan":
 		if not _barbell_moved and evan.global_position.distance_to(BARBELL_POS) < BARBELL_RADIUS:
 			_barbell_moved = true
@@ -242,6 +301,18 @@ func _nearest_enemy(from_pos: Vector2):
 
 func _process(delta: float) -> void:
 	_frosty_cooldown_timer = maxf(_frosty_cooldown_timer - delta, 0.0)
+	GameManager.set_dialog_active(_dialog_box.is_open())
+	if _dialog_box.is_open():
+		if _dialog_box.is_choice_mode():
+			if Input.is_action_just_pressed("move_up"):
+				_dialog_box.move_choice_cursor(-1)
+			elif Input.is_action_just_pressed("move_down"):
+				_dialog_box.move_choice_cursor(1)
+			elif Input.is_action_just_pressed("ui_accept"):
+				_dialog_box.select_choice()
+		elif Input.is_action_just_pressed("ui_accept"):
+			_dialog_box.advance()
+		return
 	if is_instance_valid(GameManager.active_player):
 		var active_pos: Vector2 = GameManager.active_player.global_position
 		camera.global_position = active_pos
@@ -277,8 +348,10 @@ func _exit_to_overworld() -> void:
 func _update_hint() -> void:
 	if _cleared:
 		hint_label.text = ""
+	elif not _ben_met:
+		hint_label.text = "Ben's in the cage alcove — go talk to him  [ approach, press G ]"
 	elif not _enemies_cleared:
-		hint_label.text = "The bruisers haven't clocked you yet  --  pick them off (Evan: press G to send Frosty charging), or slip past to free Ben first"
+		hint_label.text = "Clear the bruisers  [ Evan: G to send Frosty charging ]"
 	elif not _barbell_moved:
 		hint_label.text = "Evan: shove the barbell rack off Ben's cage doorway  [ approach it, press G ]"
 	else:

@@ -67,6 +67,23 @@ const PIP_FLASH_DURATION: float = 0.3
 # & multi-room levels". The duo spawns beside it in the south entry corridor;
 # walking away and back exits to the overworld at any time, cleared or not.
 const DoorwayScript: Script = preload("res://scripts/systems/doorway.gd")
+const DialogBoxScript: Script = preload("res://scripts/ui/dialog_box.gd")
+const DialogTreeScript: Script = preload("res://scripts/systems/dialog_tree.gd")
+
+const CYRUS_COLOR := Color(0.31, 0.39, 0.55)
+const CYRUS_POS := Vector2(350.0, 430.0)
+const CYRUS_RADIUS: float = 64.0
+static var CYRUS_INTRO_TREE: Dictionary = DialogTreeScript.from_pages([
+	"\"Cyrus — I maintain these tunnels. Or I did before the patrol showed up.\"",
+	"\"West passage has rubble Evan can force open. East side there's a locked hatch — Ethan will need a few passes at it. And grab the lantern from the junction first — it's dark in there.\""
+])
+static var CYRUS_REMINDER_TREE: Dictionary = DialogTreeScript.from_pages([
+	"\"West rubble needs Evan, east hatch needs Ethan's hacking passes — and keep that lantern close.\""
+])
+static var CYRUS_AFTER_TREE: Dictionary = DialogTreeScript.from_pages([
+	"\"Both passages clear. I'll get maintenance back in here properly now. Good work.\""
+])
+
 # Shortcut door  --  in the junction chamber, on the north wall. Opened once with
 # the rusty_key (consumed on use); exits to the overworld immediately without
 # needing to clear enemies or hack the hatch  --  the "hidden route" payoff the
@@ -118,6 +135,9 @@ var _fanny_loot_box = null
 var _fanny_revealed: bool = false
 var _darkness: Node2D = null
 var _doorway = null
+var _cyrus_sprite: AnimatedSprite2D
+var _dialog_box = null
+var _cyrus_met: bool = false
 
 var _hatch_progress: int = 0
 var _pip_flash: float = 0.0
@@ -141,6 +161,7 @@ func _ready() -> void:
 	_create_loot_boxes()
 	_create_hiding_spot()
 	_create_doorway()
+	_create_cyrus_npc()
 	_create_darkness_overlay()
 	_setup_camera()
 	_restore_progress()
@@ -169,6 +190,7 @@ func _restore_progress() -> void:
 	_rubble_cleared = GameManager.get_level_flag(LOCATION_ID, "rubble_cleared", false)
 	_hatch_hacked = GameManager.get_level_flag(LOCATION_ID, "hatch_hacked", false)
 	_hatch_progress = GameManager.get_level_flag(LOCATION_ID, "hatch_progress", 0)
+	_cyrus_met = GameManager.get_level_flag(LOCATION_ID, "cyrus_met", false)
 	# Security badge pre-fills the first hatch pip if either character holds one
 	# and no progress has been made yet  --  see CLAUDE.md "Collectibles & Inventory".
 	if not _hatch_hacked and _hatch_progress == 0:
@@ -305,6 +327,37 @@ func _create_doorway() -> void:
 	_doorway.setup(DOORWAY_POS)
 	add_child(_doorway)
 
+func _create_cyrus_npc() -> void:
+	_cyrus_sprite = AnimatedSprite2D.new()
+	var loaded: SpriteFrames = SpriteLoader.try_load_npc("cyrus")
+	_cyrus_sprite.sprite_frames = loaded if loaded != null else PlaceholderArt.make_player_frames(CYRUS_COLOR, "")
+	_cyrus_sprite.scale = Vector2(SpriteLoader.NPC_SPRITE_SCALE, SpriteLoader.NPC_SPRITE_SCALE) if loaded != null else Vector2.ONE
+	_cyrus_sprite.play("idle")
+	_cyrus_sprite.position = CYRUS_POS
+	add_child(_cyrus_sprite)
+	var dialog_layer := CanvasLayer.new()
+	dialog_layer.layer = 19
+	add_child(dialog_layer)
+	_dialog_box = DialogBoxScript.new()
+	dialog_layer.add_child(_dialog_box)
+	_dialog_box.closed.connect(_on_cyrus_dialog_closed)
+
+func _talk_to_cyrus() -> void:
+	var p: Player = GameManager.active_player
+	var tree: Dictionary
+	if _cleared:
+		tree = CYRUS_AFTER_TREE
+	elif not _cyrus_met:
+		tree = CYRUS_INTRO_TREE
+	else:
+		tree = CYRUS_REMINDER_TREE
+	_dialog_box.open("Cyrus", CYRUS_COLOR, tree, "start", p.data.character_name)
+
+func _on_cyrus_dialog_closed(_effects: Array) -> void:
+	if not _cyrus_met:
+		_cyrus_met = true
+		GameManager.set_level_flag(LOCATION_ID, "cyrus_met", true)
+
 # Returns true if either member of the active duo is holding the pocket lantern.
 func _has_lantern() -> bool:
 	return GameManager.has_item("Evan", PocketLanternItem.id) or \
@@ -365,7 +418,12 @@ func _add(scene: PackedScene, pos: Vector2) -> void:
 	enemies.add_child(e)
 
 func _on_special_used(char_name: String) -> void:
+	if _dialog_box.is_open():
+		return
 	var p: Player = evan if char_name == "Evan" else ethan
+	if p.global_position.distance_to(CYRUS_POS) < CYRUS_RADIUS:
+		_talk_to_cyrus()
+		return
 	# Always-visible loot boxes (pocket lantern).
 	for i in _loot_boxes.size():
 		if _loot_boxes[i].try_open(char_name, p.global_position):
@@ -429,6 +487,18 @@ func _process(delta: float) -> void:
 	_frosty_cooldown_timer = maxf(_frosty_cooldown_timer - delta, 0.0)
 	_guinea_pig_cooldown_timer = maxf(_guinea_pig_cooldown_timer - delta, 0.0)
 	queue_redraw()
+	GameManager.set_dialog_active(_dialog_box.is_open())
+	if _dialog_box.is_open():
+		if _dialog_box.is_choice_mode():
+			if Input.is_action_just_pressed("move_up"):
+				_dialog_box.move_choice_cursor(-1)
+			elif Input.is_action_just_pressed("move_down"):
+				_dialog_box.move_choice_cursor(1)
+			elif Input.is_action_just_pressed("ui_accept") or Input.is_action_just_pressed("attack"):
+				_dialog_box.select_choice()
+		elif Input.is_action_just_pressed("ui_accept") or Input.is_action_just_pressed("attack"):
+			_dialog_box.advance()
+		return
 	# Darkness overlay: update position and light state each frame.
 	if is_instance_valid(_darkness):
 		var lit: bool = _has_lantern()
@@ -494,14 +564,12 @@ func _update_hint() -> void:
 	if _cleared:
 		hint_label.text = ""
 	elif not _enemies_cleared:
-		hint_label.text = "Patrols haven't spotted you  --  sneak past or strike first  [ Evan: press G away from the rubble  --  sends Frosty charging at the nearest guard (enemies nearby) or Twinkle off barking to lure patrols away (no enemies in range) ]"
+		hint_label.text = "Patrols haven't spotted you — talk to Cyrus, then sneak past or strike  [ Evan: press G for Frosty or Twinkle ]"
 	elif not _has_lantern():
-		hint_label.text = "It's dark in here  --  find the pocket lantern in the junction chamber to light the way and reveal what's hidden in the tunnels"
-	elif not _dark_revealed:
-		hint_label.text = "The lantern illuminates the tunnels  --  check the crates in the west and east passages"
+		hint_label.text = "Find the pocket lantern in the junction chamber to light the tunnels"
 	elif not _rubble_cleared:
-		hint_label.text = "Evan: force the blocked passage open  --  west tunnel  [ approach the rubble, press G ]"
+		hint_label.text = "Evan: force the west passage open  [ approach rubble, press G ]"
 	elif not _hatch_hacked:
-		hint_label.text = "Ethan: the lock needs %d hacking passes  --  east tunnel, approach it and press G repeatedly (%d/%d so far)" % [HATCH_PRESSES_REQUIRED, _hatch_progress, HATCH_PRESSES_REQUIRED]
+		hint_label.text = "Ethan: hack the east hatch — %d/%d passes  [ approach it, press G ]" % [_hatch_progress, HATCH_PRESSES_REQUIRED]
 	else:
 		hint_label.text = ""

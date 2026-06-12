@@ -53,6 +53,23 @@ const LOOT_FLAG_KEYS  := ["foot_loot_open", "ticket_loot_open"]
 const DoorwayScript: Script = preload("res://scripts/systems/doorway.gd")
 const DOORWAY_POS := Vector2(160.0, 490.0)
 
+const DialogBoxScript: Script = preload("res://scripts/ui/dialog_box.gd")
+const DialogTreeScript: Script = preload("res://scripts/systems/dialog_tree.gd")
+
+const RIO_COLOR := Color(0.31, 0.39, 0.20)
+const RIO_POS := Vector2(500.0, 430.0)
+const RIO_RADIUS: float = 64.0
+static var RIO_INTRO_TREE: Dictionary = DialogTreeScript.from_pages([
+	"\"Rio. I was crew until I saw the manifest — I'm not their problem anymore.\"",
+	"\"Evan: that wreckage has to move before we get out. Ethan: the chute release jammed on impact — hack it in the snag grove north of here.\""
+])
+static var RIO_REMINDER_TREE: Dictionary = DialogTreeScript.from_pages([
+	"\"Evan clears the wreckage, Ethan hacks the jammed chute release — both needed.\""
+])
+static var RIO_AFTER_TREE: Dictionary = DialogTreeScript.from_pages([
+	"\"That's our way out. The marquee sign I saw before the drop — it had his name on it. Move.\""
+])
+
 # Multi-room layout bounding box  --  a literal AERIAL-DESCENT-TO-GROUND-PHASE
 # layout matching this location's two-phase spec ("a kinetic aerial descent,
 # then a standard brawler ground phase"): the duo touches down in a wide
@@ -93,6 +110,9 @@ var _william = null
 var _mary = null
 var _scout_pair_cooldown_timer: float = 0.0
 var _frosty_cooldown_timer: float = 0.0
+var _rio_sprite: AnimatedSprite2D
+var _dialog_box = null
+var _rio_met: bool = false
 
 var _cd_scale: float = 1.0
 func _ready() -> void:
@@ -108,6 +128,7 @@ func _ready() -> void:
 	_create_loot_boxes()
 	_create_hiding_spot()
 	_create_doorway()
+	_create_rio_npc()
 	_setup_camera()
 	_restore_progress()
 	if not _cleared:
@@ -133,6 +154,7 @@ func _restore_progress() -> void:
 	_enemies_cleared = GameManager.get_level_flag(LOCATION_ID, "enemies_cleared", false)
 	_chute_hacked = GameManager.get_level_flag(LOCATION_ID, "chute_hacked", false)
 	_landing_cleared = GameManager.get_level_flag(LOCATION_ID, "landing_cleared", false)
+	_rio_met = GameManager.get_level_flag(LOCATION_ID, "rio_met", false)
 	if _chute_hacked:
 		_chute_sprite.modulate = Color(0.4, 1.0, 0.5)
 	if _landing_cleared:
@@ -212,6 +234,37 @@ func _create_hiding_spot() -> void:
 	spot.position = HIDING_SPOT_POS
 	add_child(spot)
 
+func _create_rio_npc() -> void:
+	_rio_sprite = AnimatedSprite2D.new()
+	var loaded: SpriteFrames = SpriteLoader.try_load_npc("rio")
+	_rio_sprite.sprite_frames = loaded if loaded != null else PlaceholderArt.make_player_frames(RIO_COLOR, "")
+	_rio_sprite.scale = Vector2(SpriteLoader.NPC_SPRITE_SCALE, SpriteLoader.NPC_SPRITE_SCALE) if loaded != null else Vector2.ONE
+	_rio_sprite.play("idle")
+	_rio_sprite.position = RIO_POS
+	add_child(_rio_sprite)
+	var dialog_layer := CanvasLayer.new()
+	dialog_layer.layer = 19
+	add_child(dialog_layer)
+	_dialog_box = DialogBoxScript.new()
+	dialog_layer.add_child(_dialog_box)
+	_dialog_box.closed.connect(_on_rio_dialog_closed)
+
+func _talk_to_rio() -> void:
+	var p: Player = GameManager.active_player
+	var tree: Dictionary
+	if _cleared:
+		tree = RIO_AFTER_TREE
+	elif not _rio_met:
+		tree = RIO_INTRO_TREE
+	else:
+		tree = RIO_REMINDER_TREE
+	_dialog_box.open("Rio", RIO_COLOR, tree, "start", p.data.character_name)
+
+func _on_rio_dialog_closed(_effects: Array) -> void:
+	if not _rio_met:
+		_rio_met = true
+		GameManager.set_level_flag(LOCATION_ID, "rio_met", true)
+
 func _create_doorway() -> void:
 	_doorway = DoorwayScript.new()
 	_doorway.setup(DOORWAY_POS)
@@ -259,11 +312,16 @@ func _add(scene: PackedScene, pos: Vector2) -> void:
 	enemies.add_child(e)
 
 func _on_special_used(char_name: String) -> void:
+	if _dialog_box.is_open():
+		return
 	var p: Player = evan if char_name == "Evan" else ethan
 	for i in _loot_boxes.size():
 		if _loot_boxes[i].try_open(char_name, p.global_position):
 			GameManager.set_level_flag(LOCATION_ID, LOOT_FLAG_KEYS[i], true)
 			return
+	if p.global_position.distance_to(RIO_POS) < RIO_RADIUS:
+		_talk_to_rio()
+		return
 	if char_name == "Ethan" and not _chute_hacked:
 		if ethan.global_position.distance_to(CHUTE_POS) < CHUTE_RADIUS:
 			_chute_hacked = true
@@ -306,6 +364,18 @@ func _process(delta: float) -> void:
 	_scout_pair_cooldown_timer = maxf(_scout_pair_cooldown_timer - delta, 0.0)
 	_frosty_cooldown_timer = maxf(_frosty_cooldown_timer - delta, 0.0)
 	_check_scout_pair_holding()
+	GameManager.set_dialog_active(_dialog_box.is_open())
+	if _dialog_box.is_open():
+		if _dialog_box.is_choice_mode():
+			if Input.is_action_just_pressed("move_up"):
+				_dialog_box.move_choice_cursor(-1)
+			elif Input.is_action_just_pressed("move_down"):
+				_dialog_box.move_choice_cursor(1)
+			elif Input.is_action_just_pressed("ui_accept") or Input.is_action_just_pressed("attack"):
+				_dialog_box.select_choice()
+		elif Input.is_action_just_pressed("ui_accept") or Input.is_action_just_pressed("attack"):
+			_dialog_box.advance()
+		return
 	_update_hint()
 	if is_instance_valid(GameManager.active_player):
 		var active_pos: Vector2 = GameManager.active_player.global_position
@@ -342,10 +412,10 @@ func _update_hint() -> void:
 	if _cleared:
 		hint_label.text = ""
 	elif not _enemies_cleared:
-		hint_label.text = "The landing was rough but quiet  --  the ground crew hasn't spotted you  [ Evan: press G to send Frosty charging at the nearest guard ]"
+		hint_label.text = "Ground crew nearby — talk to Rio, then take them out  [ Evan: press G for Frosty ]"
 	elif not _landing_cleared:
-		hint_label.text = "Evan: clear the wreckage blocking the way out  [ approach it, press G  --  or press G elsewhere to send William & Mary to brace it from both sides ]"
+		hint_label.text = "Evan: clear the wreckage  [ approach it, press G — or press G elsewhere for William & Mary ]"
 	elif not _chute_hacked:
-		hint_label.text = "Ethan: in the snag grove, hack the jammed chute release  [ approach it, press G ]"
+		hint_label.text = "Ethan: hack the jammed chute release in the snag grove  [ approach it, press G ]"
 	else:
 		hint_label.text = ""

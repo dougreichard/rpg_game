@@ -83,11 +83,11 @@ shape = SubResource("8")
 [node name="Players" type="Node2D" parent="."]
 
 [node name="Quinn" parent="Players" instance=ExtResource("2")]
-position = Vector2(420.0, 570.0)
+position = Vector2(425.0, 485.0)
 data = ExtResource("3")
 
 [node name="Ben" parent="Players" instance=ExtResource("2")]
-position = Vector2(460.0, 570.0)
+position = Vector2(455.0, 485.0)
 data = ExtResource("4")
 
 [node name="Enemies" type="Node2D" parent="."]
@@ -102,7 +102,7 @@ visible = false
 offset_left = 390.0
 offset_top = 296.0
 offset_right = 890.0
-offset_bottom = 424.0
+offset_bottom = 456.0
 horizontal_alignment = 1
 vertical_alignment = 1
 theme_override_font_sizes/font_size = 16
@@ -114,6 +114,8 @@ layer = 15
 
 [node name="HintLabel" type="Label" parent="HintOverlay"]
 offset_left = 8.0
-offset_top = 676.0
+offset_top = 628.0
 offset_right = 1272.0
-offset_bottom = 716.0
+offset_bottom = 712.0
+autowrap_mode = 3
+theme_override_font_sizes/font_size = 14

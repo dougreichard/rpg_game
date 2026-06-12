@@ -111,6 +111,17 @@ const NPC_GATEKEEPER_ANIMS: Array = [
 	{name="talk_closeup", row=3, frames=6, fps=8.0,  loop=true},
 ]
 
+# Shared layout for level-interior NPCs generated via gen_*.py biped sheets:
+# Hieronymus (Clocktower), Viktor (Harbor), Cyrus (Underground),
+# Lena (Zip Line Park), ARIA (VR Escape Room), Rio (The Drop).
+const NPC_LEVEL_BIPED_ANIMS: Array = [
+	{name="idle",         row=0, frames=4, fps=6.0,  loop=true},
+	{name="idle_alt",     row=1, frames=6, fps=7.0,  loop=true},
+	{name="talk_closeup", row=2, frames=6, fps=8.0,  loop=true},
+	{name="gesture",      row=3, frames=6, fps=8.0,  loop=true},
+	{name="surprise",     row=4, frames=4, fps=10.0, loop=false},
+]
+
 # Animal companion sheets — 64x64 tiles, 0.5x scale (matches player/enemy/NPC convention).
 const COMPANION_TILE_SIZE: int = 64
 const COMPANION_SPRITE_SCALE: float = 0.5
@@ -245,6 +256,13 @@ static func _npc_anims(key: String) -> Array:
 		"uncle_doug":     return NPC_UNCLE_DOUG_ANIMS
 		"librarian":      return NPC_GATEKEEPER_ANIMS
 		"carnival_guard": return NPC_GATEKEEPER_ANIMS
+		"hieronymus":     return NPC_LEVEL_BIPED_ANIMS
+		"viktor":         return NPC_LEVEL_BIPED_ANIMS
+		"cyrus":          return NPC_LEVEL_BIPED_ANIMS
+		"lena":           return NPC_LEVEL_BIPED_ANIMS
+		"aria":           return NPC_LEVEL_BIPED_ANIMS
+		"rio":            return NPC_LEVEL_BIPED_ANIMS
+		"usher":          return NPC_LEVEL_BIPED_ANIMS
 		_:                return NPC_TOWN_ANIMS
 
 # Returns a SpriteFrames for an animal companion, or null if the PNG is absent.

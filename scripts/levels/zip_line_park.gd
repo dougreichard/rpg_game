@@ -49,6 +49,23 @@ const LOOT_FLAG_KEYS   := ["whistle_loot_open", "token_loot_open"]
 const DoorwayScript: Script = preload("res://scripts/systems/doorway.gd")
 const DOORWAY_POS := Vector2(160.0, 490.0)
 
+const DialogBoxScript: Script = preload("res://scripts/ui/dialog_box.gd")
+const DialogTreeScript: Script = preload("res://scripts/systems/dialog_tree.gd")
+
+const LENA_COLOR := Color(0.16, 0.63, 0.59)
+const LENA_POS := Vector2(220.0, 440.0)
+const LENA_RADIUS: float = 64.0
+static var LENA_INTRO_TREE: Dictionary = DialogTreeScript.from_pages([
+	"\"Safety briefing: all riders clip in. Someone cut the release power — lines are dead.\"",
+	"\"Ethan: the control panel on the Mid Platform will restore power. Ben, once it's live the High Platform release opens a timed window — watch the ring and press G when it pulses green.\""
+])
+static var LENA_REMINDER_TREE: Dictionary = DialogTreeScript.from_pages([
+	"\"Ethan: control panel on the Mid Platform. Then Ben catches the timing window up top.\""
+])
+static var LENA_AFTER_TREE: Dictionary = DialogTreeScript.from_pages([
+	"\"Lines fully restored. Unusual technique on that timing window — but it worked.\""
+])
+
 # Multi-room layout bounding box  --  a literal chain of VERTICAL PLATFORMS
 # linked by zip-line crossings, matching "lines connect platforms at
 # different heights": a low Landing platform (entry) -> a mid-height
@@ -89,6 +106,9 @@ var _release_lockout: float = 0.0
 var _miss_flash: float = 0.0
 var _lizard_cooldown_timer: float = 0.0
 var _cd_scale: float = 1.0
+var _lena_sprite: AnimatedSprite2D
+var _dialog_box = null
+var _lena_met: bool = false
 
 func _ready() -> void:
 	_build_floor()
@@ -103,6 +123,7 @@ func _ready() -> void:
 	_create_loot_boxes()
 	_create_hiding_spot()
 	_create_doorway()
+	_create_lena_npc()
 	_setup_camera()
 	_restore_progress()
 	if not _cleared:
@@ -128,6 +149,7 @@ func _restore_progress() -> void:
 	_enemies_cleared = GameManager.get_level_flag(LOCATION_ID, "enemies_cleared", false)
 	_panel_hacked = GameManager.get_level_flag(LOCATION_ID, "panel_hacked", false)
 	_release_timed = GameManager.get_level_flag(LOCATION_ID, "release_timed", false)
+	_lena_met = GameManager.get_level_flag(LOCATION_ID, "lena_met", false)
 	if _panel_hacked:
 		_panel_sprite.modulate = Color(0.4, 1.0, 0.5)
 	if _release_timed:
@@ -212,6 +234,37 @@ func _create_doorway() -> void:
 	_doorway.setup(DOORWAY_POS)
 	add_child(_doorway)
 
+func _create_lena_npc() -> void:
+	_lena_sprite = AnimatedSprite2D.new()
+	var loaded: SpriteFrames = SpriteLoader.try_load_npc("lena")
+	_lena_sprite.sprite_frames = loaded if loaded != null else PlaceholderArt.make_player_frames(LENA_COLOR, "")
+	_lena_sprite.scale = Vector2(SpriteLoader.NPC_SPRITE_SCALE, SpriteLoader.NPC_SPRITE_SCALE) if loaded != null else Vector2.ONE
+	_lena_sprite.play("idle")
+	_lena_sprite.position = LENA_POS
+	add_child(_lena_sprite)
+	var dialog_layer := CanvasLayer.new()
+	dialog_layer.layer = 19
+	add_child(dialog_layer)
+	_dialog_box = DialogBoxScript.new()
+	dialog_layer.add_child(_dialog_box)
+	_dialog_box.closed.connect(_on_lena_dialog_closed)
+
+func _talk_to_lena() -> void:
+	var p: Player = GameManager.active_player
+	var tree: Dictionary
+	if _cleared:
+		tree = LENA_AFTER_TREE
+	elif not _lena_met:
+		tree = LENA_INTRO_TREE
+	else:
+		tree = LENA_REMINDER_TREE
+	_dialog_box.open("Lena", LENA_COLOR, tree, "start", p.data.character_name)
+
+func _on_lena_dialog_closed(_effects: Array) -> void:
+	if not _lena_met:
+		_lena_met = true
+		GameManager.set_level_flag(LOCATION_ID, "lena_met", true)
+
 func _spawn() -> void:
 	_add(RUNNER_SCENE, Vector2(180.0, 420.0))
 	_add(GRUNT_SCENE,  Vector2(460.0, 300.0))
@@ -224,11 +277,16 @@ func _add(scene: PackedScene, pos: Vector2) -> void:
 	enemies.add_child(e)
 
 func _on_special_used(char_name: String) -> void:
+	if _dialog_box.is_open():
+		return
 	var p: Player = ethan if char_name == "Ethan" else ben
 	for i in _loot_boxes.size():
 		if _loot_boxes[i].try_open(char_name, p.global_position):
 			GameManager.set_level_flag(LOCATION_ID, LOOT_FLAG_KEYS[i], true)
 			return
+	if p.global_position.distance_to(LENA_POS) < LENA_RADIUS:
+		_talk_to_lena()
+		return
 	if char_name == "Ethan" and not _panel_hacked:
 		if ethan.global_position.distance_to(PANEL_POS) < PANEL_RADIUS:
 			_panel_hacked = true
@@ -270,12 +328,24 @@ func _on_lizard_panel() -> void:
 
 func _process(delta: float) -> void:
 	_lizard_cooldown_timer = maxf(_lizard_cooldown_timer - delta, 0.0)
-	_update_hint()
 	_release_lockout = maxf(_release_lockout - delta, 0.0)
 	_miss_flash = maxf(_miss_flash - delta, 0.0)
 	if not _release_timed:
 		_pulse_timer = fmod(_pulse_timer + delta, PULSE_PERIOD)
 	queue_redraw()
+	GameManager.set_dialog_active(_dialog_box.is_open())
+	if _dialog_box.is_open():
+		if _dialog_box.is_choice_mode():
+			if Input.is_action_just_pressed("move_up"):
+				_dialog_box.move_choice_cursor(-1)
+			elif Input.is_action_just_pressed("move_down"):
+				_dialog_box.move_choice_cursor(1)
+			elif Input.is_action_just_pressed("ui_accept") or Input.is_action_just_pressed("attack"):
+				_dialog_box.select_choice()
+		elif Input.is_action_just_pressed("ui_accept") or Input.is_action_just_pressed("attack"):
+			_dialog_box.advance()
+		return
+	_update_hint()
 	if is_instance_valid(GameManager.active_player):
 		var active_pos: Vector2 = GameManager.active_player.global_position
 		camera.global_position = active_pos
@@ -323,10 +393,10 @@ func _update_hint() -> void:
 	if _cleared:
 		hint_label.text = ""
 	elif not _enemies_cleared:
-		hint_label.text = "The patrol hasn't clocked you yet  --  thread a path between their routes, or clear them before reactivating the lines"
+		hint_label.text = "Patrol on site — talk to Lena, then clear them  [ press G to fight ]"
 	elif not _panel_hacked:
-		hint_label.text = "Ethan: reactivate the broken zip line control panel on the Mid Platform  [ approach it, press G ]"
+		hint_label.text = "Ethan: hack the control panel on the Mid Platform  [ approach it, press G ]"
 	elif not _release_timed:
-		hint_label.text = "Ben: from the High Platform, watch the pulsing ring  --  press G when it glows green at its peak"
+		hint_label.text = "Ben: High Platform — press G when the pulsing ring glows green"
 	else:
 		hint_label.text = ""

@@ -62,6 +62,23 @@ const LOOT_FLAG_KEYS := ["chip_loot_open", "charm_loot_open"]
 const DoorwayScript: Script = preload("res://scripts/systems/doorway.gd")
 const DOORWAY_POS := Vector2(170.0, 490.0)
 
+const DialogBoxScript: Script = preload("res://scripts/ui/dialog_box.gd")
+const DialogTreeScript: Script = preload("res://scripts/systems/dialog_tree.gd")
+
+const ARIA_COLOR := Color(0.12, 0.39, 0.86)
+const ARIA_POS := Vector2(280.0, 420.0)
+const ARIA_RADIUS: float = 64.0
+static var ARIA_INTRO_TREE: Dictionary = DialogTreeScript.from_pages([
+	"\"ARIA — virtual assistant. Alert: two simulation stages are corrupted.\"",
+	"\"Quinn: Stage Alpha has a physics-glitch node — your tools can patch it. Ethan: Stage Beta's system console needs a direct hack once Alpha is stable.\""
+])
+static var ARIA_REMINDER_TREE: Dictionary = DialogTreeScript.from_pages([
+	"\"Status: Quinn patches Stage Alpha first, then Ethan hacks Stage Beta.\""
+])
+static var ARIA_AFTER_TREE: Dictionary = DialogTreeScript.from_pages([
+	"\"All stages nominal. Most test subjects don't make it past Beta. Well done.\""
+])
+
 # Multi-room layout bounding box  --  a literal chain of THEMED CORRUPTED-STAGE
 # ZONES off a central "Boot Chamber": the duo spawns in a neutral cyber-blue
 # boot room, threads east through Corridor1 into Stage Alpha (a glitched
@@ -99,6 +116,9 @@ var _loot_boxes: Array = []
 var _doorway = null
 var _lizard_cooldown_timer: float = 0.0
 var _cd_scale: float = 1.0
+var _aria_sprite: AnimatedSprite2D
+var _dialog_box = null
+var _aria_met: bool = false
 
 func _ready() -> void:
 	_build_floor()
@@ -113,6 +133,7 @@ func _ready() -> void:
 	_create_loot_boxes()
 	_create_hiding_spot()
 	_create_doorway()
+	_create_aria_npc()
 	_setup_camera()
 	_restore_progress()
 	if not _cleared:
@@ -137,6 +158,7 @@ func _restore_progress() -> void:
 	_enemies_cleared = GameManager.get_level_flag(LOCATION_ID, "enemies_cleared", false)
 	_glitch_repaired = GameManager.get_level_flag(LOCATION_ID, "glitch_repaired", false)
 	_system_hacked = GameManager.get_level_flag(LOCATION_ID, "system_hacked", false)
+	_aria_met = GameManager.get_level_flag(LOCATION_ID, "aria_met", false)
 	if _glitch_repaired:
 		_glitch_sprite.modulate = Color(0.4, 1.0, 0.5)
 	if _system_hacked:
@@ -247,6 +269,37 @@ func _create_doorway() -> void:
 	_doorway.setup(DOORWAY_POS)
 	add_child(_doorway)
 
+func _create_aria_npc() -> void:
+	_aria_sprite = AnimatedSprite2D.new()
+	var loaded: SpriteFrames = SpriteLoader.try_load_npc("aria")
+	_aria_sprite.sprite_frames = loaded if loaded != null else PlaceholderArt.make_player_frames(ARIA_COLOR, "")
+	_aria_sprite.scale = Vector2(SpriteLoader.NPC_SPRITE_SCALE, SpriteLoader.NPC_SPRITE_SCALE) if loaded != null else Vector2.ONE
+	_aria_sprite.play("idle")
+	_aria_sprite.position = ARIA_POS
+	add_child(_aria_sprite)
+	var dialog_layer := CanvasLayer.new()
+	dialog_layer.layer = 19
+	add_child(dialog_layer)
+	_dialog_box = DialogBoxScript.new()
+	dialog_layer.add_child(_dialog_box)
+	_dialog_box.closed.connect(_on_aria_dialog_closed)
+
+func _talk_to_aria() -> void:
+	var p: Player = GameManager.active_player
+	var tree: Dictionary
+	if _cleared:
+		tree = ARIA_AFTER_TREE
+	elif not _aria_met:
+		tree = ARIA_INTRO_TREE
+	else:
+		tree = ARIA_REMINDER_TREE
+	_dialog_box.open("ARIA", ARIA_COLOR, tree, "start", p.data.character_name)
+
+func _on_aria_dialog_closed(_effects: Array) -> void:
+	if not _aria_met:
+		_aria_met = true
+		GameManager.set_level_flag(LOCATION_ID, "aria_met", true)
+
 func _spawn() -> void:
 	_add(GRUNT_SCENE,  Vector2(170.0, 420.0))
 	_add(GRUNT_SCENE,  Vector2(500.0, 460.0))
@@ -259,11 +312,16 @@ func _add(scene: PackedScene, pos: Vector2) -> void:
 	enemies.add_child(e)
 
 func _on_special_used(char_name: String) -> void:
+	if _dialog_box.is_open():
+		return
 	var p: Player = quinn if char_name == "Quinn" else ethan
 	for i in _loot_boxes.size():
 		if _loot_boxes[i].try_open(char_name, p.global_position):
 			GameManager.set_level_flag(LOCATION_ID, LOOT_FLAG_KEYS[i], true)
 			return
+	if p.global_position.distance_to(ARIA_POS) < ARIA_RADIUS:
+		_talk_to_aria()
+		return
 	if char_name == "Quinn" and not _glitch_repaired:
 		if quinn.global_position.distance_to(GLITCH_POS) < GLITCH_RADIUS:
 			_glitch_repaired = true
@@ -300,6 +358,18 @@ func _on_lizard_bypass() -> void:
 
 func _process(delta: float) -> void:
 	_lizard_cooldown_timer = maxf(_lizard_cooldown_timer - delta, 0.0)
+	GameManager.set_dialog_active(_dialog_box.is_open())
+	if _dialog_box.is_open():
+		if _dialog_box.is_choice_mode():
+			if Input.is_action_just_pressed("move_up"):
+				_dialog_box.move_choice_cursor(-1)
+			elif Input.is_action_just_pressed("move_down"):
+				_dialog_box.move_choice_cursor(1)
+			elif Input.is_action_just_pressed("ui_accept") or Input.is_action_just_pressed("attack"):
+				_dialog_box.select_choice()
+		elif Input.is_action_just_pressed("ui_accept") or Input.is_action_just_pressed("attack"):
+			_dialog_box.advance()
+		return
 	_update_hint()
 	if is_instance_valid(GameManager.active_player):
 		var active_pos: Vector2 = GameManager.active_player.global_position
@@ -336,10 +406,10 @@ func _update_hint() -> void:
 	if _cleared:
 		hint_label.text = ""
 	elif not _enemies_cleared:
-		hint_label.text = "The glitched patrols loop their routes, unaware  --  slip through the gaps, or short them out before the system notices"
+		hint_label.text = "Glitched patrols on loop — talk to ARIA, then clear them  [ press G to fight ]"
 	elif not _glitch_repaired:
-		hint_label.text = "Quinn: in the medieval-glitch stage, repair the broken physics  [ approach it, press G ]"
+		hint_label.text = "Quinn: repair the Stage Alpha physics glitch  [ approach it, press G ]"
 	elif not _system_hacked:
-		hint_label.text = "Ethan: in the underwater-glitch stage, hack the system to rewrite the rules  [ approach it, press G ]"
+		hint_label.text = "Ethan: hack the Stage Beta system console  [ approach it, press G ]"
 	else:
 		hint_label.text = ""

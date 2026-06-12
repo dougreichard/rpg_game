@@ -65,6 +65,23 @@ const LOOT_FLAG_KEYS    := ["crowbar_loot_open", "crank_loot_open", "treemap_loo
 const DoorwayScript: Script = preload("res://scripts/systems/doorway.gd")
 const DOORWAY_POS := Vector2(140.0, 340.0)
 
+const DialogBoxScript: Script = preload("res://scripts/ui/dialog_box.gd")
+const DialogTreeScript: Script = preload("res://scripts/systems/dialog_tree.gd")
+
+const VIKTOR_COLOR := Color(0.96, 0.51, 0.14)
+const VIKTOR_POS := Vector2(220.0, 460.0)
+const VIKTOR_RADIUS: float = 64.0
+static var VIKTOR_INTRO_TREE: Dictionary = DialogTreeScript.from_pages([
+	"\"Harbourmaster Viktor. Pier's been overrun — smugglers moved in with a suspicious manifest.\"",
+	"\"That cargo container is blocking crane access. Evan can shift it bare-handed. If you're short-handed, there's a crowbar somewhere in the yard.\""
+])
+static var VIKTOR_REMINDER_TREE: Dictionary = DialogTreeScript.from_pages([
+	"\"That container's still blocking the crane platform — Evan or a crowbar will shift it.\""
+])
+static var VIKTOR_AFTER_TREE: Dictionary = DialogTreeScript.from_pages([
+	"\"Manifest confirms it — Doug's name is on that shipment. You'll want to follow that lead.\""
+])
+
 # Multi-room layout bounding box (pier -> container-maze yard -> crane
 # platform, sealed by the cargo container). Feeds the camera's pan limits  -- 
 # see CLAUDE.md "Doorways, camera-follow & multi-room levels". Recompute if
@@ -94,6 +111,9 @@ var _container_shape: CollisionShape2D
 var _container_sprite: Sprite2D
 var _loot_boxes: Array = []
 var _doorway = null
+var _viktor_sprite: AnimatedSprite2D
+var _dialog_box = null
+var _viktor_met: bool = false
 
 var _cd_scale: float = 1.0
 func _ready() -> void:
@@ -109,6 +129,7 @@ func _ready() -> void:
 	_create_loot_boxes()
 	_create_hiding_spot()
 	_create_doorway()
+	_create_viktor_npc()
 	_setup_camera()
 	_restore_progress()
 	if not _cleared:
@@ -132,6 +153,7 @@ func _setup_camera() -> void:
 func _restore_progress() -> void:
 	_enemies_cleared = GameManager.get_level_flag(LOCATION_ID, "enemies_cleared", false)
 	_container_moved = GameManager.get_level_flag(LOCATION_ID, "container_moved", false)
+	_viktor_met = GameManager.get_level_flag(LOCATION_ID, "viktor_met", false)
 	if _container_moved:
 		_move_container(false)
 	if _enemies_cleared:
@@ -241,6 +263,37 @@ func _create_doorway() -> void:
 	_doorway.setup(DOORWAY_POS)
 	add_child(_doorway)
 
+func _create_viktor_npc() -> void:
+	_viktor_sprite = AnimatedSprite2D.new()
+	var loaded: SpriteFrames = SpriteLoader.try_load_npc("viktor")
+	_viktor_sprite.sprite_frames = loaded if loaded != null else PlaceholderArt.make_player_frames(VIKTOR_COLOR, "")
+	_viktor_sprite.scale = Vector2(SpriteLoader.NPC_SPRITE_SCALE, SpriteLoader.NPC_SPRITE_SCALE) if loaded != null else Vector2.ONE
+	_viktor_sprite.play("idle")
+	_viktor_sprite.position = VIKTOR_POS
+	add_child(_viktor_sprite)
+	var dialog_layer := CanvasLayer.new()
+	dialog_layer.layer = 19
+	add_child(dialog_layer)
+	_dialog_box = DialogBoxScript.new()
+	dialog_layer.add_child(_dialog_box)
+	_dialog_box.closed.connect(_on_viktor_dialog_closed)
+
+func _talk_to_viktor() -> void:
+	var p: Player = GameManager.active_player
+	var tree: Dictionary
+	if _cleared:
+		tree = VIKTOR_AFTER_TREE
+	elif not _viktor_met:
+		tree = VIKTOR_INTRO_TREE
+	else:
+		tree = VIKTOR_REMINDER_TREE
+	_dialog_box.open("Viktor", VIKTOR_COLOR, tree, "start", p.data.character_name)
+
+func _on_viktor_dialog_closed(_effects: Array) -> void:
+	if not _viktor_met:
+		_viktor_met = true
+		GameManager.set_level_flag(LOCATION_ID, "viktor_met", true)
+
 func _spawn() -> void:
 	_add(GRUNT_SCENE,  Vector2(380.0, 250.0))
 	_add(GRUNT_SCENE,  Vector2(820.0, 300.0))
@@ -254,11 +307,16 @@ func _add(scene: PackedScene, pos: Vector2) -> void:
 	enemies.add_child(e)
 
 func _on_special_used(char_name: String) -> void:
+	if _dialog_box.is_open():
+		return
 	var p: Player = quinn if char_name == "Quinn" else evan
 	for i in _loot_boxes.size():
 		if _loot_boxes[i].try_open(char_name, p.global_position):
 			GameManager.set_level_flag(LOCATION_ID, LOOT_FLAG_KEYS[i], true)
 			return
+	if p.global_position.distance_to(VIKTOR_POS) < VIKTOR_RADIUS:
+		_talk_to_viktor()
+		return
 	if char_name == "Evan":
 		if not _container_moved and evan.global_position.distance_to(CONTAINER_POS) < CONTAINER_RADIUS:
 			_container_moved = true
@@ -304,6 +362,18 @@ func _nearest_enemies(from_pos: Vector2, count: int) -> Array:
 
 func _process(delta: float) -> void:
 	_calvin_cooldown_timer = maxf(_calvin_cooldown_timer - delta, 0.0)
+	GameManager.set_dialog_active(_dialog_box.is_open())
+	if _dialog_box.is_open():
+		if _dialog_box.is_choice_mode():
+			if Input.is_action_just_pressed("move_up"):
+				_dialog_box.move_choice_cursor(-1)
+			elif Input.is_action_just_pressed("move_down"):
+				_dialog_box.move_choice_cursor(1)
+			elif Input.is_action_just_pressed("ui_accept") or Input.is_action_just_pressed("attack"):
+				_dialog_box.select_choice()
+		elif Input.is_action_just_pressed("ui_accept") or Input.is_action_just_pressed("attack"):
+			_dialog_box.advance()
+		return
 	if is_instance_valid(GameManager.active_player):
 		var active_pos: Vector2 = GameManager.active_player.global_position
 		camera.global_position = active_pos
@@ -340,7 +410,7 @@ func _update_hint() -> void:
 	if _cleared:
 		hint_label.text = ""
 	elif not _enemies_cleared:
-		hint_label.text = "Dock workers patrol the crate maze, unaware  --  slip through the gaps or strike before they spot you  [ Evan: press G to call Calvin & Coolidge to stagger foes ]"
+		hint_label.text = "Dock workers patrol the yard — talk to Viktor, then clear them out  [ Evan: press G to call Calvin & Coolidge ]"
 	elif not _container_moved:
 		hint_label.text = "Evan: shove the cargo container off the crane controls  [ approach it, press G ]"
 	else:
