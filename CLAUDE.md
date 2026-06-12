@@ -242,7 +242,8 @@ full game.
 
 ### Pixel grid
 - **Tile size:** 32×32 px
-- **Character sprite:** 32×32 px (matches tile size — full tile-grid alignment)
+- **Character sprite (gameplay footprint):** 32×32 px (matches tile size — full tile-grid alignment)
+- **Character sprite source art:** 64×64 px per frame (2× oversample); all five sheets are PIL-generated via `generators/gen_*.py` — see `DESIGN.md` §3/§4 for the full spec.
 - **Viewport:** 1280×720 (scale up with integer scaling in project settings)
 
 ### Character stats *(starting values — tune via exported vars)*
