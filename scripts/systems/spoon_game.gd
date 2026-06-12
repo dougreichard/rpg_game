@@ -5,6 +5,7 @@ extends RefCounted
 
 signal die_rolled(roll: int)
 signal spoon_passed(from_idx: int, to_idx: int, spoon_type: String)
+signal spoon_discarded(player_idx: int, spoon_type: String)
 signal power_activated(player_idx: int, spoon_type: String)
 signal direction_changed(direction: int)
 signal player_eliminated(idx: int)
@@ -68,13 +69,19 @@ func _next_alive(from_idx: int, steps: int) -> int:
 
 ## Rolls the die and computes who would receive the passed spoon.
 ## Does not mutate any hands -- call resolve_turn() to commit the turn.
+## When only two players remain, rolling a 6 instead sends the active
+## player's chosen spoon to "the pile" -- call resolve_discard() for these
+## turns instead of resolve_turn().
 func begin_turn() -> Dictionary:
 	var roll: int = randi_range(1, 6)
 	die_rolled.emit(roll)
-	var recipient_idx: int = _next_alive(active_idx, roll)
 	_pending_roll = roll
+	if alive_count() == 2 and roll == 6:
+		_pending_recipient_idx = -1
+		return {"roll": roll, "recipient_idx": -1, "discard": true}
+	var recipient_idx: int = _next_alive(active_idx, roll)
 	_pending_recipient_idx = recipient_idx
-	return {"roll": roll, "recipient_idx": recipient_idx}
+	return {"roll": roll, "recipient_idx": recipient_idx, "discard": false}
 
 
 ## AI: prefer passing a standard spoon, keeping power spoons in hand.
@@ -108,10 +115,23 @@ func ai_choose_activate(idx: int, spoon_type: String) -> bool:
 			return false
 
 
+## AI: when forced to discard (see begin_turn()), prefer dumping a Standard
+## Spoon, keeping power spoons in hand for future turns.
+func ai_choose_discard(idx: int) -> String:
+	var hand: Array = players[idx]["hand"]
+	for spoon in hand:
+		if spoon == "standard":
+			return "standard"
+	return hand[0]
+
+
 ## Convenience for an AI-controlled seat: rolls, picks a spoon and activation
 ## choice via the AI heuristics, and resolves the turn in one call.
 func take_ai_turn() -> void:
-	begin_turn()
+	var turn: Dictionary = begin_turn()
+	if turn["discard"]:
+		resolve_discard(ai_choose_discard(active_idx))
+		return
 	var spoon_type: String = ai_choose_spoon(active_idx)
 	var activate: bool = false
 	if spoon_type in POWER_TYPES:
@@ -165,6 +185,25 @@ func resolve_turn(spoon_type: String, activate: bool) -> void:
 	_advance_turn(passer_idx, recipient_idx, switch_seized)
 
 
+## Commits a pending discard turn (see begin_turn()): the active player's
+## chosen spoon goes to "the middle" instead of being passed -- no power
+## resolves, regardless of the spoon type.
+func resolve_discard(spoon_type: String) -> void:
+	var passer_idx: int = active_idx
+	var hand: Array = players[passer_idx]["hand"]
+	hand.erase(spoon_type)
+	discarded_count += 1
+	spoon_discarded.emit(passer_idx, spoon_type)
+
+	if hand.is_empty() and not players[passer_idx]["shielded"]:
+		_eliminate(passer_idx)
+
+	if _check_game_over():
+		return
+
+	_advance_turn(passer_idx, passer_idx, false)
+
+
 func _take_random_spoon(from_idx: int, to_idx: int) -> void:
 	var from_hand: Array = players[from_idx]["hand"]
 	if from_hand.is_empty():
@@ -198,16 +237,31 @@ func _eliminate(idx: int) -> void:
 	player_eliminated.emit(idx)
 
 
+## Game ends once at most one player remains. winner_idx == -1 means
+## "the middle wins" -- either no player is left standing, or the survivor's
+## shield expired and emptied their hand too, or the middle's pile is at
+## least as large as the survivor's remaining hand.
 func _check_game_over() -> bool:
-	if alive_count() <= 1:
-		var winner_idx: int = -1
-		for i in range(PLAYER_COUNT):
-			if players[i]["alive"]:
-				winner_idx = i
-				break
-		game_over.emit(winner_idx)
-		return true
-	return false
+	if alive_count() > 1:
+		return false
+
+	var winner_idx: int = -1
+	for i in range(PLAYER_COUNT):
+		if players[i]["alive"]:
+			winner_idx = i
+			break
+
+	if winner_idx != -1 and players[winner_idx]["shielded"]:
+		players[winner_idx]["shielded"] = false
+		if players[winner_idx]["hand"].is_empty():
+			_eliminate(winner_idx)
+			winner_idx = -1
+
+	if winner_idx != -1 and discarded_count >= players[winner_idx]["hand"].size():
+		winner_idx = -1
+
+	game_over.emit(winner_idx)
+	return true
 
 
 func _advance_turn(passer_idx: int, recipient_idx: int, switch_seized: bool) -> void:

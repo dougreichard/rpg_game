@@ -74,7 +74,11 @@
       "Bash(sips -z 630 560 /tmp/screenshots/quinn_tight.png --out /tmp/screenshots/quinn_7x.png)",
       "Bash('/Users/dougreichard/Library/Application Support/Steam/steamapps/common/Godot Engine/Godot.app/Contents/MacOS/Godot' --headless --path . -s addons/gut/gut_cmdln.gd -gdir=res://tests/unit -gexit)",
       "Read(//opt/homebrew/bin/**)",
-      "Read(//usr/local/**)"
+      "Read(//usr/local/**)",
+      "mcp__godot__get_debug_output",
+      "mcp__godot__stop_project",
+      "mcp__godot__run_project",
+      "Bash(godot --headless --path . -s addons/gut/gut_cmdln.gd -gdir=res://tests/unit -gexit)"
     ],
     "additionalDirectories": [
       "/tmp",
