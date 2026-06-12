@@ -274,8 +274,8 @@ func _create_doorway() -> void:
 	add_child(_doorway)
 
 func _spawn() -> void:
-	_add(GRUNT_SCENE,  Vector2(170.0, 230.0))
-	_add(SENTRY_SCENE, Vector2(190.0, 440.0))
+	_add(GRUNT_SCENE,  Vector2(220.0, 280.0))
+	_add(SENTRY_SCENE, Vector2(560.0, 360.0))
 	_spawned = true
 
 func _add(scene: PackedScene, pos: Vector2) -> void:

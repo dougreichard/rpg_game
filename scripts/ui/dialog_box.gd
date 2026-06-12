@@ -221,12 +221,21 @@ func _draw_prompt(text: String) -> void:
 
 func _draw_choices() -> void:
 	var choices: Array = _node.get("choices", [])
-	var max_width: float = PANEL_RECT.size.x - TEXT_LEFT_INSET - TEXT_RIGHT_INSET
+	var total_width: float = PANEL_RECT.size.x - TEXT_LEFT_INSET - TEXT_RIGHT_INSET
+	var prefix_w: float = _font.get_string_size("> ", HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE).x
+	var text_width: float = total_width - prefix_w
+
+	var y_offset: float = TEXT_TOP
 	for i: int in choices.size():
 		var color: Color = NAME_COLOR if i == _choice_index else TEXT_COLOR
-		var prefix: String = "> " if i == _choice_index else "   "
-		draw_string(_font, PANEL_RECT.position + Vector2(TEXT_LEFT_INSET, TEXT_TOP + i * LINE_HEIGHT),
-				prefix + String(choices[i].get("text", "")), HORIZONTAL_ALIGNMENT_LEFT,
-				max_width, FONT_SIZE, color)
+		var prefix: String = "> " if i == _choice_index else "  "
+		var wrapped: PackedStringArray = _wrap_line(String(choices[i].get("text", "")), text_width, FONT_SIZE)
+		draw_string(_font, PANEL_RECT.position + Vector2(TEXT_LEFT_INSET, y_offset),
+				prefix + wrapped[0], HORIZONTAL_ALIGNMENT_LEFT, total_width, FONT_SIZE, color)
+		y_offset += LINE_HEIGHT
+		for j: int in range(1, wrapped.size()):
+			draw_string(_font, PANEL_RECT.position + Vector2(TEXT_LEFT_INSET + prefix_w, y_offset),
+					wrapped[j], HORIZONTAL_ALIGNMENT_LEFT, text_width, FONT_SIZE, color)
+			y_offset += LINE_HEIGHT
 
 	_draw_prompt("↑/↓ choose · ENTER select")
