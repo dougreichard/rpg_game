@@ -321,18 +321,23 @@ func _spoon_passed_text(from_idx: int, to_idx: int, spoon_type: String) -> Strin
 func _on_die_rolled(roll: int) -> void:
 	_last_roll = roll
 	_enqueue_event({"type": "roll", "player_idx": _game.active_idx, "roll": roll})
+	Audio.play("dice_roll")
 
 
 func _on_spoon_passed(from_idx: int, to_idx: int, spoon_type: String) -> void:
 	_enqueue_event({"type": "pass", "from_idx": from_idx, "to_idx": to_idx, "spoon_type": spoon_type})
+	if from_idx != to_idx:
+		Audio.play("spoon_pass")
 
 
 func _on_spoon_discarded(player_idx: int, spoon_type: String) -> void:
 	_enqueue_event({"type": "discard", "player_idx": player_idx, "spoon_type": spoon_type})
+	Audio.play("spoon_pass")
 
 
 func _on_power_activated(player_idx: int, spoon_type: String) -> void:
 	_enqueue_event({"type": "power", "player_idx": player_idx, "spoon_type": spoon_type})
+	Audio.play("spoon_power")
 	if player_idx == 0:
 		GameManager.spoon_power_used.emit(spoon_type)
 
@@ -343,6 +348,7 @@ func _on_direction_changed(direction: int) -> void:
 
 func _on_player_eliminated(idx: int) -> void:
 	_enqueue_event({"type": "eliminate", "idx": idx})
+	Audio.play("spoon_eliminate")
 
 
 func _on_game_over(winner_idx: int) -> void:
@@ -350,7 +356,10 @@ func _on_game_over(winner_idx: int) -> void:
 	_winner_idx = winner_idx
 	_enqueue_event({"type": "game_over", "winner_idx": winner_idx})
 	if winner_idx == 0:
+		Audio.play("spoon_victory")
 		GameManager.spoon_game_won.emit()
+	else:
+		Audio.play("defeat")
 
 
 # --- Input -------------------------------------------------------------------
@@ -446,10 +455,25 @@ func _handle_playing_input(event: InputEvent) -> void:
 
 
 func _handle_game_over_input(event: InputEvent) -> void:
-	if event.is_action_pressed("ui_accept") or event.is_action_pressed("ui_cancel"):
+	if event.is_action_pressed("ui_accept"):
+		Audio.play("ui_select")
+		_play_again()
+		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed("ui_cancel"):
 		Audio.play("ui_select")
 		_exit_to_overworld()
 		get_viewport().set_input_as_handled()
+
+
+func _play_again() -> void:
+	_phase = Phase.SELECT_CHARACTER
+	_game = null
+	_ended = false
+	_winner_idx = -1
+	_event_queue.clear()
+	_current_event = {}
+	_action_text = ""
+	queue_redraw()
 
 
 # --- Drawing -------------------------------------------------------------------
@@ -802,4 +826,4 @@ func _draw_game_over() -> void:
 	var winner_name: String = "THE PILE" if _winner_idx == -1 else _player_name(_winner_idx).to_upper()
 	draw_string(_font, Vector2(MAIN_PANEL.position.x, MAIN_PANEL.position.y + MAIN_PANEL.size.y * 0.5 - 16.0), winner_name, HORIZONTAL_ALIGNMENT_CENTER, MAIN_PANEL.size.x, 30, TITLE_COLOR)
 	draw_string(_font, Vector2(MAIN_PANEL.position.x, MAIN_PANEL.position.y + MAIN_PANEL.size.y * 0.5 + 24.0), "WINS!", HORIZONTAL_ALIGNMENT_CENTER, MAIN_PANEL.size.x, 30, TITLE_COLOR)
-	draw_string(_font, Vector2(0.0, 690.0), "Press ENTER to return to town", HORIZONTAL_ALIGNMENT_CENTER, 1280.0, 13, HINT_COLOR)
+	draw_string(_font, Vector2(0.0, 690.0), "ENTER  Play Again     ESC  Back to town", HORIZONTAL_ALIGNMENT_CENTER, 1280.0, 13, HINT_COLOR)

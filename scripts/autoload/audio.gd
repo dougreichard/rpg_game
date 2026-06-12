@@ -133,6 +133,11 @@ func _build_sfx(sfx_name: String) -> AudioStreamWAV:
 		"bies":      return _sweep_adsr(1200.0, 100.0, 0.65, 0.55)
 		"ui_move":   return _tone_adsr(520.0, 0.002, 0.0,  0.0,  0.04, 0.9,  0.25, "sine")
 		"ui_select": return _tone_adsr(820.0, 0.002, 0.0,  0.0,  0.09, 0.9,  0.40, "sine")
+		"dice_roll":     return _noise_burst(0.12, 0.35)
+		"spoon_pass":    return _tone_adsr(900.0, 0.001, 0.01, 0.0,  0.06, 0.0,  0.25, "sine")
+		"spoon_power":   return _chord_sweep(350.0, 950.0, 0.35, 0.40)
+		"spoon_eliminate": return _sweep_adsr(500.0, 120.0, 0.45, 0.5)
+		"spoon_victory": return _sweep_adsr(440.0, 1100.0, 0.6, 0.55)
 		_: return null
 
 # Full ADSR envelope tone. sustain_level = amplitude during sustain phase (0–1).

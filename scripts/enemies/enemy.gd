@@ -75,8 +75,11 @@ func _ready() -> void:
 	hurtbox.hit.connect(_on_hurtbox_hit)
 	if sprite.sprite_frames == null:
 		var loaded: SpriteFrames = SpriteLoader.try_load_enemy(data.enemy_name)
-		sprite.sprite_frames = loaded if loaded != null \
-			else PlaceholderArt.make_enemy_frames(data.sprite_color, data.enemy_name, data.is_stocky)
+		if loaded != null:
+			sprite.sprite_frames = loaded
+			sprite.scale = Vector2.ONE * SpriteLoader.ENEMY_SPRITE_SCALE
+		else:
+			sprite.sprite_frames = PlaceholderArt.make_enemy_frames(data.sprite_color, data.enemy_name, data.is_stocky)
 	sprite.play("walk")
 	GameManager.noise_emitted.connect(_on_noise_emitted)
 	GameManager.enemies_calmed.connect(_on_enemies_calmed)

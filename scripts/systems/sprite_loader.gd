@@ -49,10 +49,19 @@ const ENEMY_ANIMS: Array = [
 	{name="alert",   row=7, frames=4, fps=8.0,  loop=true},
 ]
 
-# Brute (48×32) and Boss (64×64) use non-standard tile sizes.
+# Enemy sheets are authored 2x-oversampled (64x64 default tile, per
+# sprites.md/DESIGN.md SS2.0 — same convention as PLAYER_TILE_SIZE /
+# PLAYER_SPRITE_SCALE) — try_load_enemy scales the AnimatedSprite2D down via
+# ENEMY_SPRITE_SCALE so the on-screen footprint matches the old
+# PlaceholderArt gameplay size (32x32 default, 48x32 brute, 64x64 boss).
+const ENEMY_TILE_SIZE: int = 64
+const ENEMY_SPRITE_SCALE: float = 0.5
+
+# Brute (96×64 source -> 48x32 on screen) and Boss (128×128 source -> 64x64 on
+# screen) use wider/taller source tiles than the 64x64 default.
 const ENEMY_TILE_OVERRIDES: Dictionary = {
-	"brute": Vector2i(48, 32),
-	"boss":  Vector2i(64, 64),
+	"brute": Vector2i(96, 64),
+	"boss":  Vector2i(128, 128),
 }
 
 static var _player_cache: Dictionary = {}
@@ -86,7 +95,7 @@ static func try_load_enemy(enemy_name: String) -> SpriteFrames:
 	var tex: Texture2D = load(path)
 	if tex == null:
 		return null
-	var tile: Vector2i = ENEMY_TILE_OVERRIDES.get(key, Vector2i(TILE_SIZE, TILE_SIZE))
+	var tile: Vector2i = ENEMY_TILE_OVERRIDES.get(key, Vector2i(ENEMY_TILE_SIZE, ENEMY_TILE_SIZE))
 	var result: SpriteFrames = _build(tex.get_image(), ENEMY_ANIMS, tile.x, tile.y)
 	_enemy_cache[key] = result
 	return result
