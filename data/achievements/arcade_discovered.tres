@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="AchievementData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/systems/achievement_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "arcade_discovered"
+display_name = "Hidden Arcade"
+description = "Found the Gimme Dat Spoon Arcade."
+icon_color = Color(0.6, 0.85, 0.95, 1)
+secret = true

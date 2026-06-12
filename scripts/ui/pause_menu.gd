@@ -7,7 +7,7 @@ extends CanvasLayer
 
 const OPTIONS_LEVEL: Array[String] = ["Resume", "Inventory", "Quests", "Achievements", "Options", "Quit to Map", "Quit to Title"]
 const OPTIONS_OVERWORLD: Array[String] = ["Resume", "Inventory", "Quests", "Achievements", "Options", "Quit to Title"]
-const PANEL_RECT := Rect2(440.0, 180.0, 400.0, 380.0)
+const PANEL_RECT := Rect2(440.0, 110.0, 400.0, 500.0)
 const BORDER_COLOR: Color = Color(0.55, 0.45, 0.75)
 const TITLE_COLOR: Color = Color(0.95, 0.85, 0.2)
 const SELECTED_COLOR: Color = Color(0.95, 0.85, 0.2)
@@ -34,11 +34,13 @@ var _in_options: bool = false
 var _in_achievements: bool = false
 var _in_inventory: bool = false
 var _in_quest_log: bool = false
+var _in_travel: bool = false
 var _opt_cursor: int = 0
 
 @onready var _achievements_overlay: Node = get_node("../AchievementsOverlay")
 @onready var _inventory_overlay: Node = get_node("../InventoryOverlay")
 @onready var _quest_log_overlay: Node = get_node("../QuestLogOverlay")
+@onready var _travel_overlay: Node = get_node("../TravelOverlay") if in_overworld else null
 
 # Options panel nodes
 var _main_panel_nodes: Array = []
@@ -51,7 +53,13 @@ func _ready() -> void:
 	layer = 25
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	visible = false
-	_options = OPTIONS_OVERWORLD if in_overworld else OPTIONS_LEVEL
+	_options = (OPTIONS_OVERWORLD if in_overworld else OPTIONS_LEVEL).duplicate()
+	# Fast travel + the arcade shortcut only make sense once Doug is found
+	# (all 13 main locations are then unlocked) and only from the overworld.
+	if in_overworld and GameManager.completed_locations.has("grand_marquee"):
+		var insert_idx: int = _options.find("Quit to Title")
+		_options.insert(insert_idx, "Travel")
+		_options.insert(insert_idx + 1, "Gimme Dat Spoon")
 	_build_ui()
 	GameManager.paused.connect(_on_paused)
 	GameManager.unpaused.connect(_on_unpaused)
@@ -59,6 +67,8 @@ func _ready() -> void:
 	_achievements_overlay.closed.connect(_on_achievements_closed)
 	_inventory_overlay.closed.connect(_on_inventory_closed)
 	_quest_log_overlay.closed.connect(_on_quest_log_closed)
+	if _travel_overlay != null:
+		_travel_overlay.closed.connect(_on_travel_closed)
 
 func _exit_tree() -> void:
 	GameManager.unregister_pause_menu(self)
@@ -260,6 +270,9 @@ func _on_unpaused() -> void:
 	if _in_quest_log:
 		_quest_log_overlay.close()
 		_in_quest_log = false
+	if _in_travel:
+		_travel_overlay.close()
+		_in_travel = false
 
 func _on_achievements_closed() -> void:
 	_in_achievements = false
@@ -276,10 +289,15 @@ func _on_quest_log_closed() -> void:
 	_show_main()
 	_refresh_options()
 
+func _on_travel_closed() -> void:
+	_in_travel = false
+	_show_main()
+	_refresh_options()
+
 func _unhandled_input(event: InputEvent) -> void:
 	if not visible:
 		return
-	if _in_achievements or _in_inventory or _in_quest_log:
+	if _in_achievements or _in_inventory or _in_quest_log or _in_travel:
 		return
 	if _in_options:
 		_handle_options_input(event)
@@ -364,6 +382,15 @@ func _select_main() -> void:
 		"Options":
 			_show_options()
 			Audio.play("ui_select")
+		"Travel":
+			_in_travel = true
+			for n: Node in _main_panel_nodes:
+				n.visible = false
+			_travel_overlay.open()
+			Audio.play("ui_select")
+		"Gimme Dat Spoon":
+			GameManager.toggle_pause()
+			TransitionManager.change_scene("res://scenes/levels/GimmeDatSpoon.tscn")
 		"Quit to Map":
 			GameManager.toggle_pause()
 			TransitionManager.change_scene("res://scenes/overworld/OverworldMap.tscn")

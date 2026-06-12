@@ -6,7 +6,7 @@
 script = ExtResource("1")
 id = "numbered_spoon_05"
 display_name = "Spoon No. 5"
-description = "A '5' stamped into worn metal. Feels less like cutlery and more like a game piece."
+description = "A '5' stamped into worn metal. Feels less like cutlery and more like a game piece. A looping arrow is scratched around the stamp, chasing its own tail."
 icon_color = Color(0.68, 0.68, 0.72, 1)
 owner_character = ""
 is_junk = true

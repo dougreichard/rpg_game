@@ -41,11 +41,13 @@ func get_slot_summary(slot: int) -> Dictionary:
 	var cfg := ConfigFile.new()
 	if cfg.load(slot_path(slot)) != OK:
 		return {"exists": false}
+	var completed: Array = cfg.get_value("progress", "completed_locations", [])
 	return {
 		"exists": true,
-		"completed_count": (cfg.get_value("progress", "completed_locations", []) as Array).size(),
+		"completed_count": completed.size(),
 		"unlocked_characters": cfg.get_value("progress", "unlocked_characters", []),
 		"timestamp": cfg.get_value("meta", "timestamp", ""),
+		"doug_found": "grand_marquee" in completed,
 	}
 
 func save_game() -> void:
@@ -59,6 +61,7 @@ func save_game() -> void:
 	cfg.set_value("progress", "achievements_unlocked", AchievementManager.unlocked)
 	cfg.set_value("progress", "achievements_bies_count", AchievementManager.bies_activation_count)
 	cfg.set_value("progress", "achievements_companions_seen", AchievementManager.companion_types_seen)
+	cfg.set_value("progress", "achievements_spoon_powers_seen", AchievementManager.spoon_powers_seen)
 	cfg.set_value("meta", "timestamp", Time.get_datetime_string_from_system())
 	cfg.save(slot_path(current_slot))
 	_set_last_slot(current_slot)
@@ -75,6 +78,7 @@ func load_game(slot: int) -> bool:
 	AchievementManager.unlocked = cfg.get_value("progress", "achievements_unlocked", {})
 	AchievementManager.bies_activation_count = cfg.get_value("progress", "achievements_bies_count", 0)
 	AchievementManager.companion_types_seen = cfg.get_value("progress", "achievements_companions_seen", {})
+	AchievementManager.spoon_powers_seen = cfg.get_value("progress", "achievements_spoon_powers_seen", {})
 	AchievementManager._check_retroactive()
 	_set_last_slot(slot)
 	return true

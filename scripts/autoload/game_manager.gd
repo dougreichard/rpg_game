@@ -14,6 +14,9 @@ signal enemy_defeated(enemy_name: String, is_boss: bool)
 signal player_revived
 signal companion_summoned(companion_name: String)
 signal level_flag_set(location_id: String, key: String, value)
+signal spoon_arcade_entered
+signal spoon_power_used(spoon_type: String)
+signal spoon_game_won
 
 const UNLOCKS_CHARACTER: Dictionary = {
 	"pipe_organ_works": "erin",
@@ -147,6 +150,16 @@ const REVIVE_DECAY_RATE: float = 2.0
 
 var is_coop: bool = false
 
+# Set by a level's _process() to reflect its DialogBox.is_open(). While true,
+# the active/standby players are frozen (Player.input_locked) and the global
+# swap/bies_mode shortcuts are suppressed -- see CLAUDE.md "NPC dialog &
+# quests". The overworld doesn't need this: GameManager.active_player is null
+# there, so this whole block is a no-op.
+var _dialog_active: bool = false
+
+func set_dialog_active(active: bool) -> void:
+	_dialog_active = active
+
 var _bies_active: bool = false
 var _bies_timer: float = 0.0
 var _game_over_active: bool = false
@@ -173,6 +186,12 @@ func _process(delta: float) -> void:
 			_end_bies()
 
 	if not is_instance_valid(active_player):
+		return
+
+	active_player.input_locked = _dialog_active
+	if is_instance_valid(standby_player):
+		standby_player.input_locked = _dialog_active
+	if _dialog_active:
 		return
 
 	if Input.is_action_just_pressed("bies_mode") and active_player.bies_charge >= 1.0:

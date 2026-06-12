@@ -6,7 +6,7 @@
 script = ExtResource("1")
 id = "numbered_spoon_02"
 display_name = "Spoon No. 2"
-description = "A '2' is etched into the bowl. Doug seems to have handed these out like party favors."
+description = "A '2' is etched into the bowl. Doug seems to have handed these out like party favors. The bowl's underside has a faint horseshoe-magnet scratch."
 icon_color = Color(0.68, 0.68, 0.72, 1)
 owner_character = ""
 is_junk = true

@@ -29,12 +29,17 @@ const ACHIEVEMENT_LIST: Array[AchievementData] = [
 	preload("res://data/achievements/secrets_out.tres"),
 	preload("res://data/achievements/complete_set.tres"),
 	preload("res://data/achievements/friend_of_the_town.tres"),
+	preload("res://data/achievements/arcade_discovered.tres"),
+	preload("res://data/achievements/power_spoon_master.tres"),
+	preload("res://data/achievements/spoon_champion.tres"),
 ]
 
 const TIME_LORD_TARGET: int = 25
 const PACK_RAT_TARGET: int = 10
 const COMPANION_TYPES: Array[String] = ["frosty", "twinkle", "calvin_coolidge", "william_mary", "lizard"]
 const SPOON_COUNT: int = 12
+# Mirrors SpoonGameScript.POWER_TYPES (scripts/systems/spoon_game.gd).
+const SPOON_POWER_TYPES: Array[String] = ["anchor", "magnet", "spinner", "switch", "reverse", "anchorless"]
 const SECRET_DESCRIPTION: String = "???"
 
 var achievements: Dictionary = {}  # id -> AchievementData
@@ -43,6 +48,7 @@ var unlocked: Dictionary = {}  # id -> bool, persisted via SaveManager
 # Persisted progress counters that don't have a single boolean home elsewhere.
 var bies_activation_count: int = 0
 var companion_types_seen: Dictionary = {}  # companion_name -> true, persisted
+var spoon_powers_seen: Dictionary = {}  # spoon power type -> true, persisted
 
 func _ready() -> void:
 	for data: AchievementData in ACHIEVEMENT_LIST:
@@ -56,6 +62,9 @@ func _ready() -> void:
 	GameManager.bies_activated.connect(_on_bies_activated)
 	GameManager.characters_swapped.connect(_on_characters_swapped)
 	GameManager.noise_emitted.connect(_on_noise_emitted)
+	GameManager.spoon_arcade_entered.connect(_on_spoon_arcade_entered)
+	GameManager.spoon_power_used.connect(_on_spoon_power_used)
+	GameManager.spoon_game_won.connect(_on_spoon_game_won)
 	# At boot (before a save slot is chosen) this is a no-op since nothing is
 	# completed yet. SaveManager.load_game() also calls this directly after
 	# loading a slot, so a save that already satisfies a condition (e.g. all
@@ -69,6 +78,7 @@ func reset() -> void:
 	unlocked = {}
 	bies_activation_count = 0
 	companion_types_seen = {}
+	spoon_powers_seen = {}
 
 func is_unlocked(id: String) -> bool:
 	return unlocked.get(id, false)
@@ -163,6 +173,19 @@ func _on_characters_swapped() -> void:
 
 func _on_noise_emitted(_position: Vector2, _radius: float) -> void:
 	_unlock("loud_and_clear")
+
+func _on_spoon_arcade_entered() -> void:
+	_unlock("arcade_discovered")
+
+func _on_spoon_power_used(spoon_type: String) -> void:
+	if not spoon_powers_seen.get(spoon_type, false):
+		spoon_powers_seen[spoon_type] = true
+		SaveManager.save_game()
+	if spoon_powers_seen.size() >= SPOON_POWER_TYPES.size():
+		_unlock("power_spoon_master")
+
+func _on_spoon_game_won() -> void:
+	_unlock("spoon_champion")
 
 func _check_retroactive() -> void:
 	for location_id: String in GameManager.completed_locations:

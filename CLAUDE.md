@@ -1290,7 +1290,7 @@ available in `GameManager._ready()`) persists `completed_locations` and
 `GameManager._ready()`. Never store save state in scene nodes.
 
 ### Achievements *(implemented)*
-A 19-achievement tracker — a mix of visible milestones and secret discoveries
+A 22-achievement tracker — a mix of visible milestones and secret discoveries
 — with a Pause Menu screen to view progress and a slide-in toast on unlock.
 
 - **`AchievementData`** (`scripts/systems/achievement_data.gd`,
@@ -1308,8 +1308,9 @@ A 19-achievement tracker — a mix of visible milestones and secret discoveries
   `_ready()`, and connects to **9 `GameManager` signals** to detect unlock
   conditions — never reaches into level scripts directly. Persisted state
   (`unlocked: Dictionary`, `bies_activation_count: int`,
-  `companion_types_seen: Dictionary`) is read/written directly by
-  `SaveManager` (no underscore prefixes), mirroring `inventories`/
+  `companion_types_seen: Dictionary`, `spoon_powers_seen: Dictionary`) is
+  read/written directly by `SaveManager` (no underscore prefixes), mirroring
+  `inventories`/
   `level_progress`. `signal achievement_unlocked(id: String)` drives the
   toast and overlay refresh. Public API: `is_unlocked(id)`,
   `get_ordered_ids()`, `get_display_name(id)`, `get_description(id)`,
@@ -1332,7 +1333,17 @@ A 19-achievement tracker — a mix of visible milestones and secret discoveries
     `"lizard"`).
   - `level_flag_set(location_id, key, value)` — end of `set_level_flag()`;
     `AchievementManager` watches for `key == "secret_revealed"`.
-- **The 19 achievements** (`*` = secret until unlocked):
+- **3 more `GameManager` signals**, emitted by `gimme_dat_spoon.gd` (the
+  post-game bonus minigame — see CLAUDE.md "Beyond-prototype systems" /
+  `scripts/levels/gimme_dat_spoon.gd`) for the three spoon-arcade
+  achievements below:
+  - `spoon_arcade_entered` — emitted once from `_ready()`, the moment the
+    arcade scene loads.
+  - `spoon_power_used(spoon_type)` — emitted from `_on_power_activated()`
+    when `player_idx == 0` (the human-controlled seat).
+  - `spoon_game_won` — emitted from `_on_game_over(winner_idx)` when
+    `winner_idx == 0`.
+- **The 22 achievements** (`*` = secret until unlocked):
   | id | Name | Unlocks when | Trigger |
   |----|------|--------------|---------|
   | `welcome_erin` | Reunited | Found Erin at Bellows & Sons Pipe Organ Works | `location_completed("pipe_organ_works")` |
@@ -1354,6 +1365,9 @@ A 19-achievement tracker — a mix of visible milestones and secret discoveries
   | `secrets_out`* | Secret's Out | Found a hidden passage | `level_flag_set(_, "secret_revealed", true)` |
   | `complete_set`* | The Complete Set | Collected all twelve numbered spoons | `item_collected` → 12 `numbered_spoon_*` ids held |
   | `friend_of_the_town`* | Friend of the Town | Helped every townsfolk with their request | `item_collected` → all 12 `TOWN_QUEST_IDS` quests at `"complete"` |
+  | `arcade_discovered`* | Hidden Arcade | Found the Gimme Dat Spoon Arcade | `spoon_arcade_entered` |
+  | `power_spoon_master`* | Power Trip | Activated every type of Power Spoon in Gimme Dat Spoon (across any number of games) | `spoon_power_used` → all 6 `SPOON_POWER_TYPES` seen |
+  | `spoon_champion`* | Last Spoon Standing | Won a game of Gimme Dat Spoon as the human player | `spoon_game_won` |
 
   `pack_rat`/`complete_set`/`friend_of_the_town` are re-derived from scratch
   on every `item_collected` via `_check_collectible_achievements()` (scans
@@ -1368,10 +1382,10 @@ A 19-achievement tracker — a mix of visible milestones and secret discoveries
   for (e.g. `globetrotter` if all 13 locations were already cleared).
 - **`AchievementsOverlay`** (`scripts/ui/achievements_overlay.gd`,
   `extends CanvasLayer`, `layer = 26`, sibling of `PauseMenu` in `HUD.tscn`)
-  — a full-screen list (`PANEL_RECT`) of all 19 achievements in
+  — a full-screen list (`PANEL_RECT`) of all 22 achievements in
   `ACHIEVEMENT_LIST` order, each row showing an icon-color swatch, name
   (`"???"` + dimmed if a locked secret), and an `UNLOCKED`/`LOCKED` tag, plus
-  an "`N / 19 unlocked`" progress line and a description panel for the
+  an "`N / 22 unlocked`" progress line and a description panel for the
   cursor-selected row. Mirrors `pause_menu.gd`'s programmatic
   `_draw()`-free `ColorRect`/`Label` construction, color consts, and
   `_unhandled_input` + `set_input_as_handled()` pattern (`move_up`/
@@ -1392,12 +1406,13 @@ A 19-achievement tracker — a mix of visible milestones and secret discoveries
   achievement's name is revealed at the moment it unlocks, not before).
   `PROCESS_MODE_ALWAYS` keeps it animating even if the unlock coincides with
   a pause.
-- **Persistence** — `save_manager.gd` adds three keys under `"progress"`:
+- **Persistence** — `save_manager.gd` adds four keys under `"progress"`:
   `achievements_unlocked` (→ `AchievementManager.unlocked`),
-  `achievements_bies_count` (→ `bies_activation_count`), and
-  `achievements_companions_seen` (→ `companion_types_seen`).
+  `achievements_bies_count` (→ `bies_activation_count`),
+  `achievements_companions_seen` (→ `companion_types_seen`), and
+  `achievements_spoon_powers_seen` (→ `spoon_powers_seen`).
 - **GUT coverage** — `tests/unit/test_achievements.gd` (8 tests, scene-free):
-  count is in the CLAUDE.md-spec 12–20 range, ids are unique/non-empty, every
+  count is in the CLAUDE.md-spec 12–25 range, ids are unique/non-empty, every
   `.tres` filename matches its `id`, both secret and visible achievements
   exist, `achievements`/`get_ordered_ids()` are populated correctly from
   `ACHIEVEMENT_LIST`, and a locked secret achievement's name/description are

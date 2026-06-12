@@ -6,7 +6,7 @@
 script = ExtResource("1")
 id = "numbered_spoon_06"
 display_name = "Spoon No. 6"
-description = "Marked '6'. Half a dozen down. Feels like there should be more out there."
+description = "Marked '6'. Half a dozen down. Feels like there should be more out there. This one has an 'X' scratched through the handle, like it's meant to be thrown away."
 icon_color = Color(0.68, 0.68, 0.72, 1)
 owner_character = ""
 is_junk = true

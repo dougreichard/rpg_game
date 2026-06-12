@@ -473,6 +473,7 @@ func _add(scene: PackedScene, pos: Vector2) -> void:
 	enemies.add_child(e)
 
 func _process(_delta: float) -> void:
+	GameManager.set_dialog_active(_dialog_box.is_open())
 	if _dialog_box.is_open():
 		if Input.is_action_just_pressed("ui_accept"):
 			_dialog_box.advance()

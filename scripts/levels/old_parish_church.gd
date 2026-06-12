@@ -462,6 +462,7 @@ func _on_special_used(char_name: String) -> void:
 		Audio.play("special")
 
 func _process(_delta: float) -> void:
+	GameManager.set_dialog_active(_dialog_box.is_open())
 	if _dialog_box.is_open():
 		if _dialog_box.is_choice_mode():
 			if Input.is_action_just_pressed("move_up"):

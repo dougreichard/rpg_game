@@ -20,6 +20,10 @@ var revive_progress: float = 0.0
 var is_hidden: bool = false
 var action_prefix: String = ""
 
+# Frozen while a dialog box is open -- see GameManager.set_dialog_active().
+# Mirrors overworld_player.gd's input_locked guard.
+var input_locked: bool = false
+
 enum State { IDLE, WALK, ATTACK, DASH, HURT, DOWN }
 var _state: State = State.IDLE
 
@@ -75,7 +79,7 @@ func _ready() -> void:
 	sprite.play("idle")
 
 func _physics_process(delta: float) -> void:
-	if GameManager.is_paused():
+	if GameManager.is_paused() or input_locked:
 		return
 	_tick_timers(delta)
 	if _flash_timer <= 0.0:

@@ -35,6 +35,7 @@ const AchievementsOverlayScript: Script = preload("res://scripts/ui/achievements
 const AchievementToastScript: Script = preload("res://scripts/ui/achievement_toast.gd")
 const InventoryOverlayScript: Script = preload("res://scripts/ui/inventory_overlay.gd")
 const QuestLogOverlayScript: Script = preload("res://scripts/ui/quest_log_overlay.gd")
+const TravelOverlayScript: Script = preload("res://scripts/ui/travel_overlay.gd")
 
 const CHAR_DATA: Dictionary = {
 	"Quinn": preload("res://data/characters/quinn.tres"),
@@ -148,6 +149,12 @@ const LOCS: Array = [
 		"anchor": Vector2i(17, 0), "size": Vector2i(5, 4), "terrain_row": T_CARPET,
 		"requires": "the_drop", "icon": "film", "duo": ["Quinn", "Ben"],
 	},
+	{
+		"id": "gimme_dat_spoon", "name": "Gimme Dat Spoon Arcade",
+		"short": "Gimme Dat\nSpoon", "scene": "res://scenes/levels/GimmeDatSpoon.tscn",
+		"anchor": Vector2i(35, 1), "size": Vector2i(4, 3), "terrain_row": T_CARPET,
+		"requires": "grand_marquee", "icon": "spoon",
+	},
 ]
 
 const CONNECTIONS: Array = [
@@ -165,6 +172,7 @@ const CONNECTIONS: Array = [
 	["vr_room", "the_drop"],
 	["the_drop", "grand_marquee"],
 	["vr_room", "grand_marquee"],
+	["vr_room", "gimme_dat_spoon"],
 ]
 
 var _id_to_idx: Dictionary = {}
@@ -439,6 +447,12 @@ func _build_ui() -> void:
 	quest_log_overlay.name = "QuestLogOverlay"
 	add_child(quest_log_overlay)
 
+	var travel_overlay = TravelOverlayScript.new()
+	travel_overlay.name = "TravelOverlay"
+	add_child(travel_overlay)
+	travel_overlay.setup(LOCS)
+	travel_overlay.location_chosen.connect(_on_travel_chosen)
+
 	var achievement_toast = AchievementToastScript.new()
 	achievement_toast.name = "AchievementToast"
 	add_child(achievement_toast)
@@ -482,6 +496,7 @@ func _is_completed(idx: int) -> bool:
 func _process(_delta: float) -> void:
 	if GameManager.is_paused():
 		return
+	GameManager.set_dialog_active(_dialog_box.is_open())
 	if is_instance_valid(_standby_player):
 		_standby_player.follow_target = _active_player.global_position - _active_player.facing * (TILE * 0.9)
 	if is_instance_valid(_active_player):
@@ -593,6 +608,19 @@ func _find_item_holder(item_id: String) -> String:
 			return character_name
 	return ""
 
+# Teleports the duo + camera to loc_id's door tile -- the fast-travel
+# destination chosen via the Pause Menu's "Travel" entry / TravelOverlay.
+func _on_travel_chosen(loc_id: String) -> void:
+	var idx: int = _id_to_idx.get(loc_id, -1)
+	if idx < 0:
+		return
+	var door_px: Vector2 = Vector2(_loc_door[idx]) * TILE + Vector2(TILE / 2.0, TILE / 2.0)
+	_active_player.global_position = door_px
+	if is_instance_valid(_standby_player):
+		_standby_player.global_position = door_px + Vector2(-TILE, 0.0)
+	camera.global_position = door_px
+	_update_nearby()
+
 func _swap_duo() -> void:
 	if not is_instance_valid(_standby_player):
 		return
@@ -614,6 +642,12 @@ func _launch() -> void:
 		_status_label.text = "Coming soon!"
 		return
 	Audio.play("ui_select")
+	# The arcade is a single-player bonus minigame with its own character
+	# select -- skip CharacterSelect.tscn (which expects a 2-character duo)
+	# and go straight to the minigame scene.
+	if loc["id"] == "gimme_dat_spoon":
+		TransitionManager.change_scene(loc["scene"])
+		return
 	GameManager.pending_level = loc["scene"]
 	GameManager.pending_level_name = loc["name"]
 	GameManager.pending_level_duo = loc.get("duo", [])
@@ -732,5 +766,8 @@ func _draw_icon(kind: String, p: Vector2, color: Color) -> void:
 			draw_rect(Rect2(p.x - 6.0, p.y - 4.5, 12.0, 9.0), color, false, 2.0)
 			draw_circle(p + Vector2(-3.5, 0.0), 1.4, color)
 			draw_circle(p + Vector2(3.5, 0.0), 1.4, color)
+		"spoon":
+			draw_arc(p + Vector2(0.0, -2.5), 4.0, 0.0, TAU, 12, color, 2.0, true)
+			draw_line(p + Vector2(0.0, 1.5), p + Vector2(0.0, 8.0), color, 2.0)
 		_:
 			pass

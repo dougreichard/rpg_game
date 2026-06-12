@@ -25,7 +25,7 @@ signal closed(effects: Array)
 
 const DialogTreeScript: Script = preload("res://scripts/systems/dialog_tree.gd")
 
-const PANEL_RECT := Rect2(160.0, 460.0, 960.0, 140.0)
+const PANEL_RECT := Rect2(160.0, 420.0, 960.0, 180.0)
 const PANEL_COLOR := Color(0.05, 0.05, 0.09, 0.92)
 const BORDER_COLOR := Color(0.85, 0.78, 0.35, 1.0)
 const NAME_COLOR := Color(1.0, 0.92, 0.4, 1.0)
@@ -33,6 +33,17 @@ const TEXT_COLOR := Color(0.92, 0.92, 0.95, 1.0)
 const PROMPT_COLOR := Color(0.55, 0.55, 0.6, 1.0)
 const PORTRAIT_RADIUS: float = 18.0
 const LINE_HEIGHT: float = 20.0
+const FONT_SIZE: int = 14
+const PROMPT_FONT_SIZE: int = 12
+const TEXT_LEFT_INSET: float = 70.0
+const TEXT_RIGHT_INSET: float = 20.0
+const TEXT_TOP: float = 56.0
+const PROMPT_BOTTOM_MARGIN: float = 16.0
+
+# Max wrapped lines shown per "screen" before advance() moves on -- chosen so
+# TEXT_TOP + (MAX_LINES_PER_SCREEN - 1) * LINE_HEIGHT plus a line of text
+# still leaves room for the prompt above PANEL_RECT's bottom edge.
+const MAX_LINES_PER_SCREEN: int = 5
 
 var _font: Font
 var _portrait_color: Color = Color.WHITE
@@ -40,7 +51,13 @@ var _npc_name: String = ""
 var _tree: Dictionary = {}
 var _node_id: String = ""
 var _node: Dictionary = {}
-var _line_index: int = -1
+
+# Each node's "lines" are word-wrapped and chunked into "screens" (at most
+# MAX_LINES_PER_SCREEN wrapped lines each) by _build_screens() -- see
+# _goto_node(). advance() steps through _screens one at a time so long pages
+# can never overflow PANEL_RECT.
+var _screens: Array[PackedStringArray] = []
+var _screen_index: int = -1
 var _active_character: String = ""
 var _effects: Array = []
 var _choice_mode: bool = false
@@ -71,27 +88,63 @@ func open(npc_name: String, portrait_color: Color, tree: Dictionary, start_node:
 	visible = true
 	_goto_node(start_node)
 
-# Jumps to `node_id`, collecting any "effects" it carries and resetting page/
-# choice state.
+# Jumps to `node_id`, collecting any "effects" it carries and resetting
+# page/choice state.
 func _goto_node(node_id: String) -> void:
 	_node_id = node_id
 	_node = _tree.get(node_id, {})
 	if _node.has("effects"):
 		_effects.append(_node["effects"])
-	_line_index = 0
+	_screens = _build_screens(_node.get("lines", []))
+	_screen_index = 0
 	_choice_mode = false
 	_choice_index = 0
 	queue_redraw()
 
-# Advances to the next page of the current node, or -- once its lines are
+# Word-wraps `text` to fit within `max_width` px at `font_size`, preserving
+# any author-supplied "\n" line breaks.
+func _wrap_line(text: String, max_width: float, font_size: int) -> PackedStringArray:
+	var out := PackedStringArray()
+	for raw_line: String in text.split("\n"):
+		var current: String = ""
+		for word: String in raw_line.split(" "):
+			var candidate: String = word if current == "" else current + " " + word
+			if current != "" and _font.get_string_size(candidate, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x > max_width:
+				out.append(current)
+				current = word
+			else:
+				current = candidate
+		out.append(current)
+	return out
+
+# Wraps every page in `lines` to fit the panel, then chunks the wrapped lines
+# into "screens" of at most MAX_LINES_PER_SCREEN -- advance() steps through
+# these one at a time so a long page can never overflow PANEL_RECT.
+func _build_screens(lines: Array) -> Array[PackedStringArray]:
+	var max_width: float = PANEL_RECT.size.x - TEXT_LEFT_INSET - TEXT_RIGHT_INSET
+	var screens: Array[PackedStringArray] = []
+	for page: String in lines:
+		var wrapped: PackedStringArray = _wrap_line(page, max_width, FONT_SIZE)
+		var i: int = 0
+		while i < wrapped.size():
+			var screen := PackedStringArray()
+			for j: int in MAX_LINES_PER_SCREEN:
+				if i + j < wrapped.size():
+					screen.append(wrapped[i + j])
+			screens.append(screen)
+			i += MAX_LINES_PER_SCREEN
+	if screens.is_empty():
+		screens.append(PackedStringArray())
+	return screens
+
+# Advances to the next screen of the current node, or -- once its screens are
 # exhausted -- enters choice mode, jumps via "next", or closes the
 # conversation (emitting `closed`) if neither is present.
 func advance() -> void:
 	if not visible or _choice_mode:
 		return
-	var lines: Array = _node.get("lines", [])
-	_line_index += 1
-	if _line_index < lines.size():
+	_screen_index += 1
+	if _screen_index < _screens.size():
 		queue_redraw()
 		return
 	if _node.has("choices"):
@@ -149,27 +202,31 @@ func _draw() -> void:
 		_draw_choices()
 		return
 
-	var lines: Array = _node.get("lines", [])
-	if _line_index < 0 or _line_index >= lines.size():
-		return
-	var text_lines: PackedStringArray = String(lines[_line_index]).split("\n")
-	for i: int in text_lines.size():
-		draw_string(_font, PANEL_RECT.position + Vector2(70.0, 56.0 + i * LINE_HEIGHT),
-				text_lines[i], HORIZONTAL_ALIGNMENT_LEFT, PANEL_RECT.size.x - 90.0, 14, TEXT_COLOR)
+	var screen: PackedStringArray = _screens[_screen_index] if _screen_index < _screens.size() else PackedStringArray()
+	for i: int in screen.size():
+		draw_string(_font, PANEL_RECT.position + Vector2(TEXT_LEFT_INSET, TEXT_TOP + i * LINE_HEIGHT),
+				screen[i], HORIZONTAL_ALIGNMENT_LEFT, PANEL_RECT.size.x - TEXT_LEFT_INSET - TEXT_RIGHT_INSET, FONT_SIZE, TEXT_COLOR)
 
-	var has_more: bool = _line_index < lines.size() - 1 or _node.has("choices") or _node.has("next")
+	var has_more: bool = _screen_index < _screens.size() - 1 or _node.has("choices") or _node.has("next")
 	var prompt: String = "Press ENTER to continue" if has_more else "Press ENTER to close"
-	draw_string(_font, PANEL_RECT.position + Vector2(PANEL_RECT.size.x - 230.0, PANEL_RECT.size.y - 14.0),
-			prompt, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, PROMPT_COLOR)
+	_draw_prompt(prompt)
+
+# Draws `text` right-aligned within PANEL_RECT, TEXT_RIGHT_INSET from its
+# right edge -- guarantees the prompt never paints outside the panel
+# regardless of string length (unlike a fixed left offset).
+func _draw_prompt(text: String) -> void:
+	var pos: Vector2 = PANEL_RECT.position + Vector2(TEXT_LEFT_INSET, PANEL_RECT.size.y - PROMPT_BOTTOM_MARGIN)
+	var width: float = PANEL_RECT.size.x - TEXT_LEFT_INSET - TEXT_RIGHT_INSET
+	draw_string(_font, pos, text, HORIZONTAL_ALIGNMENT_RIGHT, width, PROMPT_FONT_SIZE, PROMPT_COLOR)
 
 func _draw_choices() -> void:
 	var choices: Array = _node.get("choices", [])
+	var max_width: float = PANEL_RECT.size.x - TEXT_LEFT_INSET - TEXT_RIGHT_INSET
 	for i: int in choices.size():
 		var color: Color = NAME_COLOR if i == _choice_index else TEXT_COLOR
 		var prefix: String = "> " if i == _choice_index else "   "
-		draw_string(_font, PANEL_RECT.position + Vector2(70.0, 56.0 + i * LINE_HEIGHT),
+		draw_string(_font, PANEL_RECT.position + Vector2(TEXT_LEFT_INSET, TEXT_TOP + i * LINE_HEIGHT),
 				prefix + String(choices[i].get("text", "")), HORIZONTAL_ALIGNMENT_LEFT,
-				PANEL_RECT.size.x - 90.0, 14, color)
+				max_width, FONT_SIZE, color)
 
-	draw_string(_font, PANEL_RECT.position + Vector2(PANEL_RECT.size.x - 230.0, PANEL_RECT.size.y - 14.0),
-			"↑/↓ choose · ENTER select", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, PROMPT_COLOR)
+	_draw_prompt("↑/↓ choose · ENTER select")

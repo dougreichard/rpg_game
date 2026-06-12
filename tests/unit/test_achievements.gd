@@ -1,6 +1,6 @@
 extends GutTest
 
-# CLAUDE.md: the achievement system has 12-20 achievements, a mix of secret
+# CLAUDE.md: the achievement system has 12-25 achievements, a mix of secret
 # and visible, each backed by a data/achievements/*.tres AchievementData
 # Resource and listed in AchievementManager.ACHIEVEMENT_LIST. This only reads
 # the const list and .tres Resources directly — never mutates
@@ -9,7 +9,7 @@ extends GutTest
 
 func test_achievement_count_in_spec_range() -> void:
 	var count: int = AchievementManager.ACHIEVEMENT_LIST.size()
-	assert_between(count, 12, 20, "Should have 12-20 achievements per CLAUDE.md spec")
+	assert_between(count, 12, 25, "Should have 12-25 achievements per CLAUDE.md spec")
 
 func test_achievement_ids_unique_and_non_empty() -> void:
 	var seen: Dictionary = {}

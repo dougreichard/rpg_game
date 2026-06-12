@@ -17,11 +17,19 @@ const SLOT_RECT := Rect2(390.0, 110.0, 500.0, 500.0)
 const SLIDER_STEPS: int = 10
 
 # Main menu
-const MENU_ITEMS: Array[String] = ["Continue", "New Game", "Load", "Options"]
+const MENU_ITEMS: Array[String] = ["Continue", "New Game", "Load", "Options", "Gimme Dat Spoon"]
 const IDX_CONTINUE: int = 0
 const IDX_NEW: int = 1
 const IDX_LOAD: int = 2
 const IDX_OPTIONS: int = 3
+const IDX_SPOON: int = 4
+
+# Layout — sized to fit MENU_ITEMS.size() rows between the subtitle and the
+# controls hint without overlap.
+const MENU_START_Y: float = 350.0
+const MENU_ROW_HEIGHT: float = 60.0
+const MENU_ITEM_HEIGHT: float = 50.0
+const CONTROLS_Y: float = 672.0
 
 var _menu_canvas: CanvasLayer = null
 var _menu_labels: Array = []
@@ -125,8 +133,8 @@ func _build_main_ui() -> void:
 	var col_w: float = 360.0
 	for i in MENU_ITEMS.size():
 		var lbl := Label.new()
-		lbl.position = Vector2(col_x, 360.0 + float(i) * 68.0)
-		lbl.size = Vector2(col_w, 56.0)
+		lbl.position = Vector2(col_x, MENU_START_Y + float(i) * MENU_ROW_HEIGHT)
+		lbl.size = Vector2(col_w, MENU_ITEM_HEIGHT)
 		lbl.add_theme_font_size_override("font_size", 28)
 		_menu_canvas.add_child(lbl)
 		_menu_labels.append(lbl)
@@ -134,7 +142,7 @@ func _build_main_ui() -> void:
 
 	var controls := Label.new()
 	controls.text = "WASD Move  F Attack  V Dash  G Special  Tab Swap  B Bies"
-	controls.position = Vector2(0.0, 660.0)
+	controls.position = Vector2(0.0, CONTROLS_Y)
 	controls.size = Vector2(1280.0, 28.0)
 	controls.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	controls.add_theme_font_size_override("font_size", 14)
@@ -507,6 +515,8 @@ func _is_enabled(idx: int) -> bool:
 			return _can_continue
 		IDX_LOAD:
 			return _can_load
+		IDX_SPOON:
+			return _can_continue and SaveManager.get_slot_summary(SaveManager.get_last_slot()).get("doug_found", false)
 		_:
 			return true
 
@@ -538,6 +548,10 @@ func _select_menu() -> void:
 			_open_slot_select("load")
 		IDX_OPTIONS:
 			_open_options()
+		IDX_SPOON:
+			Audio.play("ui_select")
+			SaveManager.load_game(SaveManager.get_last_slot())
+			TransitionManager.change_scene("res://scenes/levels/GimmeDatSpoon.tscn")
 
 func _start_new_game() -> void:
 	SaveManager.start_new_game(_pending_new_slot)
@@ -555,7 +569,10 @@ func _refresh_menu() -> void:
 		var lbl: Label = _menu_labels[i]
 		var enabled: bool = _is_enabled(i)
 		var sel: bool = (i == _menu_cursor)
-		lbl.text = (">  " if sel else "    ") + MENU_ITEMS[i]
+		# The arcade shortcut is obfuscated until Doug is found, mirroring
+		# AchievementsOverlay's "???" treatment of locked secret entries.
+		var item_text: String = "???" if (i == IDX_SPOON and not enabled) else MENU_ITEMS[i]
+		lbl.text = (">  " if sel else "    ") + item_text
 		var col: Color = SELECTED_COLOR if sel else (NORMAL_COLOR if enabled else DIMMED_COLOR)
 		lbl.add_theme_color_override("font_color", col)
 

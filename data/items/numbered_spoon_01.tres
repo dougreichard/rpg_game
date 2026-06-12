@@ -6,7 +6,7 @@
 script = ExtResource("1")
 id = "numbered_spoon_01"
 display_name = "Spoon No. 1"
-description = "Stamped with a small '1' on the handle. Means nothing on its own -- but feels like it's part of a set."
+description = "Stamped with a small '1' on the handle. Means nothing on its own -- but feels like it's part of a set. A tiny anchor is scratched beside the number."
 icon_color = Color(0.68, 0.68, 0.72, 1)
 owner_character = ""
 is_junk = true
