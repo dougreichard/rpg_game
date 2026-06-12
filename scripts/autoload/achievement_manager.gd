@@ -36,7 +36,7 @@ const ACHIEVEMENT_LIST: Array[AchievementData] = [
 
 const TIME_LORD_TARGET: int = 25
 const PACK_RAT_TARGET: int = 10
-const COMPANION_TYPES: Array[String] = ["frosty", "twinkle", "calvin_coolidge", "william_mary", "lizard"]
+const COMPANION_TYPES: Array[String] = ["frosty", "twinkle", "calvin_coolidge", "william_mary", "lizard", "guinea_pigs"]
 const SPOON_COUNT: int = 12
 # Mirrors SpoonGameScript.POWER_TYPES (scripts/systems/spoon_game.gd).
 const SPOON_POWER_TYPES: Array[String] = ["anchor", "magnet", "spinner", "switch", "reverse", "anchorless"]

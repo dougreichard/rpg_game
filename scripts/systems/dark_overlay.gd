@@ -6,7 +6,7 @@ extends Node2D
 # all world content (floor, walls, enemies, players) but below any CanvasLayer
 # (HUD etc.).  Update `light_pos` and call `queue_redraw()` each frame.
 
-var world_rect: Rect2 = Rect2.EMPTY
+var world_rect: Rect2 = Rect2()
 var light_pos: Vector2 = Vector2.ZERO
 var darkness_alpha: float = 0.82
 var has_light: bool = false
@@ -18,7 +18,7 @@ const LANTERN_RADIUS: float = 190.0
 const AMBIENT_RADIUS: float = 65.0
 
 func _draw() -> void:
-	if world_rect == Rect2.EMPTY:
+	if world_rect == Rect2():
 		return
 	draw_rect(world_rect, Color(0.0, 0.01, 0.05, darkness_alpha))
 	var glow_col: Color = LANTERN_COLOR if has_light else AMBIENT_COLOR

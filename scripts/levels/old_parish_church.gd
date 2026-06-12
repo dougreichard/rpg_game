@@ -195,6 +195,8 @@ func _ready() -> void:
 	_create_father_aldric()
 	_setup_camera()
 	_restore_progress()
+	if not clear_label.visible:
+		Audio.play_music("combat")
 
 # Camera follows the active character  --  see CLAUDE.md "Doorways,
 # camera-follow & multi-room levels". Smoothing makes the retarget on
@@ -477,6 +479,8 @@ func _on_special_used(char_name: String) -> void:
 		hint_label.text = ""
 		clear_label.text = "PARISH CLEARED!\n\nPress ENTER for the Map"
 		clear_label.visible = true
+		Audio.play("puzzle_complete")
+		Audio.play_music("victory")
 	elif GameManager.try_use_whistle():
 		Audio.play("special")
 

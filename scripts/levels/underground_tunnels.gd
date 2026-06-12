@@ -15,6 +15,8 @@ const GRUNT_SCENE: PackedScene = preload("res://scenes/enemies/Grunt.tscn")
 const RUNNER_SCENE: PackedScene = preload("res://scenes/enemies/Runner.tscn")
 const HidingSpotScript: Script = preload("res://scripts/systems/hiding_spot.gd")
 const TwinkleScript: Script = preload("res://scripts/systems/twinkle_companion.gd")
+const GuineaPigScript: Script = preload("res://scripts/systems/guinea_pig_companion.gd")
+const GUINEA_PIG_COOLDOWN: float = 8.0
 # Frosty  --  Evan's general-purpose combat distractor (see CLAUDE.md "Evan's Animals").
 # Priority over Twinkle: when enemies are still alive, Evan's away-from-rubble
 # Special sends Frosty to stagger; once the floor is clear, Twinkle's noise
@@ -121,6 +123,7 @@ var _hatch_progress: int = 0
 var _pip_flash: float = 0.0
 var _twinkle_cooldown_timer: float = 0.0
 var _frosty_cooldown_timer: float = 0.0
+var _guinea_pig_cooldown_timer: float = 0.0
 
 var _cd_scale: float = 1.0
 
@@ -141,6 +144,8 @@ func _ready() -> void:
 	_create_darkness_overlay()
 	_setup_camera()
 	_restore_progress()
+	if not _cleared:
+		Audio.play_music("combat")
 
 # Camera follows the active character  --  see CLAUDE.md "Doorways,
 # camera-follow & multi-room levels".
@@ -334,6 +339,13 @@ func _nearest_enemy(from_pos: Vector2):
 	living.sort_custom(func(a, b): return from_pos.distance_to(a.global_position) < from_pos.distance_to(b.global_position))
 	return living[0]
 
+func _summon_guinea_pigs() -> void:
+	var gp = GuineaPigScript.new()
+	gp.setup(evan.global_position, evan.facing)
+	add_child(gp)
+	_guinea_pig_cooldown_timer = GUINEA_PIG_COOLDOWN * _cd_scale
+	GameManager.companion_summoned.emit("guinea_pigs")
+
 func _summon_twinkle() -> void:
 	var twinkle = TwinkleScript.new()
 	twinkle.setup(evan, evan.facing)
@@ -395,6 +407,8 @@ func _on_special_used(char_name: String) -> void:
 				_summon_frosty(target)
 			elif _twinkle_cooldown_timer == 0.0:
 				_summon_twinkle()
+			elif _guinea_pig_cooldown_timer == 0.0:
+				_summon_guinea_pigs()
 	elif char_name == "Ethan" and not _hatch_hacked:
 		if ethan.global_position.distance_to(HATCH_POS) < HATCH_RADIUS:
 			_hatch_progress += 1
@@ -413,6 +427,7 @@ func _process(delta: float) -> void:
 	_pip_flash = maxf(_pip_flash - delta, 0.0)
 	_twinkle_cooldown_timer = maxf(_twinkle_cooldown_timer - delta, 0.0)
 	_frosty_cooldown_timer = maxf(_frosty_cooldown_timer - delta, 0.0)
+	_guinea_pig_cooldown_timer = maxf(_guinea_pig_cooldown_timer - delta, 0.0)
 	queue_redraw()
 	# Darkness overlay: update position and light state each frame.
 	if is_instance_valid(_darkness):
@@ -442,6 +457,8 @@ func _process(delta: float) -> void:
 		GameManager.set_level_flag(LOCATION_ID, "enemies_cleared", true)
 	if _enemies_cleared and _rubble_cleared and _hatch_hacked and not _cleared:
 		_cleared = true
+		Audio.play("puzzle_complete")
+		Audio.play_music("victory")
 		hint_label.text = ""
 		clear_label.text = "TUNNELS MAPPED!\n\nA hidden route opens between locations.\n\nPress ENTER for the Map"
 		clear_label.visible = true

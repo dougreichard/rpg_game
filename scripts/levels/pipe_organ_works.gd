@@ -138,6 +138,8 @@ func _ready() -> void:
 	_create_goal_banner()
 	_setup_camera()
 	_restore_progress()
+	if not _cleared:
+		Audio.play_music("combat")
 
 # Camera follows the active character  --  see CLAUDE.md "Doorways,
 # camera-follow & multi-room levels". Smoothing makes the retarget on
@@ -495,6 +497,8 @@ func _process(_delta: float) -> void:
 		GameManager.set_level_flag(LOCATION_ID, "enemies_cleared", true)
 	if _enemies_cleared and _organ_repaired and not _cleared:
 		_cleared = true
+		Audio.play("puzzle_complete")
+		Audio.play_music("victory")
 		hint_label.text = ""
 		clear_label.text = "WORKSHOP CLEARED!\n\nThe organ breathes again  --  and somewhere\nbehind it, a door creaks open.\n\nPress ENTER for the Church"
 		clear_label.visible = true

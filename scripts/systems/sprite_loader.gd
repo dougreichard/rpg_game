@@ -174,6 +174,15 @@ const COMPANION_LIZARD_ANIMS: Array = [
 	{name="flee_scatter",      row=6, frames=4, fps=12.0, loop=false},
 ]
 
+const COMPANION_GUINEA_PIGS_ANIMS: Array = [
+	{name="idle_scatter",  row=0, frames=6, fps=8.0,  loop=true},
+	{name="scurry_right",  row=1, frames=8, fps=12.0, loop=true},
+	{name="scurry_down",   row=2, frames=8, fps=12.0, loop=true},
+	{name="flood_panic",   row=3, frames=8, fps=14.0, loop=true},
+	{name="calm_regroup",  row=4, frames=6, fps=8.0,  loop=false},
+	{name="down",          row=5, frames=6, fps=10.0, loop=false},
+]
+
 static var _player_cache: Dictionary = {}
 static var _enemy_cache: Dictionary = {}
 static var _npc_cache: Dictionary = {}
@@ -260,6 +269,7 @@ static func _companion_anims(key: String) -> Array:
 		"william_and_mary":    return COMPANION_WILLIAM_MARY_ANIMS
 		"calvin_and_coolidge": return COMPANION_CALVIN_COOLIDGE_ANIMS
 		"lizard":              return COMPANION_LIZARD_ANIMS
+		"guinea_pigs":         return COMPANION_GUINEA_PIGS_ANIMS
 		_:                     return COMPANION_FROSTY_ANIMS
 
 static func _build(img: Image, anims: Array, tile_w: int, tile_h: int) -> SpriteFrames:

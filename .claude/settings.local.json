@@ -78,7 +78,8 @@
       "mcp__godot__get_debug_output",
       "mcp__godot__stop_project",
       "mcp__godot__run_project",
-      "Bash(godot --headless --path . -s addons/gut/gut_cmdln.gd -gdir=res://tests/unit -gexit)"
+      "Bash(godot --headless --path . -s addons/gut/gut_cmdln.gd -gdir=res://tests/unit -gexit)",
+      "Bash(godot --headless --path . --quit-after 200 --verbose)"
     ],
     "additionalDirectories": [
       "/tmp",

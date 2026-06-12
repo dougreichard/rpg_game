@@ -115,6 +115,8 @@ func _ready() -> void:
 	_create_doorway()
 	_setup_camera()
 	_restore_progress()
+	if not _cleared:
+		Audio.play_music("combat")
 
 # Camera follows the active character  --  see CLAUDE.md "Doorways,
 # camera-follow & multi-room levels".
@@ -310,6 +312,8 @@ func _process(delta: float) -> void:
 		GameManager.set_level_flag(LOCATION_ID, "enemies_cleared", true)
 	if _enemies_cleared and _glitch_repaired and _system_hacked and not _cleared:
 		_cleared = true
+		Audio.play("puzzle_complete")
+		Audio.play_music("victory")
 		hint_label.text = ""
 		clear_label.text = "SIMULATION EXITED!\n\nThe rules rewrite themselves  --  and a door opens.\n\nPress ENTER for the Map"
 		clear_label.visible = true

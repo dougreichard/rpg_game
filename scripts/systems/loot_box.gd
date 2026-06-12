@@ -34,7 +34,7 @@ func try_open(character_name: String, character_pos: Vector2) -> bool:
 		return false
 	is_open = true
 	GameManager.grant_item(character_name, item.id)
-	Audio.play("special")
+	Audio.play("loot_open")
 	modulate = OPEN_COLOR
 	queue_redraw()
 	return true
