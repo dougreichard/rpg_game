@@ -319,7 +319,7 @@ func _reveal_dark_boxes() -> void:
 # distraction  --  cooldown-gated (see CLAUDE.md "Evan's Animals").
 func _summon_frosty(target: Enemy) -> void:
 	var frosty = AnimalCompanionScript.new()
-	frosty.setup(evan, target, FROSTY_COLOR)
+	frosty.setup(evan, target, FROSTY_COLOR, "frosty")
 	add_child(frosty)
 	_frosty_cooldown_timer = FROSTY_COOLDOWN * _cd_scale
 	GameManager.companion_summoned.emit("frosty")

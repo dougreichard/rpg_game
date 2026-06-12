@@ -220,6 +220,8 @@ func _enter_investigate() -> void:
 	_set_state(State.INVESTIGATE)
 
 func _enter_chase() -> void:
+	if _state == State.PATROL or _state == State.INVESTIGATE:
+		Audio.play("alert")
 	_alert_meter = ALERT_THRESHOLD
 	_set_state(State.CHASE)
 

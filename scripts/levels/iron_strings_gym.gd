@@ -223,7 +223,7 @@ func _summon_frosty() -> void:
 	if target == null:
 		return
 	var frosty = AnimalCompanionScript.new()
-	frosty.setup(evan, target, FROSTY_COLOR)
+	frosty.setup(evan, target, FROSTY_COLOR, "frosty")
 	add_child(frosty)
 	_frosty_cooldown_timer = FROSTY_COOLDOWN * _cd_scale
 	GameManager.companion_summoned.emit("frosty")

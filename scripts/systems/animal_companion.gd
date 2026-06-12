@@ -19,13 +19,27 @@ var _phase: Phase = Phase.CHARGE
 var _life_timer: float = LIFETIME
 var _color: Color = Color.WHITE
 var _hitbox = null
+var _sprite: AnimatedSprite2D = null
+var _sprite_name: String = ""
+var _move_dir: Vector2 = Vector2.RIGHT
 
-func setup(summoner: Player, target: Enemy, color: Color) -> void:
+func setup(summoner: Player, target: Enemy, color: Color, sprite_name: String = "") -> void:
 	_summoner = summoner
 	_target = target
 	_color = color
+	_sprite_name = sprite_name
 	global_position = summoner.global_position + Vector2(0.0, -11.0)
 	_build_hitbox()
+
+func _ready() -> void:
+	if _sprite_name.length() > 0:
+		var sf: SpriteFrames = SpriteLoader.try_load_companion(_sprite_name)
+		if sf != null:
+			_sprite = AnimatedSprite2D.new()
+			_sprite.sprite_frames = sf
+			_sprite.scale = Vector2.ONE * SpriteLoader.COMPANION_SPRITE_SCALE
+			add_child(_sprite)
+	_update_sprite()
 
 func _build_hitbox() -> void:
 	_hitbox = HitboxScript.new()
@@ -57,6 +71,7 @@ func _process(delta: float) -> void:
 	match _phase:
 		Phase.CHARGE: _tick_charge(delta)
 		Phase.RETURN: _tick_return(delta)
+	_update_sprite()
 	queue_redraw()
 
 func _tick_charge(delta: float) -> void:
@@ -69,7 +84,8 @@ func _tick_charge(delta: float) -> void:
 		_hitbox.monitoring = false
 		_phase = Phase.RETURN
 		return
-	global_position += to_target.normalized() * CHARGE_SPEED * delta
+	_move_dir = to_target.normalized()
+	global_position += _move_dir * CHARGE_SPEED * delta
 
 func _tick_return(delta: float) -> void:
 	if not is_instance_valid(_summoner):
@@ -79,8 +95,22 @@ func _tick_return(delta: float) -> void:
 	if to_summoner.length() <= ARRIVE_DISTANCE:
 		queue_free()
 		return
-	global_position += to_summoner.normalized() * RETURN_SPEED * delta
+	_move_dir = to_summoner.normalized()
+	global_position += _move_dir * RETURN_SPEED * delta
+
+func _update_sprite() -> void:
+	if _sprite == null:
+		return
+	var target_anim: String = "calvin_charge" if _sprite_name == "calvin_and_coolidge" else "charge"
+	if _phase == Phase.RETURN:
+		target_anim = "return"
+	if _sprite.animation != target_anim:
+		_sprite.play(target_anim)
+	if _move_dir.x != 0.0:
+		_sprite.flip_h = _move_dir.x < 0.0
 
 func _draw() -> void:
+	if _sprite != null:
+		return
 	draw_circle(Vector2.ZERO, BODY_RADIUS, _color)
 	draw_circle(Vector2(BODY_RADIUS * 0.4, -BODY_RADIUS * 0.4), BODY_RADIUS * 0.3, Color.WHITE)

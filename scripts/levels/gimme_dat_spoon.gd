@@ -154,6 +154,9 @@ func _ready() -> void:
 		if frames != null and frames.has_animation("talk_closeup"):
 			_portraits[char_name] = frames
 	_roster.append({"name": "Uncle Doug", "color": UNCLE_DOUG_COLOR})
+	var doug_frames: SpriteFrames = SpriteLoader.try_load_npc("uncle_doug")
+	if doug_frames != null and doug_frames.has_animation("talk_closeup"):
+		_portraits["Uncle Doug"] = doug_frames
 	GameManager.spoon_arcade_entered.emit()
 	queue_redraw()
 

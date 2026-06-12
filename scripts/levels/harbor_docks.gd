@@ -284,10 +284,10 @@ func _summon_calvin_and_coolidge() -> void:
 	if targets.is_empty():
 		return
 	var calvin = AnimalCompanionScript.new()
-	calvin.setup(evan, targets[0], CALVIN_COLOR)
+	calvin.setup(evan, targets[0], CALVIN_COLOR, "calvin_and_coolidge")
 	add_child(calvin)
 	var coolidge = AnimalCompanionScript.new()
-	coolidge.setup(evan, targets[1] if targets.size() > 1 else targets[0], COOLIDGE_COLOR)
+	coolidge.setup(evan, targets[1] if targets.size() > 1 else targets[0], COOLIDGE_COLOR, "calvin_and_coolidge")
 	add_child(coolidge)
 	_calvin_cooldown_timer = CALVIN_COOLDOWN * _cd_scale
 	GameManager.companion_summoned.emit("calvin_coolidge")

@@ -111,9 +111,73 @@ const NPC_GATEKEEPER_ANIMS: Array = [
 	{name="talk_closeup", row=3, frames=6, fps=8.0,  loop=true},
 ]
 
+# Animal companion sheets — 64x64 tiles, 0.5x scale (matches player/enemy/NPC convention).
+const COMPANION_TILE_SIZE: int = 64
+const COMPANION_SPRITE_SCALE: float = 0.5
+
+const COMPANION_FROSTY_ANIMS: Array = [
+	{name="idle",         row=0,  frames=6, fps=8.0,  loop=true},
+	{name="trot_down",    row=1,  frames=8, fps=10.0, loop=true},
+	{name="trot_up",      row=2,  frames=8, fps=10.0, loop=true},
+	{name="trot_right",   row=3,  frames=8, fps=10.0, loop=true},
+	{name="gallop_down",  row=4,  frames=8, fps=12.0, loop=true},
+	{name="gallop_up",    row=5,  frames=8, fps=12.0, loop=true},
+	{name="gallop_right", row=6,  frames=8, fps=12.0, loop=true},
+	{name="charge",       row=7,  frames=6, fps=14.0, loop=true},
+	{name="hurt",         row=8,  frames=4, fps=15.0, loop=false},
+	{name="down",         row=9,  frames=8, fps=10.0, loop=false},
+	{name="return",       row=10, frames=6, fps=10.0, loop=true},
+]
+
+const COMPANION_TWINKLE_ANIMS: Array = [
+	{name="idle",          row=0, frames=6, fps=8.0,  loop=true},
+	{name="trot_down",     row=1, frames=6, fps=10.0, loop=true},
+	{name="trot_right",    row=2, frames=6, fps=10.0, loop=true},
+	{name="bark_distract", row=3, frames=8, fps=10.0, loop=false},
+	{name="return_trot",   row=4, frames=6, fps=10.0, loop=true},
+	{name="hurt",          row=5, frames=4, fps=15.0, loop=false},
+	{name="down",          row=6, frames=6, fps=10.0, loop=false},
+	{name="sniff",         row=7, frames=4, fps=8.0,  loop=true},
+	{name="annoyed",       row=8, frames=4, fps=8.0,  loop=true},
+]
+
+const COMPANION_WILLIAM_MARY_ANIMS: Array = [
+	{name="idle_pair",             row=0, frames=6, fps=8.0,  loop=true},
+	{name="hop_down_pair",         row=1, frames=8, fps=10.0, loop=true},
+	{name="hop_right_pair",        row=2, frames=8, fps=10.0, loop=true},
+	{name="brace_hold_right_pair", row=3, frames=6, fps=8.0,  loop=true},
+	{name="william_squeeze_gap",   row=4, frames=6, fps=10.0, loop=false},
+	{name="reunite",               row=5, frames=6, fps=10.0, loop=false},
+	{name="hurt_pair",             row=6, frames=4, fps=15.0, loop=false},
+	{name="down_pair",             row=7, frames=8, fps=10.0, loop=false},
+]
+
+const COMPANION_CALVIN_COOLIDGE_ANIMS: Array = [
+	{name="idle_pair",         row=0, frames=6, fps=8.0,  loop=true},
+	{name="walk_down_pair",    row=1, frames=8, fps=10.0, loop=true},
+	{name="walk_right_pair",   row=2, frames=8, fps=10.0, loop=true},
+	{name="calvin_charge",     row=3, frames=6, fps=14.0, loop=true},
+	{name="coolidge_brace",    row=4, frames=6, fps=8.0,  loop=false},
+	{name="dual_charge_split", row=5, frames=8, fps=14.0, loop=false},
+	{name="hurt_pair",         row=6, frames=4, fps=15.0, loop=false},
+	{name="down_pair",         row=7, frames=8, fps=10.0, loop=false},
+	{name="return",            row=8, frames=6, fps=10.0, loop=true},
+]
+
+const COMPANION_LIZARD_ANIMS: Array = [
+	{name="idle",              row=0, frames=4, fps=6.0,  loop=true},
+	{name="walk_right_ground", row=1, frames=6, fps=10.0, loop=true},
+	{name="climb_upward",      row=2, frames=8, fps=12.0, loop=true},
+	{name="perch_hold",        row=3, frames=4, fps=8.0,  loop=true},
+	{name="target_reached",    row=4, frames=4, fps=10.0, loop=false},
+	{name="descend",           row=5, frames=8, fps=12.0, loop=true},
+	{name="flee_scatter",      row=6, frames=4, fps=12.0, loop=false},
+]
+
 static var _player_cache: Dictionary = {}
 static var _enemy_cache: Dictionary = {}
 static var _npc_cache: Dictionary = {}
+static var _companion_cache: Dictionary = {}
 
 # Returns a SpriteFrames built from assets/art/sprites/<character_name>.png,
 # or null if the file is absent (caller should use PlaceholderArt instead).
@@ -173,6 +237,30 @@ static func _npc_anims(key: String) -> Array:
 		"librarian":      return NPC_GATEKEEPER_ANIMS
 		"carnival_guard": return NPC_GATEKEEPER_ANIMS
 		_:                return NPC_TOWN_ANIMS
+
+# Returns a SpriteFrames for an animal companion, or null if the PNG is absent.
+static func try_load_companion(companion_name: String) -> SpriteFrames:
+	var key: String = companion_name.to_lower()
+	if key in _companion_cache:
+		return _companion_cache[key]
+	var path: String = "res://assets/art/sprites/%s.png" % key
+	if not ResourceLoader.exists(path):
+		return null
+	var tex: Texture2D = load(path)
+	if tex == null:
+		return null
+	var result: SpriteFrames = _build(tex.get_image(), _companion_anims(key), COMPANION_TILE_SIZE, COMPANION_TILE_SIZE)
+	_companion_cache[key] = result
+	return result
+
+static func _companion_anims(key: String) -> Array:
+	match key:
+		"frosty":              return COMPANION_FROSTY_ANIMS
+		"twinkle":             return COMPANION_TWINKLE_ANIMS
+		"william_and_mary":    return COMPANION_WILLIAM_MARY_ANIMS
+		"calvin_and_coolidge": return COMPANION_CALVIN_COOLIDGE_ANIMS
+		"lizard":              return COMPANION_LIZARD_ANIMS
+		_:                     return COMPANION_FROSTY_ANIMS
 
 static func _build(img: Image, anims: Array, tile_w: int, tile_h: int) -> SpriteFrames:
 	var frames := SpriteFrames.new()

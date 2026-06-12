@@ -112,6 +112,10 @@ func _get_music_stream(track_name: String):
 		var path := "res://assets/music/" + track_name + "." + ext
 		if ResourceLoader.exists(path):
 			var s = load(path)
+			if s is AudioStreamWAV:
+				s.loop_mode = AudioStreamWAV.LOOP_FORWARD
+				s.loop_begin = 0
+				s.loop_end = (s.data.size() / 2) - 1
 			_cache[key] = s
 			return s
 	var stream: AudioStreamWAV = _build_music(track_name)

@@ -25,6 +25,17 @@ var _target: Vector2 = Vector2.ZERO
 var _phase: Phase = Phase.CLIMB
 var _perch_timer: float = PERCH_DURATION
 var _draw_color: Color = COLOR_IDLE
+var _sprite: AnimatedSprite2D = null
+
+func _ready() -> void:
+	var sf: SpriteFrames = SpriteLoader.try_load_companion("lizard")
+	if sf != null:
+		_sprite = AnimatedSprite2D.new()
+		_sprite.sprite_frames = sf
+		_sprite.scale = Vector2.ONE * SpriteLoader.COMPANION_SPRITE_SCALE
+		_sprite.animation_finished.connect(_on_sprite_anim_finished)
+		add_child(_sprite)
+		_sprite.play("climb_upward")
 
 func setup(summoner: Player, target_world_pos: Vector2) -> void:
 	_summoner = summoner
@@ -45,16 +56,21 @@ func _tick_climb(delta: float) -> void:
 		_perch_timer = PERCH_DURATION
 		_draw_color = COLOR_PERCH
 		target_reached.emit()
+		if _sprite != null:
+			_sprite.play("target_reached")
 	else:
 		global_position += to.normalized() * CLIMB_SPEED * delta
+		if _sprite != null:
+			_sprite.flip_h = to.x < 0.0
 
 func _tick_perch(delta: float) -> void:
 	_perch_timer -= delta
-	# Flicker the color to telegraph the switch-flip moment
 	_draw_color = COLOR_PERCH if int(_perch_timer * 10) % 2 == 0 else COLOR_IDLE
 	if _perch_timer <= 0.0:
 		_phase = Phase.RETURN
 		_draw_color = COLOR_IDLE
+		if _sprite != null:
+			_sprite.play("descend")
 		if _summoner == null or not is_instance_valid(_summoner):
 			queue_free()
 
@@ -68,11 +84,15 @@ func _tick_return(delta: float) -> void:
 	else:
 		global_position += to.normalized() * RETURN_SPEED * delta
 
+func _on_sprite_anim_finished() -> void:
+	if _sprite != null and _sprite.animation == "target_reached":
+		_sprite.play("perch_hold")
+
 func _draw() -> void:
-	# Small elongated lizard body — two offset ovals suggesting head+torso
+	if _sprite != null:
+		return
 	draw_rect(Rect2(-BODY_W * 0.5, -BODY_H * 0.5, BODY_W, BODY_H), _draw_color)
 	draw_rect(Rect2(-BODY_W * 0.4, -BODY_H * 0.5 - 4.0, BODY_W * 0.8, 5.0),
 			_draw_color.lightened(0.15))
-	# Tiny eye dot
 	draw_circle(Vector2(BODY_W * 0.25, -BODY_H * 0.5 - 2.0), 1.2,
 			Color(0.1, 0.1, 0.1))

@@ -29,6 +29,17 @@ var _bark_point: Vector2 = Vector2.ZERO
 var _phase: Phase = Phase.TROT_OUT
 var _life_timer: float = LIFETIME
 var _bark_timer: float = 0.0
+var _sprite: AnimatedSprite2D = null
+var _move_dir: Vector2 = Vector2.RIGHT
+
+func _ready() -> void:
+	var sf: SpriteFrames = SpriteLoader.try_load_companion("twinkle")
+	if sf != null:
+		_sprite = AnimatedSprite2D.new()
+		_sprite.sprite_frames = sf
+		_sprite.scale = Vector2.ONE * SpriteLoader.COMPANION_SPRITE_SCALE
+		add_child(_sprite)
+	_update_sprite()
 
 func setup(summoner: Player, direction: Vector2) -> void:
 	_summoner = summoner
@@ -45,6 +56,7 @@ func _process(delta: float) -> void:
 		Phase.TROT_OUT: _tick_trot_out(delta)
 		Phase.BARK:     _tick_bark(delta)
 		Phase.RETURN:   _tick_return(delta)
+	_update_sprite()
 	queue_redraw()
 
 func _tick_trot_out(delta: float) -> void:
@@ -55,7 +67,8 @@ func _tick_trot_out(delta: float) -> void:
 		Audio.play("special")
 		GameManager.emit_noise(global_position, BARK_RADIUS)
 		return
-	global_position += to_point.normalized() * TROT_SPEED * delta
+	_move_dir = to_point.normalized()
+	global_position += _move_dir * TROT_SPEED * delta
 
 func _tick_bark(delta: float) -> void:
 	_bark_timer = maxf(_bark_timer - delta, 0.0)
@@ -70,9 +83,25 @@ func _tick_return(delta: float) -> void:
 	if to_summoner.length() <= ARRIVE_DISTANCE:
 		queue_free()
 		return
-	global_position += to_summoner.normalized() * RETURN_SPEED * delta
+	_move_dir = to_summoner.normalized()
+	global_position += _move_dir * RETURN_SPEED * delta
+
+func _update_sprite() -> void:
+	if _sprite == null:
+		return
+	var target_anim: String
+	match _phase:
+		Phase.TROT_OUT: target_anim = "trot_right"
+		Phase.BARK:     target_anim = "bark_distract"
+		Phase.RETURN:   target_anim = "return_trot"
+	if _sprite.animation != target_anim:
+		_sprite.play(target_anim)
+	if _move_dir.x != 0.0:
+		_sprite.flip_h = _move_dir.x < 0.0
 
 func _draw() -> void:
+	if _sprite != null:
+		return
 	draw_circle(Vector2.ZERO, BODY_RADIUS, BODY_COLOR)
 	if _phase == Phase.BARK:
 		draw_arc(Vector2.ZERO, BODY_RADIUS + 6.0, 0.0, TAU, 16, BARK_RING_COLOR, 2.0)
