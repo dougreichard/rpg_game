@@ -353,18 +353,21 @@ Business_Man/Cowgirl/Badguy — binary `Characters.fbx`), **WesternFrontier**
 (Priest, GoldMiner, Bandit, Salesman, … — binary individual `SK_Chr_*` files).
 Initial dig done (samples rendered to `/tmp/{legendary_chest,priest,goldminer}.png`).
 Tasks to "dig in" later:
-- **Father Aldric (church NPC) → Western Frontier `SK_Chr_Priest_Male_01`** — a
-  black-suited preacher, ideal fit. Wire as the church's in-level NPC billboard.
-- **Quinn → a Western character** (GoldMiner reads as a rugged mechanic/worker;
-  Cowboy/Business_Man are alternates). Re-render his overworld billboard +
-  consider his in-level sprite.
+- **Father Aldric (church NPC) → Western Frontier `SK_Chr_Priest_Male_01`** —
+  ✅ DONE. `old_parish_church.gd._create_father_aldric` builds a priest billboard
+  (idle/talk emotion anims → one pose), feet-anchored, PIL fallback.
+- **Quinn → a Western character** — explored (GoldMiner = rugged western worker,
+  Salesman = Victorian gent). **Held:** none beat the current Roadworker for the
+  "mechanic" read, so Quinn stays Roadworker unless the user prefers a swap.
+  (Pose fix below now makes any of them one render away.)
 - **LegendaryChest → optional loot-box upgrade.** Fancier than the wooden crate
   but **fantasy gold-ornate** (may clash with the modern town — taste call). It's
   modular: `Chest_01` (open body) + `Lid_01` → assemble for closed/open states.
-- **Blocker / prerequisite:** the Western/Frontier character rig uses bone names
-  not yet in `render_character.py`'s `POSE` dict, so they render **T-pose**. Add
-  their arm/leg bone names (inspect one rig in Blender) so the arms-down pose
-  applies, like we did for the old POLYGON + modern Sidekick rigs.
+- **Pose fix:** ✅ DONE. `render_character.py`'s `POSE` dict now covers BOTH the
+  old POLYGON rig (`Shoulder_L`…) and the modern Sidekick rig (`UpperArm_L`,
+  `Thigh_L`, `calf_l`…), which the Western/Frontier + CityCharacters v2 packs use.
+  Their characters now render arms-down. (Also: render_character.py falls back to
+  the single/first mesh when `--mesh` doesn't match, for individual `SK_*` files.)
 - These also tie into **Phase 6b** (in-level characters) — if we tackle animated
   sprites, the priest/Quinn come along.
 

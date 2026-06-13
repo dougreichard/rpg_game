@@ -444,9 +444,24 @@ func _create_doorway() -> void:
 
 func _create_father_aldric() -> void:
 	_aldric_sprite = AnimatedSprite2D.new()
-	var loaded: SpriteFrames = SpriteLoader.try_load_npc("father_aldric")
-	_aldric_sprite.sprite_frames = loaded if loaded != null else PlaceholderArt.make_player_frames(ALDRIC_COLOR, "")
-	_aldric_sprite.scale = Vector2(SpriteLoader.NPC_SPRITE_SCALE, SpriteLoader.NPC_SPRITE_SCALE) if loaded != null else Vector2.ONE
+	# Synty 2.5D priest billboard (Western Frontier) for Father Aldric — a single
+	# pose mapped to all his idle/talk emotion anims; falls back to the PIL sheet.
+	var bb_path := "res://assets/art/synty/characters/father_aldric.png"
+	if ResourceLoader.exists(bb_path):
+		var tex: Texture2D = load(bb_path)
+		var sf := SpriteFrames.new()
+		sf.remove_animation("default")
+		for a: String in ["idle", "talk", "talk_pleased", "talk_amused"]:
+			sf.add_animation(a)
+			sf.set_animation_loop(a, true)
+			sf.add_frame(a, tex)
+		_aldric_sprite.sprite_frames = sf
+		_aldric_sprite.offset = Vector2(0.0, -tex.get_height() / 2.0)  # feet at position
+		_aldric_sprite.scale = Vector2.ONE * (54.0 / float(tex.get_height()))
+	else:
+		var loaded: SpriteFrames = SpriteLoader.try_load_npc("father_aldric")
+		_aldric_sprite.sprite_frames = loaded if loaded != null else PlaceholderArt.make_player_frames(ALDRIC_COLOR, "")
+		_aldric_sprite.scale = Vector2(SpriteLoader.NPC_SPRITE_SCALE, SpriteLoader.NPC_SPRITE_SCALE) if loaded != null else Vector2.ONE
 	_aldric_sprite.play("idle")
 	_aldric_sprite.position = ALDRIC_POS
 	add_child(_aldric_sprite)
