@@ -176,6 +176,7 @@ var _cd_scale: float = 1.0
 func _ready() -> void:
 	_build_floor()
 	_build_walls()
+	PlaceholderArt.add_mood_light(self, LOCATION_ID)
 	GameManager.register_players_with_preference(evan, ethan)
 	hud.setup(evan, ethan)
 	_cd_scale = GameManager.companion_cooldown_scale()
