@@ -337,6 +337,39 @@ static func make_synty_ground_tileset() -> TileSet:
 	_synty_ground_ts = ts
 	return ts
 
+# Synty interior floor tileset for the levels (see docs/synty_2_5d_art_plan.md).
+# Loads a 64x32 atlas (two 32px tiles: plain + accent) baked from a Synty
+# interior surface texture. Parameterized + cached per path so each level can
+# pass its own floor (workshop wood, dock concrete, etc.).
+static var _synty_floor_ts_cache: Dictionary = {}
+
+static func make_synty_floor_tileset(atlas_path: String) -> TileSet:
+	if _synty_floor_ts_cache.has(atlas_path):
+		return _synty_floor_ts_cache[atlas_path]
+	var src := TileSetAtlasSource.new()
+	src.texture = load(atlas_path)
+	src.texture_region_size = Vector2i(32, 32)
+	src.use_texture_padding = false
+	for col: int in 2:
+		src.create_tile(Vector2i(col, 0))
+	var ts := TileSet.new()
+	ts.tile_size = Vector2i(32, 32)
+	ts.add_source(src, 0)
+	_synty_floor_ts_cache[atlas_path] = ts
+	return ts
+
+# Synty wall tile texture (a small tileable surface). Pair with a Sprite2D using
+# region_enabled + region_rect = wall size + texture_repeat ENABLED to tile it
+# across an arbitrary wall rect. Cached per path.
+static var _synty_wall_tex_cache: Dictionary = {}
+
+static func make_synty_wall_tile(tex_path: String) -> Texture2D:
+	if _synty_wall_tex_cache.has(tex_path):
+		return _synty_wall_tex_cache[tex_path]
+	var tex: Texture2D = load(tex_path)
+	_synty_wall_tex_cache[tex_path] = tex
+	return tex
+
 # Generic prop/gate texture: a beveled panel with an outer black frame.
 # Works for any rectangular prop — wall gates, containers, doors, etc.
 # Thick props (w>16, h>16) get an inner bevel for a 3-D recessed panel look.

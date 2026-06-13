@@ -174,9 +174,23 @@ Original notes:
 - `PlaceholderArt` stays the fallback for any building not yet rendered.
 
 ### Phase 3 — Roll out to the 13 levels
-- Same pipeline for interior floors, walls, and the per-location props currently
-  drawn by `PlaceholderArt.make_*_texture()` (organ, pews, consoles, gears, etc.).
-- Each level migrates independently behind the fallback — no big-bang.
+
+**Pilot — Pipe Organ Works floor + walls: ✅ DONE (2026-06-13).**
+- Reusable, parameterized PlaceholderArt helpers (so every level reuses them):
+  - `make_synty_floor_tileset(atlas_path)` — 64x32 atlas (plain + accent 32px
+    tiles) baked from a Synty interior surface; cached per path.
+  - `make_synty_wall_tile(tex_path)` — tileable wall texture; pair with a Sprite2D
+    `region_enabled` + `region_rect = wall size` + `texture_repeat ENABLED`.
+- `assets/art/tiles/synty_floor_workshop.png` (Shops wood) +
+  `synty_wall_concrete.png` (Shops concrete), baked via PIL.
+- `pipe_organ_works.gd` `_build_floor`/`_build_walls` now use them.
+
+**Still pending for the rollout:**
+- Per-location props: replace `PlaceholderArt.make_*_texture()` (organ, pews,
+  consoles, gears…) with Synty prop billboards; keep signature items (the organ)
+  as placeholders where Synty has no equivalent.
+- Remaining 12 levels (each migrates independently behind the fallback — no
+  big-bang), with their own floor/wall textures per theme.
 
 ### Phase 4 — Characters & enemies
 
