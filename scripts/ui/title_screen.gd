@@ -17,19 +17,22 @@ const SLOT_RECT := Rect2(390.0, 110.0, 500.0, 500.0)
 const SLIDER_STEPS: int = 10
 
 # Main menu
-const MENU_ITEMS: Array[String] = ["Continue", "New Game", "Load", "Options", "Gimme Dat Spoon"]
+const MENU_ITEMS: Array[String] = ["Continue", "New Game", "Load", "Options", "How to Play", "Gimme Dat Spoon"]
 const IDX_CONTINUE: int = 0
 const IDX_NEW: int = 1
 const IDX_LOAD: int = 2
 const IDX_OPTIONS: int = 3
-const IDX_SPOON: int = 4
+const IDX_HELP: int = 4
+const IDX_SPOON: int = 5
 
 # Layout — sized to fit MENU_ITEMS.size() rows between the subtitle and the
 # controls hint without overlap.
-const MENU_START_Y: float = 350.0
-const MENU_ROW_HEIGHT: float = 60.0
+const MENU_START_Y: float = 320.0
+const MENU_ROW_HEIGHT: float = 54.0
 const MENU_ITEM_HEIGHT: float = 50.0
 const CONTROLS_Y: float = 672.0
+
+const HowToPlayOverlayScript: Script = preload("res://scripts/ui/how_to_play_overlay.gd")
 
 var _menu_canvas: CanvasLayer = null
 var _menu_labels: Array = []
@@ -62,6 +65,9 @@ var _opt_name_labels: Array = []
 var _opt_bar_fills: Array = []
 var _opt_pct_labels: Array = []
 
+var _help_open: bool = false
+var _how_to_play_overlay = null
+
 var _time: float = 0.0
 var _gears: Array = []
 var _motes: Array = []
@@ -81,6 +87,10 @@ func _ready() -> void:
 	_build_slot_overlay()
 	_build_confirm_overlay()
 	_build_options_overlay()
+	_how_to_play_overlay = HowToPlayOverlayScript.new()
+	_how_to_play_overlay.layer = 5
+	add_child(_how_to_play_overlay)
+	_how_to_play_overlay.closed.connect(_on_help_closed)
 
 # ---------------------------------------------------------------------------
 # Background (gears + floating motes)
@@ -417,6 +427,8 @@ func _draw_gear(center: Vector2, radius: float, teeth: int, angle: float) -> voi
 # ---------------------------------------------------------------------------
 
 func _unhandled_input(event: InputEvent) -> void:
+	if _help_open:
+		return
 	if _opt_open:
 		_handle_options_input(event)
 	elif _confirming:
@@ -548,6 +560,10 @@ func _select_menu() -> void:
 			_open_slot_select("load")
 		IDX_OPTIONS:
 			_open_options()
+		IDX_HELP:
+			_help_open = true
+			_how_to_play_overlay.open()
+			Audio.play("ui_select")
 		IDX_SPOON:
 			Audio.play("ui_select")
 			SaveManager.load_game(SaveManager.get_last_slot())
@@ -688,6 +704,9 @@ func _open_options() -> void:
 	_opt_canvas.visible = true
 	_refresh_sliders()
 	Audio.play("ui_select")
+
+func _on_help_closed() -> void:
+	_help_open = false
 
 func _close_options() -> void:
 	_opt_open = false
