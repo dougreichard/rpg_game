@@ -23,6 +23,9 @@ synty_source/
                        SpyKit/ (Ethan gadgets) Kids/
                      Enemies/characters: CityCharacters/ GangWarfare/ Heist/
                        Mech/ (robots+bosses) HorrorCarnival/ SciFiSpace/ Knights/
+                       Western/ WesternFrontier/ (priest=Father Aldric, miner/cowboy
+                       =Quinn options; binary FBX). Props: LegendaryChest/ (fancy
+                       loot-box upgrade candidate, fantasy-gold) -- see plan doc.
                      Interiors (cont): CoffeeShop/ (NEW, cafe/lounge)
                      Animation: AnimLocomotion/ (walk/idle/run; Sidekick + Polygon
                        rig sets). CityCharacters v2 = modern *Sidekick* rig (binary
