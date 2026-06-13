@@ -387,9 +387,11 @@ func _create_synty_props() -> void:
 # dialog (see CLAUDE.md "NPC dialog & quests").
 func _create_manager() -> void:
 	_manager_sprite = AnimatedSprite2D.new()
-	var loaded: SpriteFrames = SpriteLoader.try_load_npc("mr_bellows")
-	_manager_sprite.sprite_frames = loaded if loaded != null else PlaceholderArt.make_player_frames(MANAGER_COLOR, "")
-	_manager_sprite.scale = Vector2(SpriteLoader.NPC_SPRITE_SCALE, SpriteLoader.NPC_SPRITE_SCALE) if loaded != null else Vector2.ONE
+	# Synty 2.5D billboard (Western Frontier salesman = Victorian "Bellows & Sons" manager).
+	if not PlaceholderArt.apply_npc_billboard(_manager_sprite, "mr_bellows", 54.0):
+		var loaded: SpriteFrames = SpriteLoader.try_load_npc("mr_bellows")
+		_manager_sprite.sprite_frames = loaded if loaded != null else PlaceholderArt.make_player_frames(MANAGER_COLOR, "")
+		_manager_sprite.scale = Vector2(SpriteLoader.NPC_SPRITE_SCALE, SpriteLoader.NPC_SPRITE_SCALE) if loaded != null else Vector2.ONE
 	_manager_sprite.play("idle")
 	_manager_sprite.position = MANAGER_POS
 	add_child(_manager_sprite)
