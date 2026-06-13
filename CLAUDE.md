@@ -7,9 +7,19 @@ the project evolves.
 
 ## Project overview
 
-**Hunkle Bunkle** is a retro-style, 16-bit, top-down adventure brawler built in
-**Godot 4.x with GDScript**. It combines environmental puzzle-solving with
-arcade-style beat-em-up combat across 13 distinct locations.
+**Hunkle Bunkle** is a top-down adventure brawler built in **Godot 4.x with
+GDScript**, with a **Synty low-poly 2.5D** art style — Synty 3D assets rendered
+to 2D sprites/billboards at a fixed 3/4 angle and composited into a top-down 2D
+scene (see `docs/synty_2_5d_art_plan.md`). It combines environmental
+puzzle-solving with arcade-style beat-em-up combat across 13 distinct locations.
+
+> **Art direction:** the game is **not** retro/pixel-art. Do not assume a
+> 16-bit/8-bit look. Environments, props, town characters and bosses are Synty
+> billboards (`assets/art/synty/…`, baked from the licensed packs staged in
+> git-ignored `synty_source/`). `PlaceholderArt` (programmatic) and the older
+> PIL pixel sheets (`assets/art/sprites/…`, still used for in-level player and
+> regular-enemy combat animation) remain as fallbacks, not the target style.
+> Earlier `DESIGN.md` / `artwork/` / `gem/` pixel-art docs are legacy.
 
 **Goal:** Find and rescue "Uncle Doug". Players navigate an overworld map,
 unlock new locations and characters by solving puzzles and defeating enemies.
@@ -146,11 +156,15 @@ Agnes by Old Parish Church `secret_revealed`.
 
 ## Game specs
 
-### Pixel grid
-- **Tile size:** 32×32 px
-- **Character sprite (gameplay footprint):** 32×32 px (matches tile size — full tile-grid alignment)
-- **Character sprite source art:** 64×64 px per frame (2× oversample); all five sheets are PIL-generated via `generators/gen_*.py` — see `DESIGN.md` §3/§4 for the full spec.
-- **Viewport:** 1280×720 (scale up with integer scaling in project settings)
+### Tile & sprite grid
+*(A gameplay grid, not a pixel-art constraint — the art is Synty 2.5D, see above.)*
+- **Tile size:** 32×32 px (gameplay/collision grid)
+- **Character gameplay footprint:** 32×32 px (tile-aligned)
+- **Synty billboards** (`assets/art/synty/…`): rendered 3/4 at high res, alpha-trimmed,
+  imported with smooth filtering, and scaled to fit the grid at runtime — not pixel art.
+- **Legacy PIL character/enemy sheets** (`assets/art/sprites/…`): 64×64 px/frame
+  (2× oversample), via `generators/gen_*.py` — still used for in-level combat animation.
+- **Viewport:** 1280×720
 
 ### Character stats *(starting values — tune via exported vars)*
 
@@ -386,7 +400,11 @@ Location template:
 ## Tech stack & targets
 
 - **Engine:** Godot 4.x (confirm with `godot --version`; prefer 4.3+ APIs). Use GDScript 2.0 idioms.
-- **Rendering:** 2D. `Node2D` + Y-sort for depth (screen-Y = depth; small `z` for jump height).
+- **Rendering:** 2D, **2.5D presentation** — top-down gameplay with Synty 3D
+  assets pre-rendered to 2D billboards (fixed 3/4 angle) for buildings, props,
+  town characters and bosses. `Node2D` + Y-sort for depth (screen-Y = depth;
+  small `z` for jump height); the overworld root is Y-sorted so the duo
+  interleaves with buildings/props.
 - **Platforms:** Desktop — Windows, macOS, Linux.
 
 ---
@@ -480,7 +498,12 @@ Tracks puzzle state per location. Emits signals when puzzle conditions are met
 abilities by type, not by character name, so new characters can plug in.
 
 ### Tile-mapped floors & wall art
-All 13 levels use programmatically generated `TileMap` floors and wall sprites — no imported assets.
+All 13 levels use a `TileMap` floor + textured wall sprites. The current art is
+**Synty-derived**: `PlaceholderArt.make_synty_floor_tileset(path)` (per-theme
+floor atlas baked from Synty textures) and `make_synty_wall_tile(path)` (tiled
+across each wall rect via `region` + `texture_repeat`), with Synty billboard
+props on top. The original programmatic generators
+(`make_level_tileset`/`make_wall_texture`) remain as fallbacks.
 
 **Floor:** `PlaceholderArt.make_level_tileset(base, accent) -> TileSet` draws a 64×32 px atlas
 (two 32×32 tiles). `_build_floor()` builds a `TileMap`, `move_child(tm, 0)` so it renders behind
@@ -645,10 +668,13 @@ with how the editor serializes, then reopen in the editor to confirm it's valid.
 
 ## Guardrails
 
-- Original IP only — no licensed names, music, or assets. Imported assets are
-  allowed as long as they are original (created for this project) or from a
-  compatible open/free license (CC0, OFL, etc.). `PlaceholderArt` remains
-  available as a fallback for anything not yet replaced with real art.
+- Original IP for **names, story, characters, music** — no licensed/brand names.
+- **Art assets:** the look is **Synty low-poly 2.5D**, built from the licensed
+  Synty POLYGON packs the project owns (raw FBX/textures staged in git-ignored
+  `synty_source/`; rendered PNGs live in `assets/art/synty/`). Original art and
+  CC0/OFL assets are also fine. `PlaceholderArt` (programmatic) and the PIL pixel
+  sheets are **fallbacks**, not the target style — don't treat the game as
+  retro/pixel-art (see Project overview).
 - Enemy attacks must be **telegraphed**; combat must stay **readable**.
 - Character abilities should feel distinct and be required by at least one puzzle
   or encounter — no ability should be purely cosmetic.

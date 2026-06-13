@@ -1,5 +1,12 @@
 # DESIGN.md — Hunkle Bunkle Visual Design
 
+> ⚠️ **Legacy (pixel-art era).** The game's art direction is now **Synty
+> low-poly 2.5D**, not retro pixel art — see `CLAUDE.md` "Project overview" and
+> `docs/synty_2_5d_art_plan.md`. The palettes, pixel-grid, and sprite-generation
+> conventions below describe the original PIL pixel sheets (still used for
+> in-level player/enemy combat animation) and are kept for that context only.
+> Do **not** treat the pixel-art guidance here as the target style.
+
 This document consolidates the project's **visual design language** — color
 palettes, art-generation conventions, UI styling, and on-screen feedback
 (telegraphs/FX) — in one place. It complements, but doesn't replace:
