@@ -13,6 +13,16 @@ const FOLLOW_SPEED: float = 170.0
 const FOLLOW_STOP_DISTANCE: float = 36.0
 const TELEPORT_DISTANCE: float = 300.0
 
+# Billboard juice: a small vertical bob while walking, and a soft ground shadow
+# so the feet-anchored Synty character billboard reads as standing on the map.
+const BOB_AMPLITUDE: float = 2.6
+const BOB_SPEED: float = 13.0
+const SHADOW_OFFSET: Vector2 = Vector2(0.0, 2.0)
+const SHADOW_RADIUS: float = 8.5
+const SHADOW_COLOR: Color = Color(0.0, 0.0, 0.0, 0.26)
+
+var _bob_phase: float = 0.0
+
 var mode: Mode = Mode.ACTIVE
 var follow_target: Vector2 = Vector2.ZERO
 var facing: Vector2 = Vector2.DOWN
@@ -39,7 +49,7 @@ func setup(frames: SpriteFrames, sprite_scale: float = 1.0, name_in: String = ""
 	character_name = name_in
 
 
-func _physics_process(_delta: float) -> void:
+func _physics_process(delta: float) -> void:
 	if GameManager.is_paused() or input_locked:
 		return
 	match mode:
@@ -47,6 +57,25 @@ func _physics_process(_delta: float) -> void:
 			_tick_active()
 		Mode.FOLLOW:
 			_tick_follow()
+	_update_bob(delta)
+
+
+# Bob the sprite (not the node) so the ground shadow drawn at the node origin
+# stays put while the feet lift on each step.
+func _update_bob(delta: float) -> void:
+	if sprite == null:
+		return
+	if velocity.length() > 1.0:
+		_bob_phase += delta * BOB_SPEED
+		sprite.position.y = -absf(sin(_bob_phase)) * BOB_AMPLITUDE
+	else:
+		sprite.position.y = move_toward(sprite.position.y, 0.0, delta * 30.0)
+
+
+func _draw() -> void:
+	draw_set_transform(SHADOW_OFFSET, 0.0, Vector2(1.0, 0.45))
+	draw_circle(Vector2.ZERO, SHADOW_RADIUS, SHADOW_COLOR)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
 func _tick_active() -> void:
