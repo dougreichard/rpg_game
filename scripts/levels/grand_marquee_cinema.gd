@@ -7,9 +7,20 @@ const FLOOR_BASE_COLOR: Color = Color(0.30, 0.21, 0.23)
 const FLOOR_ACCENT_COLOR: Color = Color(0.72, 0.55, 0.28)
 const FLOOR_COLS: int = 20
 const FLOOR_ROWS: int = 17
-const FLOOR_TILE_PLAIN: Vector2i = Vector2i(0, 6)
-const FLOOR_TILE_ACCENT: Vector2i = Vector2i(1, 6)
+const FLOOR_TILE_PLAIN: Vector2i = Vector2i(0, 0)
+const FLOOR_TILE_ACCENT: Vector2i = Vector2i(1, 0)
 const FLOOR_ACCENT_PERIOD: int = 4
+# Synty 2.5D cinema (see docs/synty_2_5d_art_plan.md): carpet floor + walls;
+# Office projector in the booth + couch seating. House organ stays PlaceholderArt.
+const SYNTY_FLOOR: String = "res://assets/art/tiles/synty_floor_carpet.png"
+const SYNTY_WALL: String = "res://assets/art/tiles/synty_wall_concrete.png"
+const PROJECTOR_BILLBOARD: String = "res://assets/art/synty/props/projector.png"
+# [name, x, y, on-screen height px] cinema dressing.
+const CINEMA_PROPS: Array = [
+	["couch", 270, 430, 40],
+	["couch", 410, 430, 40],
+	["plant", 110, 450, 40],
+]
 
 const GRUNT_SCENE: PackedScene = preload("res://scenes/enemies/Grunt.tscn")
 const BOSS_SCENE: PackedScene = preload("res://scenes/enemies/Boss.tscn")
@@ -240,20 +251,32 @@ func _restore_progress() -> void:
 # Booth + Balcony hub-and-wings layout (12 wall segments) needed zero changes
 # here, only more .tscn nodes.
 func _build_walls() -> void:
-	var wall_color: Color = FLOOR_BASE_COLOR.darkened(0.35)
+	var wall_tex: Texture2D = PlaceholderArt.make_synty_wall_tile(SYNTY_WALL)
 	for wall in $Walls.get_children():
 		if not wall is StaticBody2D:
 			continue
 		var shape: CollisionShape2D = wall.get_node("CollisionShape2D")
 		var rect: RectangleShape2D = shape.shape
 		var sprite := Sprite2D.new()
-		sprite.texture = PlaceholderArt.make_wall_texture(wall_color, int(rect.size.x), int(rect.size.y))
+		sprite.texture = wall_tex
+		sprite.texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
+		sprite.region_enabled = true
+		sprite.region_rect = Rect2(0.0, 0.0, rect.size.x, rect.size.y)
 		wall.add_child(sprite)
+
+func _apply_synty_billboard(spr: Sprite2D, path: String, target_h: float) -> bool:
+	if not ResourceLoader.exists(path):
+		return false
+	var tex: Texture2D = load(path)
+	spr.texture = tex
+	spr.offset = Vector2(0.0, -tex.get_height() / 2.0)
+	spr.scale = Vector2.ONE * (target_h / float(tex.get_height()))
+	return true
 
 func _build_floor() -> void:
 	var tile_map := TileMap.new()
 	tile_map.name = "Floor"
-	tile_map.tile_set = PlaceholderArt.make_hb_tileset()
+	tile_map.tile_set = PlaceholderArt.make_synty_floor_tileset(SYNTY_FLOOR)
 	add_child(tile_map)
 	move_child(tile_map, 0)
 	tile_map.position = Vector2(CAMERA_LIMIT_LEFT, CAMERA_LIMIT_TOP)
@@ -264,9 +287,16 @@ func _build_floor() -> void:
 
 func _create_projector() -> void:
 	_projector_sprite = Sprite2D.new()
-	_projector_sprite.texture = PlaceholderArt.make_gate_texture(Color(0.42, 0.32, 0.5), 48, 48)
+	if not _apply_synty_billboard(_projector_sprite, PROJECTOR_BILLBOARD, 40.0):
+		_projector_sprite.texture = PlaceholderArt.make_gate_texture(Color(0.42, 0.32, 0.5), 48, 48)
 	_projector_sprite.position = PROJECTOR_POS
 	add_child(_projector_sprite)
+	# Cinema dressing (couch seating + plant).
+	for p: Array in CINEMA_PROPS:
+		var spr := Sprite2D.new()
+		if _apply_synty_billboard(spr, "res://assets/art/synty/props/%s.png" % p[0], float(p[3])):
+			spr.position = Vector2(float(p[1]), float(p[2]))
+			add_child(spr)
 	# Uncle Doug — hidden until the level is cleared; appears in the booth
 	_uncle_doug_sprite = AnimatedSprite2D.new()
 	var loaded: SpriteFrames = SpriteLoader.try_load_npc("uncle_doug")
