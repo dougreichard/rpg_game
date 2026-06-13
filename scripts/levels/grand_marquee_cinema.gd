@@ -45,6 +45,16 @@ const TicketEthanItem: ItemData = preload("res://data/items/ticket_ethan.tres")
 # trigger; not yet cleared -> OverworldMap, the standard early-exit path).
 const DialogBoxScript: Script = preload("res://scripts/ui/dialog_box.gd")
 const DialogTreeScript: Script = preload("res://scripts/systems/dialog_tree.gd")
+const SpeechBubbleScript: Script = preload("res://scripts/systems/speech_bubble.gd")
+
+const USHER_BUBBLE_MIN  : float = 7.0
+const USHER_BUBBLE_MAX  : float = 14.0
+const USHER_BUBBLE_DUR  : float = 3.5
+const USHER_BUBBLE_LINES: Array[String] = [
+	"Tickets will be checked. All five.",
+	"The cinema has standards, even now.",
+	"I've been holding this door longer than I care to admit.",
+]
 
 const UNCLE_DOUG_COLOR := Color(0.70, 0.63, 0.48)
 const UNCLE_DOUG_POS := Vector2(160.0, 260.0)  # PROJECTOR_POS + Vector2(48, 0)
@@ -155,6 +165,8 @@ var _doorway = null
 var _dialog_box = null
 var _doug_talked: bool = false
 var _usher_sprite: AnimatedSprite2D
+var _usher_bubble        = null
+var _usher_bubble_timer: float = 0.0
 var _usher_met: bool = false
 
 func _ready() -> void:
@@ -332,6 +344,10 @@ func _create_usher_npc() -> void:
 	_usher_sprite.play("idle")
 	_usher_sprite.position = USHER_POS
 	add_child(_usher_sprite)
+	_usher_bubble = SpeechBubbleScript.new()
+	_usher_bubble.position = USHER_POS + Vector2(0.0, -52.0)
+	add_child(_usher_bubble)
+	_usher_bubble_timer = randf_range(USHER_BUBBLE_MIN, USHER_BUBBLE_MAX)
 
 func _talk_to_usher(char_name: String) -> void:
 	Audio.play("ui_select")
@@ -391,7 +407,14 @@ func _on_special_used(char_name: String) -> void:
 	elif GameManager.try_use_whistle():
 		Audio.play("special")
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
+	if is_instance_valid(_usher_bubble) and not _dialog_box.is_open():
+		_usher_bubble_timer -= delta
+		if _usher_bubble_timer <= 0.0:
+			_usher_bubble_timer = randf_range(USHER_BUBBLE_MIN, USHER_BUBBLE_MAX)
+			_usher_bubble.show_text(
+				USHER_BUBBLE_LINES[randi() % USHER_BUBBLE_LINES.size()],
+				USHER_BUBBLE_DUR)
 	GameManager.set_dialog_active(_dialog_box.is_open())
 	if _dialog_box.is_open():
 		if _dialog_box.is_choice_mode():

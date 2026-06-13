@@ -38,8 +38,18 @@ const LOOT_FLAG_KEYS := ["music_loot_open", "fork_loot_open"]
 const DoorwayScript: Script = preload("res://scripts/systems/doorway.gd")
 const DOORWAY_POS := Vector2(440.0, 560.0)
 
-const DialogBoxScript: Script = preload("res://scripts/ui/dialog_box.gd")
-const DialogTreeScript: Script = preload("res://scripts/systems/dialog_tree.gd")
+const DialogBoxScript: Script    = preload("res://scripts/ui/dialog_box.gd")
+const DialogTreeScript: Script   = preload("res://scripts/systems/dialog_tree.gd")
+const SpeechBubbleScript: Script = preload("res://scripts/systems/speech_bubble.gd")
+
+const HIERONYMUS_BUBBLE_MIN  : float = 7.0
+const HIERONYMUS_BUBBLE_MAX  : float = 14.0
+const HIERONYMUS_BUBBLE_DUR  : float = 3.5
+const HIERONYMUS_BUBBLE_LINES: Array[String] = [
+	"The bells haven't rung in years.",
+	"Time moves strangely in a stopped clock.",
+	"I know that sequence... or I did, once.",
+]
 
 const HIERONYMUS_COLOR := Color(0.44, 0.39, 0.35)
 const HIERONYMUS_POS := Vector2(280.0, 500.0)
@@ -83,6 +93,8 @@ var _bell_sprite: Sprite2D
 var _loot_boxes: Array = []
 var _doorway = null
 var _hieronymus_sprite: AnimatedSprite2D
+var _hieronymus_bubble        = null
+var _hieronymus_bubble_timer: float = 0.0
 var _dialog_box = null
 var _hieronymus_met: bool = false
 
@@ -213,6 +225,10 @@ func _create_hieronymus_npc() -> void:
 	_hieronymus_sprite.play("idle")
 	_hieronymus_sprite.position = HIERONYMUS_POS
 	add_child(_hieronymus_sprite)
+	_hieronymus_bubble = SpeechBubbleScript.new()
+	_hieronymus_bubble.position = HIERONYMUS_POS + Vector2(0.0, -52.0)
+	add_child(_hieronymus_bubble)
+	_hieronymus_bubble_timer = randf_range(HIERONYMUS_BUBBLE_MIN, HIERONYMUS_BUBBLE_MAX)
 	var dialog_layer := CanvasLayer.new()
 	dialog_layer.layer = 19
 	add_child(dialog_layer)
@@ -278,7 +294,14 @@ func _on_special_used(char_name: String) -> void:
 	elif GameManager.try_use_whistle():
 		Audio.play("special")
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
+	if is_instance_valid(_hieronymus_bubble) and not _dialog_box.is_open():
+		_hieronymus_bubble_timer -= delta
+		if _hieronymus_bubble_timer <= 0.0:
+			_hieronymus_bubble_timer = randf_range(HIERONYMUS_BUBBLE_MIN, HIERONYMUS_BUBBLE_MAX)
+			_hieronymus_bubble.show_text(
+				HIERONYMUS_BUBBLE_LINES[randi() % HIERONYMUS_BUBBLE_LINES.size()],
+				HIERONYMUS_BUBBLE_DUR)
 	GameManager.set_dialog_active(_dialog_box.is_open())
 	if _dialog_box.is_open():
 		if _dialog_box.is_choice_mode():

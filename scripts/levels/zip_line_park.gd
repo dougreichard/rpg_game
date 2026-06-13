@@ -49,8 +49,18 @@ const LOOT_FLAG_KEYS   := ["whistle_loot_open", "token_loot_open"]
 const DoorwayScript: Script = preload("res://scripts/systems/doorway.gd")
 const DOORWAY_POS := Vector2(160.0, 490.0)
 
-const DialogBoxScript: Script = preload("res://scripts/ui/dialog_box.gd")
-const DialogTreeScript: Script = preload("res://scripts/systems/dialog_tree.gd")
+const DialogBoxScript: Script    = preload("res://scripts/ui/dialog_box.gd")
+const DialogTreeScript: Script   = preload("res://scripts/systems/dialog_tree.gd")
+const SpeechBubbleScript: Script = preload("res://scripts/systems/speech_bubble.gd")
+
+const LENA_BUBBLE_MIN  : float = 7.0
+const LENA_BUBBLE_MAX  : float = 14.0
+const LENA_BUBBLE_DUR  : float = 3.5
+const LENA_BUBBLE_LINES: Array[String] = [
+	"Nobody rides until the equipment's certified.",
+	"Safety first. Then fun. In that order.",
+	"I've cleared this course a hundred times.",
+]
 
 const LENA_COLOR := Color(0.16, 0.63, 0.59)
 const LENA_POS := Vector2(220.0, 440.0)
@@ -107,6 +117,8 @@ var _miss_flash: float = 0.0
 var _lizard_cooldown_timer: float = 0.0
 var _cd_scale: float = 1.0
 var _lena_sprite: AnimatedSprite2D
+var _lena_bubble        = null
+var _lena_bubble_timer: float = 0.0
 var _dialog_box = null
 var _lena_met: bool = false
 
@@ -242,6 +254,10 @@ func _create_lena_npc() -> void:
 	_lena_sprite.play("idle")
 	_lena_sprite.position = LENA_POS
 	add_child(_lena_sprite)
+	_lena_bubble = SpeechBubbleScript.new()
+	_lena_bubble.position = LENA_POS + Vector2(0.0, -52.0)
+	add_child(_lena_bubble)
+	_lena_bubble_timer = randf_range(LENA_BUBBLE_MIN, LENA_BUBBLE_MAX)
 	var dialog_layer := CanvasLayer.new()
 	dialog_layer.layer = 19
 	add_child(dialog_layer)
@@ -333,6 +349,13 @@ func _process(delta: float) -> void:
 	if not _release_timed:
 		_pulse_timer = fmod(_pulse_timer + delta, PULSE_PERIOD)
 	queue_redraw()
+	if is_instance_valid(_lena_bubble) and not _dialog_box.is_open():
+		_lena_bubble_timer -= delta
+		if _lena_bubble_timer <= 0.0:
+			_lena_bubble_timer = randf_range(LENA_BUBBLE_MIN, LENA_BUBBLE_MAX)
+			_lena_bubble.show_text(
+				LENA_BUBBLE_LINES[randi() % LENA_BUBBLE_LINES.size()],
+				LENA_BUBBLE_DUR)
 	GameManager.set_dialog_active(_dialog_box.is_open())
 	if _dialog_box.is_open():
 		if _dialog_box.is_choice_mode():

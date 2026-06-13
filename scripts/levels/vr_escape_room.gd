@@ -64,6 +64,16 @@ const DOORWAY_POS := Vector2(170.0, 490.0)
 
 const DialogBoxScript: Script = preload("res://scripts/ui/dialog_box.gd")
 const DialogTreeScript: Script = preload("res://scripts/systems/dialog_tree.gd")
+const SpeechBubbleScript: Script = preload("res://scripts/systems/speech_bubble.gd")
+
+const ARIA_BUBBLE_MIN  : float = 7.0
+const ARIA_BUBBLE_MAX  : float = 14.0
+const ARIA_BUBBLE_DUR  : float = 3.5
+const ARIA_BUBBLE_LINES: Array[String] = [
+	"Stage systems... partially nominal.",
+	"Anomaly detected in Stage Beta.",
+	"Welcome. Please do not panic.",
+]
 
 const ARIA_COLOR := Color(0.12, 0.39, 0.86)
 const ARIA_POS := Vector2(280.0, 420.0)
@@ -117,6 +127,8 @@ var _doorway = null
 var _lizard_cooldown_timer: float = 0.0
 var _cd_scale: float = 1.0
 var _aria_sprite: AnimatedSprite2D
+var _aria_bubble        = null
+var _aria_bubble_timer: float = 0.0
 var _dialog_box = null
 var _aria_met: bool = false
 
@@ -277,6 +289,10 @@ func _create_aria_npc() -> void:
 	_aria_sprite.play("idle")
 	_aria_sprite.position = ARIA_POS
 	add_child(_aria_sprite)
+	_aria_bubble = SpeechBubbleScript.new()
+	_aria_bubble.position = ARIA_POS + Vector2(0.0, -52.0)
+	add_child(_aria_bubble)
+	_aria_bubble_timer = randf_range(ARIA_BUBBLE_MIN, ARIA_BUBBLE_MAX)
 	var dialog_layer := CanvasLayer.new()
 	dialog_layer.layer = 19
 	add_child(dialog_layer)
@@ -358,6 +374,13 @@ func _on_lizard_bypass() -> void:
 
 func _process(delta: float) -> void:
 	_lizard_cooldown_timer = maxf(_lizard_cooldown_timer - delta, 0.0)
+	if is_instance_valid(_aria_bubble) and not _dialog_box.is_open():
+		_aria_bubble_timer -= delta
+		if _aria_bubble_timer <= 0.0:
+			_aria_bubble_timer = randf_range(ARIA_BUBBLE_MIN, ARIA_BUBBLE_MAX)
+			_aria_bubble.show_text(
+				ARIA_BUBBLE_LINES[randi() % ARIA_BUBBLE_LINES.size()],
+				ARIA_BUBBLE_DUR)
 	GameManager.set_dialog_active(_dialog_box.is_open())
 	if _dialog_box.is_open():
 		if _dialog_box.is_choice_mode():

@@ -67,8 +67,18 @@ const PIP_FLASH_DURATION: float = 0.3
 # & multi-room levels". The duo spawns beside it in the south entry corridor;
 # walking away and back exits to the overworld at any time, cleared or not.
 const DoorwayScript: Script = preload("res://scripts/systems/doorway.gd")
-const DialogBoxScript: Script = preload("res://scripts/ui/dialog_box.gd")
-const DialogTreeScript: Script = preload("res://scripts/systems/dialog_tree.gd")
+const DialogBoxScript: Script    = preload("res://scripts/ui/dialog_box.gd")
+const DialogTreeScript: Script   = preload("res://scripts/systems/dialog_tree.gd")
+const SpeechBubbleScript: Script = preload("res://scripts/systems/speech_bubble.gd")
+
+const CYRUS_BUBBLE_MIN  : float = 7.0
+const CYRUS_BUBBLE_MAX  : float = 14.0
+const CYRUS_BUBBLE_DUR  : float = 3.5
+const CYRUS_BUBBLE_LINES: Array[String] = [
+	"These tunnels haven't been mapped properly in years.",
+	"That hatch has been jammed since Tuesday.",
+	"Water's running somewhere it shouldn't be.",
+]
 
 const CYRUS_COLOR := Color(0.31, 0.39, 0.55)
 const CYRUS_POS := Vector2(350.0, 430.0)
@@ -136,6 +146,8 @@ var _fanny_revealed: bool = false
 var _darkness: Node2D = null
 var _doorway = null
 var _cyrus_sprite: AnimatedSprite2D
+var _cyrus_bubble        = null
+var _cyrus_bubble_timer: float = 0.0
 var _dialog_box = null
 var _cyrus_met: bool = false
 
@@ -335,6 +347,10 @@ func _create_cyrus_npc() -> void:
 	_cyrus_sprite.play("idle")
 	_cyrus_sprite.position = CYRUS_POS
 	add_child(_cyrus_sprite)
+	_cyrus_bubble = SpeechBubbleScript.new()
+	_cyrus_bubble.position = CYRUS_POS + Vector2(0.0, -52.0)
+	add_child(_cyrus_bubble)
+	_cyrus_bubble_timer = randf_range(CYRUS_BUBBLE_MIN, CYRUS_BUBBLE_MAX)
 	var dialog_layer := CanvasLayer.new()
 	dialog_layer.layer = 19
 	add_child(dialog_layer)
@@ -487,6 +503,13 @@ func _process(delta: float) -> void:
 	_frosty_cooldown_timer = maxf(_frosty_cooldown_timer - delta, 0.0)
 	_guinea_pig_cooldown_timer = maxf(_guinea_pig_cooldown_timer - delta, 0.0)
 	queue_redraw()
+	if is_instance_valid(_cyrus_bubble) and not _dialog_box.is_open():
+		_cyrus_bubble_timer -= delta
+		if _cyrus_bubble_timer <= 0.0:
+			_cyrus_bubble_timer = randf_range(CYRUS_BUBBLE_MIN, CYRUS_BUBBLE_MAX)
+			_cyrus_bubble.show_text(
+				CYRUS_BUBBLE_LINES[randi() % CYRUS_BUBBLE_LINES.size()],
+				CYRUS_BUBBLE_DUR)
 	GameManager.set_dialog_active(_dialog_box.is_open())
 	if _dialog_box.is_open():
 		if _dialog_box.is_choice_mode():

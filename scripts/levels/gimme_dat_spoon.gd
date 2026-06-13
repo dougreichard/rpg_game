@@ -158,6 +158,7 @@ func _ready() -> void:
 	if doug_frames != null and doug_frames.has_animation("talk_closeup"):
 		_portraits["Uncle Doug"] = doug_frames
 	GameManager.spoon_arcade_entered.emit()
+	Audio.play_music("combat")
 	queue_redraw()
 
 

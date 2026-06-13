@@ -53,8 +53,18 @@ const LOOT_FLAG_KEYS  := ["foot_loot_open", "ticket_loot_open"]
 const DoorwayScript: Script = preload("res://scripts/systems/doorway.gd")
 const DOORWAY_POS := Vector2(160.0, 490.0)
 
-const DialogBoxScript: Script = preload("res://scripts/ui/dialog_box.gd")
-const DialogTreeScript: Script = preload("res://scripts/systems/dialog_tree.gd")
+const DialogBoxScript: Script    = preload("res://scripts/ui/dialog_box.gd")
+const DialogTreeScript: Script   = preload("res://scripts/systems/dialog_tree.gd")
+const SpeechBubbleScript: Script = preload("res://scripts/systems/speech_bubble.gd")
+
+const RIO_BUBBLE_MIN  : float = 7.0
+const RIO_BUBBLE_MAX  : float = 14.0
+const RIO_BUBBLE_DUR  : float = 3.5
+const RIO_BUBBLE_LINES: Array[String] = [
+	"That marquee sign... it's pointing somewhere.",
+	"I've seen stranger landings.",
+	"Place used to be busier than this.",
+]
 
 const RIO_COLOR := Color(0.31, 0.39, 0.20)
 const RIO_POS := Vector2(500.0, 430.0)
@@ -111,6 +121,8 @@ var _mary = null
 var _scout_pair_cooldown_timer: float = 0.0
 var _frosty_cooldown_timer: float = 0.0
 var _rio_sprite: AnimatedSprite2D
+var _rio_bubble        = null
+var _rio_bubble_timer: float = 0.0
 var _dialog_box = null
 var _rio_met: bool = false
 
@@ -242,6 +254,10 @@ func _create_rio_npc() -> void:
 	_rio_sprite.play("idle")
 	_rio_sprite.position = RIO_POS
 	add_child(_rio_sprite)
+	_rio_bubble = SpeechBubbleScript.new()
+	_rio_bubble.position = RIO_POS + Vector2(0.0, -52.0)
+	add_child(_rio_bubble)
+	_rio_bubble_timer = randf_range(RIO_BUBBLE_MIN, RIO_BUBBLE_MAX)
 	var dialog_layer := CanvasLayer.new()
 	dialog_layer.layer = 19
 	add_child(dialog_layer)
@@ -364,6 +380,13 @@ func _process(delta: float) -> void:
 	_scout_pair_cooldown_timer = maxf(_scout_pair_cooldown_timer - delta, 0.0)
 	_frosty_cooldown_timer = maxf(_frosty_cooldown_timer - delta, 0.0)
 	_check_scout_pair_holding()
+	if is_instance_valid(_rio_bubble) and not _dialog_box.is_open():
+		_rio_bubble_timer -= delta
+		if _rio_bubble_timer <= 0.0:
+			_rio_bubble_timer = randf_range(RIO_BUBBLE_MIN, RIO_BUBBLE_MAX)
+			_rio_bubble.show_text(
+				RIO_BUBBLE_LINES[randi() % RIO_BUBBLE_LINES.size()],
+				RIO_BUBBLE_DUR)
 	GameManager.set_dialog_active(_dialog_box.is_open())
 	if _dialog_box.is_open():
 		if _dialog_box.is_choice_mode():

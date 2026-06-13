@@ -65,8 +65,18 @@ const LOOT_FLAG_KEYS    := ["crowbar_loot_open", "crank_loot_open", "treemap_loo
 const DoorwayScript: Script = preload("res://scripts/systems/doorway.gd")
 const DOORWAY_POS := Vector2(140.0, 340.0)
 
-const DialogBoxScript: Script = preload("res://scripts/ui/dialog_box.gd")
-const DialogTreeScript: Script = preload("res://scripts/systems/dialog_tree.gd")
+const DialogBoxScript: Script    = preload("res://scripts/ui/dialog_box.gd")
+const DialogTreeScript: Script   = preload("res://scripts/systems/dialog_tree.gd")
+const SpeechBubbleScript: Script = preload("res://scripts/systems/speech_bubble.gd")
+
+const VIKTOR_BUBBLE_MIN  : float = 7.0
+const VIKTOR_BUBBLE_MAX  : float = 14.0
+const VIKTOR_BUBBLE_DUR  : float = 3.5
+const VIKTOR_BUBBLE_LINES: Array[String] = [
+	"Every crate gets checked. No exceptions.",
+	"Something came through here that wasn't on the manifest.",
+	"I run a tight dock.",
+]
 
 const VIKTOR_COLOR := Color(0.96, 0.51, 0.14)
 const VIKTOR_POS := Vector2(220.0, 460.0)
@@ -112,6 +122,8 @@ var _container_sprite: Sprite2D
 var _loot_boxes: Array = []
 var _doorway = null
 var _viktor_sprite: AnimatedSprite2D
+var _viktor_bubble        = null
+var _viktor_bubble_timer: float = 0.0
 var _dialog_box = null
 var _viktor_met: bool = false
 
@@ -271,6 +283,10 @@ func _create_viktor_npc() -> void:
 	_viktor_sprite.play("idle")
 	_viktor_sprite.position = VIKTOR_POS
 	add_child(_viktor_sprite)
+	_viktor_bubble = SpeechBubbleScript.new()
+	_viktor_bubble.position = VIKTOR_POS + Vector2(0.0, -52.0)
+	add_child(_viktor_bubble)
+	_viktor_bubble_timer = randf_range(VIKTOR_BUBBLE_MIN, VIKTOR_BUBBLE_MAX)
 	var dialog_layer := CanvasLayer.new()
 	dialog_layer.layer = 19
 	add_child(dialog_layer)
@@ -362,6 +378,13 @@ func _nearest_enemies(from_pos: Vector2, count: int) -> Array:
 
 func _process(delta: float) -> void:
 	_calvin_cooldown_timer = maxf(_calvin_cooldown_timer - delta, 0.0)
+	if is_instance_valid(_viktor_bubble) and not _dialog_box.is_open():
+		_viktor_bubble_timer -= delta
+		if _viktor_bubble_timer <= 0.0:
+			_viktor_bubble_timer = randf_range(VIKTOR_BUBBLE_MIN, VIKTOR_BUBBLE_MAX)
+			_viktor_bubble.show_text(
+				VIKTOR_BUBBLE_LINES[randi() % VIKTOR_BUBBLE_LINES.size()],
+				VIKTOR_BUBBLE_DUR)
 	GameManager.set_dialog_active(_dialog_box.is_open())
 	if _dialog_box.is_open():
 		if _dialog_box.is_choice_mode():

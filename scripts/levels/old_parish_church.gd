@@ -86,6 +86,12 @@ const CHOIR_LEADER_WAYPOINTS : Array[Vector2] = [
 	Vector2(580.0, 385.0),
 	Vector2(480.0, 490.0),
 ]
+const CHOIR_LEADER_QUIPS: Array[String] = [
+	"Hands. Pockets. OUT. Am I clear?",
+	"I can see you from here.",
+	"Eyes forward! This is a house of worship!",
+	"I said OUT of your pockets, not into mine.",
+]
 
 # ── Father Aldric ────────────────────────────────────────────────────────────
 const ALDRIC_COLOR := Color(0.55, 0.5, 0.42)
@@ -683,6 +689,12 @@ func _on_dialog_closed(effects: Array) -> void:
 
 # ── Input / game loop ─────────────────────────────────────────────────────────
 
+func _talk_to_choir_leader() -> void:
+	var tree: Dictionary = DialogTreeScript.from_pages(
+		[CHOIR_LEADER_QUIPS[randi() % CHOIR_LEADER_QUIPS.size()]])
+	Audio.play("ui_select")
+	_dialog_box.open("Choir Director", CHOIR_LEADER_COLOR, tree, "start", "")
+
 func _on_special_used(char_name: String) -> void:
 	if _dialog_box.is_open():
 		return
@@ -696,6 +708,10 @@ func _on_special_used(char_name: String) -> void:
 		return
 	if p.global_position.distance_to(ALDRIC_POS) < ALDRIC_RADIUS:
 		_talk_to_father_aldric(char_name)
+		return
+	if is_instance_valid(_choir_leader) and \
+			p.global_position.distance_to(_choir_leader.position) < NPC_RADIUS:
+		_talk_to_choir_leader()
 		return
 	for npc_id: String in NPC_POSITIONS.keys():
 		if p.global_position.distance_to(NPC_POSITIONS[npc_id]) < NPC_RADIUS:
