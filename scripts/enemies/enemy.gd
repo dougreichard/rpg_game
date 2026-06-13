@@ -41,6 +41,12 @@ const TELEGRAPH_COLOR: Color = Color(1.0, 0.3, 0.2, 0.85)
 const TELEGRAPH_RANGE_COLOR: Color = Color(1.0, 0.3, 0.2, 0.3)
 const TELEGRAPH_FILL_COLOR: Color = Color(1.0, 0.3, 0.2, 0.18)
 const SLAM_FLASH_COLOR: Color = Color(1.0, 0.45, 0.3, 0.4)
+# Melee windup telegraph (code-driven so it reads with any sprite, animated or
+# billboard): the enemy flashes toward an overbright red and a ring fills as the
+# strike approaches. Satisfies the "attacks must be telegraphed" guardrail.
+const WINDUP_WARN_COLOR: Color = Color(1.9, 0.6, 0.5, 1.0)
+const WINDUP_RING_COLOR: Color = Color(1.0, 0.3, 0.2, 0.9)
+const WINDUP_RING_RADIUS: float = 22.0
 
 const WALL_COLLISION_MASK: int = 1
 const SUSPICION_THRESHOLD: float = 0.35
@@ -66,6 +72,30 @@ const ALERT_RING_HIGH_COLOR: Color = Color(1.0, 0.3, 0.2, 0.95)
 @onready var hitbox: Hitbox = $HitboxPivot/Hitbox
 @onready var hitbox_pivot: Node2D = $HitboxPivot
 
+# Synty enemy billboards: a single 3/4 pose used for every combat state. Combat
+# reads via the code-driven windup ring/flash + hit-flash/knockback, not per-
+# state frames -- so this suits stationary guardians (the Mech boss) well, while
+# animated regular enemies keep their PIL sheets. Centered (like the PIL sheets)
+# so the body aligns with the hurtbox.
+const SYNTY_ENEMY_DIR: String = "res://assets/art/synty/enemies/"
+const SYNTY_ENEMY_ANIMS: Array = ["walk", "chase", "windup", "attack", "recover", "hurt", "death", "alert"]
+
+func _try_synty_billboard() -> bool:
+	var path: String = SYNTY_ENEMY_DIR + data.enemy_name.to_lower() + ".png"
+	if not ResourceLoader.exists(path):
+		return false
+	var tex: Texture2D = load(path)
+	var sf := SpriteFrames.new()
+	sf.remove_animation("default")
+	for a: String in SYNTY_ENEMY_ANIMS:
+		sf.add_animation(a)
+		sf.set_animation_loop(a, true)
+		sf.add_frame(a, tex)
+	sprite.sprite_frames = sf
+	var target_h: float = 64.0 if data.is_boss else 38.0
+	sprite.scale = Vector2.ONE * (target_h / float(tex.get_height()))
+	return true
+
 func _ready() -> void:
 	assert(data != null, name + " requires an EnemyData resource")
 	hp = data.max_hp
@@ -73,7 +103,7 @@ func _ready() -> void:
 	hitbox.knockback_force = data.knockback_force
 	hitbox.monitoring = false
 	hurtbox.hit.connect(_on_hurtbox_hit)
-	if sprite.sprite_frames == null:
+	if sprite.sprite_frames == null and not _try_synty_billboard():
 		var loaded: SpriteFrames = SpriteLoader.try_load_enemy(data.enemy_name)
 		if loaded != null:
 			sprite.sprite_frames = loaded
@@ -267,10 +297,14 @@ func _enter_windup() -> void:
 	_set_state(State.WINDUP)
 
 func _tick_windup() -> void:
+	if data.windup_duration > 0.0:
+		var t: float = clampf(1.0 - (_windup_timer / data.windup_duration), 0.0, 1.0)
+		sprite.modulate = Color.WHITE.lerp(WINDUP_WARN_COLOR, t)
 	if _windup_timer == 0.0:
 		_enter_strike()
 
 func _enter_strike() -> void:
+	sprite.modulate = Color.WHITE  # clear the windup warning flash
 	var target := _get_target()
 	if data.is_ranged:
 		_fire_projectile(target)
@@ -353,6 +387,10 @@ func _set_state(new_state: State) -> void:
 
 func _draw() -> void:
 	_draw_awareness()
+	# Melee windup ring fills clockwise as the strike nears — every enemy.
+	if _state == State.WINDUP and data.windup_duration > 0.0:
+		var wt: float = clampf(1.0 - (_windup_timer / data.windup_duration), 0.0, 1.0)
+		draw_arc(Vector2.ZERO, WINDUP_RING_RADIUS, -PI * 0.5, -PI * 0.5 + TAU * wt, 24, WINDUP_RING_COLOR, 2.5)
 	if not data.is_boss:
 		return
 	if _state == State.AOE_TELEGRAPH:
