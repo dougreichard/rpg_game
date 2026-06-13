@@ -148,6 +148,7 @@ var _aria_met: bool = false
 func _ready() -> void:
 	_build_floor()
 	_build_walls()
+	PlaceholderArt.add_mood_light(self, LOCATION_ID)
 	GameManager.register_players_with_preference(quinn, ethan)
 	hud.setup(quinn, ethan)
 	quinn.special_used.connect(_on_special_used)

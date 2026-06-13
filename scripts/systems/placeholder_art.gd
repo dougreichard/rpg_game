@@ -379,6 +379,51 @@ const WALL_FACE_HEIGHT: float = 15.0
 const WALL_FACE_SHADE: Color = Color(0.40, 0.40, 0.45)  # shadowed front face
 const WALL_TOP_TINT: Color = Color(1.18, 1.18, 1.20)    # lit top surface
 
+# Soft round drop-shadow texture (radial alpha falloff), cached. Pair with a
+# Sprite2D flattened on Y (scale.y ~= 0.42) and placed at a billboard's feet so
+# buildings/props/characters read as standing on the ground instead of floating.
+static var _shadow_tex: Texture2D = null
+
+# Subtle per-level mood tint via a CanvasModulate on the level's default canvas
+# (the HUD lives on separate CanvasLayers, so it's unaffected). Unifies the mixed
+# art under one mood and warms/cools each location. Tints are kept gentle.
+const MOOD_TINTS: Dictionary = {
+	"pipe_organ_works": Color(1.04, 0.98, 0.88),   # warm workshop lamps
+	"old_parish_church": Color(0.92, 0.94, 1.06),  # cool stone
+	"iron_strings_gym": Color(0.98, 0.99, 1.02),   # neutral-cool
+	"recording_studio": Color(0.93, 0.93, 1.04),   # cool studio
+	"clocktower": Color(0.96, 0.95, 1.04),          # cool dusk
+	"harbor_docks": Color(0.9, 0.97, 1.06),         # cool sea air
+	"library": Color(1.05, 0.99, 0.88),             # warm reading light
+	"carnival": Color(1.06, 0.97, 0.9),             # festive warm
+	"underground": Color(0.82, 0.87, 1.02),         # cold, dim
+	"zip_line": Color(1.0, 1.01, 0.94),             # bright daylight
+	"vr_room": Color(0.88, 0.98, 1.12),             # cyan tech glow
+	"the_drop": Color(1.02, 0.99, 0.9),             # warm outdoor
+	"grand_marquee": Color(1.07, 0.95, 0.82),       # warm cinema amber
+}
+
+static func add_mood_light(parent: Node, location_id: String) -> void:
+	if not MOOD_TINTS.has(location_id):
+		return
+	var cm := CanvasModulate.new()
+	cm.color = MOOD_TINTS[location_id]
+	parent.add_child(cm)
+
+static func make_shadow_texture() -> Texture2D:
+	if _shadow_tex != null:
+		return _shadow_tex
+	var size: int = 64
+	var img := Image.create(size, size, false, Image.FORMAT_RGBA8)
+	var c := Vector2(size / 2.0, size / 2.0)
+	for y: int in size:
+		for x: int in size:
+			var d: float = Vector2(x, y).distance_to(c) / (size / 2.0)
+			var a: float = clampf(1.0 - d, 0.0, 1.0)
+			img.set_pixel(x, y, Color(0.0, 0.0, 0.0, a * a * 0.5))
+	_shadow_tex = ImageTexture.create_from_image(img)
+	return _shadow_tex
+
 static func add_synty_wall_faces(wall_body: Node, size: Vector2, tex: Texture2D) -> void:
 	var front := Sprite2D.new()
 	front.texture = tex

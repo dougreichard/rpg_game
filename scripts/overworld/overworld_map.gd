@@ -380,6 +380,7 @@ func _build_building_sprites() -> void:
 		spr.position = Vector2((anchor.x + size.x / 2.0) * TILE, (anchor.y + size.y) * TILE)
 		if not _is_unlocked(i):
 			spr.modulate = Color(0.5, 0.5, 0.55)  # dim locked locations
+		_add_ground_shadow(spr.position, size.x * TILE * 0.8)
 		add_child(spr)
 		_building_sprites[i] = spr
 
@@ -451,10 +452,21 @@ func _place_prop(d: Dictionary, tx: int, ty: int, h: int) -> void:
 	# Jitter within the tile so props don't sit on a rigid grid.
 	var jx: float = float((h >> 3) % TILE) - TILE / 2.0
 	spr.position = Vector2(tx * TILE + TILE / 2.0 + jx * 0.4, (ty + 1) * TILE)
+	_add_ground_shadow(spr.position, tex.get_width() * s * 0.55)
 	add_child(spr)
 
 func _hash2(x: int, y: int) -> int:
 	return absi((x * 73856093) ^ (y * 19349663))
+
+# Soft ground shadow under a billboard's feet. Added as a y-sorted root child at
+# the same position (call BEFORE adding the billboard so it sorts underneath).
+func _add_ground_shadow(pos: Vector2, width: float) -> void:
+	var sh := Sprite2D.new()
+	sh.texture = PlaceholderArt.make_shadow_texture()
+	var s: float = width / 64.0
+	sh.scale = Vector2(s, s * 0.42)
+	sh.position = pos
+	add_child(sh)
 
 # One StaticBody2D per building footprint so the duo can't walk through them —
 # the door tile (one row below the footprint) is left clear for entry.

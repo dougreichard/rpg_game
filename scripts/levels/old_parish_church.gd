@@ -252,6 +252,7 @@ var _cl_yell_timer: float = 0.0
 func _ready() -> void:
 	_build_floor()
 	_build_walls()
+	PlaceholderArt.add_mood_light(self, LOCATION_ID)
 	_build_props()
 	GameManager.register_players_with_preference(quinn, erin)
 	hud.setup(quinn, erin)

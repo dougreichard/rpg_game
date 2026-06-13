@@ -183,6 +183,7 @@ var _usher_met: bool = false
 func _ready() -> void:
 	_build_floor()
 	_build_walls()
+	PlaceholderArt.add_mood_light(self, LOCATION_ID)
 	GameManager.register_players_with_preference(quinn, ben)
 	hud.setup(quinn, ben)
 	quinn.special_used.connect(_on_special_used)
