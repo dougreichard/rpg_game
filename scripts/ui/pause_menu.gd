@@ -233,13 +233,11 @@ func _build_options_panel() -> void:
 			_opt_bar_fills.append(null)
 			_opt_pct_labels.append(null)
 
-	var hint := Label.new()
-	hint.text = "← → Adjust     UP / DN Select"
-	hint.position = OPT_RECT.position + Vector2(0.0, OPT_RECT.size.y - 34.0)
-	hint.size = Vector2(OPT_RECT.size.x, 24.0)
-	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	hint.add_theme_font_size_override("font_size", 13)
-	hint.add_theme_color_override("font_color", HINT_COLOR)
+	var hint: Label = UIFactory.make_label(
+		"← → Adjust     UP / DN Select",
+		OPT_RECT.position + Vector2(0.0, OPT_RECT.size.y - 34.0),
+		Vector2(OPT_RECT.size.x, 24.0),
+		13, HINT_COLOR, HORIZONTAL_ALIGNMENT_CENTER, true)
 	hint.visible = false
 	add_child(hint)
 	_opt_panel_nodes.append(hint)

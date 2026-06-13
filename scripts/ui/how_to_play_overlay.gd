@@ -100,14 +100,8 @@ func _content_y(row: int) -> float:
 func _add_label(page: int, text: String, x: float, y: float, w: float,
 		font_size: int, color: Color,
 		halign: HorizontalAlignment = HORIZONTAL_ALIGNMENT_LEFT) -> Label:
-	var lbl := Label.new()
-	lbl.text = text
-	lbl.position = Vector2(x, y)
-	lbl.size = Vector2(w, ROW_H)
-	lbl.add_theme_font_size_override("font_size", font_size)
-	lbl.add_theme_color_override("font_color", color)
-	lbl.horizontal_alignment = halign
-	lbl.autowrap_mode = TextServer.AUTOWRAP_WORD
+	var lbl: Label = UIFactory.make_label(
+		text, Vector2(x, y), Vector2(w, ROW_H), font_size, color, halign, true)
 	lbl.visible = false
 	add_child(lbl)
 	_page_nodes[page].append(lbl)

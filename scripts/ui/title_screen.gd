@@ -210,11 +210,10 @@ func _build_slot_overlay() -> void:
 		_slot_canvas.add_child(main_lbl)
 		_slot_main_labels.append(main_lbl)
 
-		var sub_lbl := Label.new()
-		sub_lbl.position = SLOT_RECT.position + Vector2(64.0, row_y + 32.0)
-		sub_lbl.size = Vector2(SLOT_RECT.size.x - 104.0, 24.0)
-		sub_lbl.add_theme_font_size_override("font_size", 14)
-		sub_lbl.add_theme_color_override("font_color", HINT_COLOR)
+		var sub_lbl: Label = UIFactory.make_label(
+			"", SLOT_RECT.position + Vector2(64.0, row_y + 32.0),
+			Vector2(SLOT_RECT.size.x - 104.0, 24.0),
+			14, HINT_COLOR, HORIZONTAL_ALIGNMENT_LEFT, true)
 		_slot_canvas.add_child(sub_lbl)
 		_slot_sub_labels.append(sub_lbl)
 
@@ -276,12 +275,11 @@ func _build_confirm_overlay() -> void:
 	ttl.add_theme_color_override("font_color", Color(0.95, 0.35, 0.35))
 	_confirm_canvas.add_child(ttl)
 
-	var warn := Label.new()
-	warn.text = "This will erase your\nsaved progress."
-	warn.position = CONFIRM_RECT.position + Vector2(40.0, 80.0)
-	warn.size = Vector2(CONFIRM_RECT.size.x - 80.0, 80.0)
-	warn.add_theme_font_size_override("font_size", 18)
-	warn.add_theme_color_override("font_color", NORMAL_COLOR)
+	var warn: Label = UIFactory.make_label(
+		"This will erase your\nsaved progress.",
+		CONFIRM_RECT.position + Vector2(40.0, 80.0),
+		Vector2(CONFIRM_RECT.size.x - 80.0, 80.0),
+		18, NORMAL_COLOR, HORIZONTAL_ALIGNMENT_LEFT, true)
 	_confirm_canvas.add_child(warn)
 
 	for i in 2:
