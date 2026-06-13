@@ -13,7 +13,7 @@ const KEY_COLOR     : Color = Color(0.75, 0.70, 1.0)
 const NORMAL_COLOR  : Color = Color(0.72, 0.72, 0.82)
 const HINT_COLOR    : Color = Color(0.45, 0.45, 0.55)
 const PAGE_COUNT    : int   = 3
-const ROW_H         : float = 44.0
+const ROW_H         : float = 52.0
 const CONTENT_START_Y: float = 140.0   # offset from HELP_RECT.position.y
 const SECTION_Y     : float = 80.0     # offset from HELP_RECT.position.y
 
@@ -107,6 +107,7 @@ func _add_label(page: int, text: String, x: float, y: float, w: float,
 	lbl.add_theme_font_size_override("font_size", font_size)
 	lbl.add_theme_color_override("font_color", color)
 	lbl.horizontal_alignment = halign
+	lbl.autowrap_mode = TextServer.AUTOWRAP_WORD
 	lbl.visible = false
 	add_child(lbl)
 	_page_nodes[page].append(lbl)
@@ -169,24 +170,14 @@ func _build_page_tips() -> void:
 	_add_label(2, "TIPS", lx, sy, cw, 18, TITLE_COLOR)
 
 	var tips: Array[String] = [
-		"Each location is built for both duo members — swap to match the puzzle in front of you.",
-		"Guards have vision cones. Duck into hiding spots to let patrols pass.",
-		"Loot boxes hold items that can skip puzzle steps or open shortcuts.",
-		"Every character's Special (G) is a key — use it near objects and NPCs.",
-		"You need all five movie tickets to enter the Grand Marquee Cinema.",
+		"·  Each location is built for both duo members — swap to match the puzzle in front of you.",
+		"·  Guards have vision cones. Duck into hiding spots to let patrols pass.",
+		"·  Loot boxes hold items that can skip puzzle steps or open shortcuts.",
+		"·  Every character's Special (G) is a key — use it near objects and NPCs.",
+		"·  You need all five movie tickets to enter the Grand Marquee Cinema.",
 	]
 	for i in tips.size():
-		var y: float = _content_y(i)
-		var lbl := Label.new()
-		lbl.text = "·  " + tips[i]
-		lbl.position = Vector2(lx, y)
-		lbl.size = Vector2(cw, ROW_H + 4.0)
-		lbl.add_theme_font_size_override("font_size", 17)
-		lbl.add_theme_color_override("font_color", NORMAL_COLOR)
-		lbl.autowrap_mode = TextServer.AUTOWRAP_WORD
-		lbl.visible = false
-		add_child(lbl)
-		_page_nodes[2].append(lbl)
+		_add_label(2, tips[i], lx, _content_y(i), cw, 17, NORMAL_COLOR)
 
 # ---------------------------------------------------------------------------
 # Page navigation
