@@ -317,14 +317,22 @@ one level first):
    Recommend prototyping **#2** (cheap, global via the shared `_build_walls`
    helper) and reserving **#1** for hero rooms.
 
-### Pass 6b — in-level characters & enemies (the pixel-art remnant)
-The controllable duo, level NPCs, and regular enemies still use PIL sheets. Unlike
-the overworld, these need **combat animation** (attack/dash/hurt/death/windup), so
-static billboards don't fit cleanly — this is the **animated-sprite retarget**
-sub-project (Blender 5.x slotted-action API + rig-case remap). Until then they stay
-pixel-art. Decide: invest in animated Synty sheets, or treat PIL combat sprites as
-an intentional stylistic layer. (The code windup telegraph already added means a
-billboard *enemy* is at least viable; the player is the harder case.)
+### Pass 6b — in-level characters & enemies — ✅ DONE (2026-06-13)
+Resolved with **static Synty billboards + code-driven combat feedback** (no
+combat animation clips exist in our packs, so this is the achievable route — and
+it's the same approach the Mech boss already used):
+- **Duo** (`player.gd._try_synty_billboard`): reuses each lead's overworld
+  billboard for every player anim, centered (hurtbox-aligned), with a walk bob +
+  ground shadow. The **attack arc is already code-drawn** (`_draw`), and
+  hit-flash / dash motion+i-frames carry the rest, so combat stays readable.
+- **Enemies** (already wired via `enemy.gd._try_synty_billboard`): rendered
+  grunt/runner/brute/sentry billboards — a "crime crew" from Heist (thug/mobster/
+  FBI) + a Western Frontier soldier brute (stocky → bigger). The **windup
+  telegraph** (filling ring + red flash) + hit-flash provide the combat tells.
+- Trade-off: no per-frame walk/attack *frames*, but the world is now fully Synty.
+
+**Result: the entire game is Synty** — environments, props, all NPCs + congregation,
+the duo, regular enemies, and bosses. PIL/PlaceholderArt remain only as fallbacks.
 
 ### Pass 6c — puzzle-gate props — ✅ DONE (2026-06-13, active ones)
 Most `make_gate_texture` calls were already **fallbacks** (inside
