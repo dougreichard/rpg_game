@@ -7,8 +7,22 @@ const FLOOR_BASE_COLOR: Color = Color(0.20, 0.20, 0.19)
 const FLOOR_ACCENT_COLOR: Color = Color(0.38, 0.35, 0.28)
 const FLOOR_COLS: int = 30
 const FLOOR_ROWS: int = 17
-const FLOOR_TILE_PLAIN: Vector2i = Vector2i(0, 4)
-const FLOOR_TILE_ACCENT: Vector2i = Vector2i(1, 4)
+const FLOOR_TILE_PLAIN: Vector2i = Vector2i(0, 0)
+const FLOOR_TILE_ACCENT: Vector2i = Vector2i(1, 0)
+# Synty 2.5D tunnels (see docs/synty_2_5d_art_plan.md): concrete floor +
+# stone-block walls; Construction rubble + Office ducting/cable billboards.
+const SYNTY_FLOOR: String = "res://assets/art/tiles/synty_floor_concrete.png"
+const SYNTY_WALL: String = "res://assets/art/tiles/synty_wall_stone.png"
+const RUBBLE_BILLBOARD: String = "res://assets/art/synty/props/rubble.png"
+# [name, x, y, on-screen height px] maintenance-tunnel dressing.
+const TUNNEL_PROPS: Array = [
+	["dirt_pile", 250, 470, 30],
+	["cable_tray", 480, 230, 30],
+	["ducting", 650, 240, 40],
+	["barrel", 200, 490, 50],
+	["brick_stack", 770, 480, 44],
+	["server", 560, 480, 52],
+]
 const FLOOR_ACCENT_PERIOD: int = 4
 
 const GRUNT_SCENE: PackedScene = preload("res://scenes/enemies/Grunt.tscn")
@@ -238,7 +252,7 @@ func _restore_progress() -> void:
 func _build_floor() -> void:
 	var tile_map := TileMap.new()
 	tile_map.name = "Floor"
-	tile_map.tile_set = PlaceholderArt.make_hb_tileset()
+	tile_map.tile_set = PlaceholderArt.make_synty_floor_tileset(SYNTY_FLOOR)
 	add_child(tile_map)
 	move_child(tile_map, 0)
 	tile_map.position = Vector2(CAMERA_LIMIT_LEFT, CAMERA_LIMIT_TOP)
@@ -253,21 +267,40 @@ func _build_floor() -> void:
 # layout (16 wall segments forming a corridor/junction/two-tunnel network)
 # needed zero changes here, only more .tscn nodes.
 func _build_walls() -> void:
-	var wall_color: Color = FLOOR_BASE_COLOR.darkened(0.35)
+	var wall_tex: Texture2D = PlaceholderArt.make_synty_wall_tile(SYNTY_WALL)
 	for wall in $Walls.get_children():
 		if not wall is StaticBody2D:
 			continue
 		var shape: CollisionShape2D = wall.get_node("CollisionShape2D")
 		var rect: RectangleShape2D = shape.shape
 		var sprite := Sprite2D.new()
-		sprite.texture = PlaceholderArt.make_wall_texture(wall_color, int(rect.size.x), int(rect.size.y))
+		sprite.texture = wall_tex
+		sprite.texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
+		sprite.region_enabled = true
+		sprite.region_rect = Rect2(0.0, 0.0, rect.size.x, rect.size.y)
 		wall.add_child(sprite)
+
+func _apply_synty_billboard(spr: Sprite2D, path: String, target_h: float) -> bool:
+	if not ResourceLoader.exists(path):
+		return false
+	var tex: Texture2D = load(path)
+	spr.texture = tex
+	spr.offset = Vector2(0.0, -tex.get_height() / 2.0)
+	spr.scale = Vector2.ONE * (target_h / float(tex.get_height()))
+	return true
 
 func _create_rubble() -> void:
 	_rubble_sprite = Sprite2D.new()
-	_rubble_sprite.texture = PlaceholderArt.make_gate_texture(Color(0.34, 0.3, 0.28), 60, 44)
+	if not _apply_synty_billboard(_rubble_sprite, RUBBLE_BILLBOARD, 44.0):
+		_rubble_sprite.texture = PlaceholderArt.make_gate_texture(Color(0.34, 0.3, 0.28), 60, 44)
 	_rubble_sprite.position = RUBBLE_POS
 	add_child(_rubble_sprite)
+	# Maintenance-tunnel dressing (Construction + Office billboards).
+	for p: Array in TUNNEL_PROPS:
+		var spr := Sprite2D.new()
+		if _apply_synty_billboard(spr, "res://assets/art/synty/props/%s.png" % p[0], float(p[3])):
+			spr.position = Vector2(float(p[1]), float(p[2]))
+			add_child(spr)
 
 func _create_shortcut_door() -> void:
 	_shortcut_door_sprite = Sprite2D.new()
