@@ -238,9 +238,10 @@ func _create_librarian_desk() -> void:
 	_librarian_desk.add_child(_desk_sprite)
 	# Librarian character sprite — stands at the desk in idle until talked down
 	_librarian_sprite = AnimatedSprite2D.new()
-	var loaded: SpriteFrames = SpriteLoader.try_load_npc("librarian")
-	_librarian_sprite.sprite_frames = loaded if loaded != null else PlaceholderArt.make_player_frames(Color(0.48, 0.55, 0.60), "")
-	_librarian_sprite.scale = Vector2(SpriteLoader.NPC_SPRITE_SCALE, SpriteLoader.NPC_SPRITE_SCALE) if loaded != null else Vector2.ONE
+	if not PlaceholderArt.apply_npc_billboard(_librarian_sprite, "librarian"):
+		var loaded: SpriteFrames = SpriteLoader.try_load_npc("librarian")
+		_librarian_sprite.sprite_frames = loaded if loaded != null else PlaceholderArt.make_player_frames(Color(0.48, 0.55, 0.60), "")
+		_librarian_sprite.scale = Vector2(SpriteLoader.NPC_SPRITE_SCALE, SpriteLoader.NPC_SPRITE_SCALE) if loaded != null else Vector2.ONE
 	_librarian_sprite.play("idle")
 	_librarian_sprite.position = LIBRARIAN_POS + Vector2(0.0, -16.0)  # just above desk
 	add_child(_librarian_sprite)

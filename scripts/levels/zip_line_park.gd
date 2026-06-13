@@ -277,9 +277,10 @@ func _create_doorway() -> void:
 
 func _create_lena_npc() -> void:
 	_lena_sprite = AnimatedSprite2D.new()
-	var loaded: SpriteFrames = SpriteLoader.try_load_npc("lena")
-	_lena_sprite.sprite_frames = loaded if loaded != null else PlaceholderArt.make_player_frames(LENA_COLOR, "")
-	_lena_sprite.scale = Vector2(SpriteLoader.NPC_SPRITE_SCALE, SpriteLoader.NPC_SPRITE_SCALE) if loaded != null else Vector2.ONE
+	if not PlaceholderArt.apply_npc_billboard(_lena_sprite, "lena"):
+		var loaded: SpriteFrames = SpriteLoader.try_load_npc("lena")
+		_lena_sprite.sprite_frames = loaded if loaded != null else PlaceholderArt.make_player_frames(LENA_COLOR, "")
+		_lena_sprite.scale = Vector2(SpriteLoader.NPC_SPRITE_SCALE, SpriteLoader.NPC_SPRITE_SCALE) if loaded != null else Vector2.ONE
 	_lena_sprite.play("idle")
 	_lena_sprite.position = LENA_POS
 	add_child(_lena_sprite)

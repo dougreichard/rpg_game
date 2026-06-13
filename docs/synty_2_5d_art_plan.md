@@ -371,6 +371,23 @@ Tasks to "dig in" later:
 - These also tie into **Phase 6b** (in-level characters) — if we tackle animated
   sprites, the priest/Quinn come along.
 
+### In-level NPCs → Synty billboards — ✅ DONE (2026-06-13)
+`PlaceholderArt.apply_npc_billboard(spr, key)` + a per-NPC billboard makes each a
+one-line swap. Theme-matched across the WHOLE roster (not just western):
+- **Uncle Doug → Office `Developer`** (a literal programmer — user's pick).
+- **ARIA → SciFiSpace `RobotFemale`** (an actual android).
+- **Cyrus → SciFiSpace `Junker`**, **Viktor → SciFiSpace `CrewCaptain`**.
+- **Carnival guard → HorrorCarnival `Strongman`**, **Hieronymus → HorrorCarnival
+  `FortuneTeller`**.
+- **Rio → SciFiSpace `Crew`**, **Lena → CityCharacters `Paramedic`**,
+  **Librarian → Office `Business_Female`**, **Cecil/Usher → Office `Boss`**.
+- Plus earlier: **Mr. Bellows → W.Frontier `Salesman`**, **Father Aldric →
+  W.Frontier `Priest`**. So packs map by theme: SciFiSpace→tech levels,
+  HorrorCarnival→carnival, Office/City→modern, Western→period NPCs.
+Wired via a regex over the identical NPC-creation blocks; all boot clean, PIL
+fallback retained. Remaining pixel-art: the **controllable duo + regular enemies**
+(true 6b — needs the animation pipeline) and the church **congregation** crowd.
+
 ### Other things worth checking (noticed during the audit)
 - **Drop shadows** are characters-only; buildings, props, and level billboards
   float slightly — extend the shadow helper to all billboards.

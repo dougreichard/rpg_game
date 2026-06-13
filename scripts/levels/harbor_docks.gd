@@ -304,9 +304,10 @@ func _create_doorway() -> void:
 
 func _create_viktor_npc() -> void:
 	_viktor_sprite = AnimatedSprite2D.new()
-	var loaded: SpriteFrames = SpriteLoader.try_load_npc("viktor")
-	_viktor_sprite.sprite_frames = loaded if loaded != null else PlaceholderArt.make_player_frames(VIKTOR_COLOR, "")
-	_viktor_sprite.scale = Vector2(SpriteLoader.NPC_SPRITE_SCALE, SpriteLoader.NPC_SPRITE_SCALE) if loaded != null else Vector2.ONE
+	if not PlaceholderArt.apply_npc_billboard(_viktor_sprite, "viktor"):
+		var loaded: SpriteFrames = SpriteLoader.try_load_npc("viktor")
+		_viktor_sprite.sprite_frames = loaded if loaded != null else PlaceholderArt.make_player_frames(VIKTOR_COLOR, "")
+		_viktor_sprite.scale = Vector2(SpriteLoader.NPC_SPRITE_SCALE, SpriteLoader.NPC_SPRITE_SCALE) if loaded != null else Vector2.ONE
 	_viktor_sprite.play("idle")
 	_viktor_sprite.position = VIKTOR_POS
 	add_child(_viktor_sprite)
