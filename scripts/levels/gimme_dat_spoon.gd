@@ -122,6 +122,7 @@ var _font: Font
 var _phase: int = Phase.SELECT_CHARACTER
 var _roster: Array = []  # [{name: String, color: Color}]
 var _portraits: Dictionary = {}  # character name -> SpriteFrames (talk_closeup)
+var _seated: Dictionary = {}  # character name -> {idle/grab/out: Texture2D} seated billboard
 var _select_cursor: int = 0
 
 var _game = null
@@ -157,6 +158,10 @@ func _ready() -> void:
 	var doug_frames: SpriteFrames = SpriteLoader.try_load_npc("uncle_doug")
 	if doug_frames != null and doug_frames.has_animation("talk_closeup"):
 		_portraits["Uncle Doug"] = doug_frames
+	for entry in _roster:
+		var seated: Dictionary = _load_seated(entry["name"])
+		if not seated.is_empty():
+			_seated[entry["name"]] = seated
 	GameManager.spoon_arcade_entered.emit()
 	Audio.play_music("combat")
 	queue_redraw()
@@ -262,6 +267,42 @@ func _player_name(idx: int) -> String:
 func _token_pos(idx: int) -> Vector2:
 	var angle: float = -PI / 2.0 + float(idx) * TAU / 6.0
 	return CIRCLE_CENTER + Vector2(cos(angle), sin(angle)) * CIRCLE_RADIUS
+
+
+# Loads a character's seated billboard frames (first frame of each strip) baked
+# by render_anim_lead.sh. Returns {} when the character has no animated set yet
+# (those seats fall back to the colored token + drawn face).
+func _load_seated(name: String) -> Dictionary:
+	var key: String = name.to_lower().replace(" ", "_")
+	var base: String = "res://assets/art/synty/characters/anim/" + key + "/"
+	var out: Dictionary = {}
+	for state in {"idle": "spoon_idle", "grab": "spoon_grab", "out": "spoon_out"}:
+		var path: String = base + {"idle": "spoon_idle", "grab": "spoon_grab", "out": "spoon_out"}[state] + ".png"
+		if ResourceLoader.exists(path):
+			out[state] = load(path)
+	return out
+
+
+# Draws one seated billboard centered on a seat. Picks the grab frame on the
+# active turn, the slumped "out" frame when eliminated, idle otherwise. Each strip
+# is a row of square frames; only the first frame is drawn (static seat pose).
+func _draw_seated(token_pos: Vector2, name: String, is_active: bool, alive: bool, modulate: Color) -> void:
+	var seated: Dictionary = _seated[name]
+	var tex: Texture2D = seated.get("idle")
+	if not alive and seated.has("out"):
+		tex = seated["out"]
+	elif is_active and seated.has("grab"):
+		tex = seated["grab"]
+	if tex == null:
+		return
+	var side: float = float(tex.get_height())
+	var target_h: float = TOKEN_RADIUS * 2.7
+	var scale: float = target_h / side
+	var draw_w: float = side * scale
+	# Centered horizontally; lifted so the lap/hands sit near the seat center.
+	var top_left: Vector2 = token_pos + Vector2(-draw_w * 0.5, -target_h * 0.62)
+	draw_texture_rect_region(tex, Rect2(top_left, Vector2(draw_w, target_h)),
+		Rect2(0.0, 0.0, side, side), modulate)
 
 
 func _enqueue_event(event: Dictionary) -> void:
@@ -563,9 +604,20 @@ func _draw_player_circle() -> void:
 			var recipient_pulse: float = (sin(_pulse_time * 5.0) + 1.0) * 0.5
 			draw_arc(token_pos, TOKEN_RADIUS + 6.0 + recipient_pulse * 4.0, 0.0, TAU, 32, RECIPIENT_RING_COLOR, 3.0)
 
-		draw_circle(token_pos, radius, color)
-		draw_arc(token_pos, radius, 0.0, TAU, 32, BORDER_COLOR, 1.5)
-		_draw_face(token_pos, player, is_winner)
+		if _seated.has(player["name"]):
+			# Seated billboard: a colored seat pad behind the figure keeps each
+			# player's color identity; the sprite replaces the drawn face token.
+			draw_circle(token_pos + Vector2(0.0, TOKEN_RADIUS * 0.5), radius * 0.7,
+				Color(color.r, color.g, color.b, 0.5))
+			var fig_mod: Color = Color.WHITE if player["alive"] else ELIMINATED_COLOR
+			if _current_event.get("type") == "eliminate" and _current_event["idx"] == i:
+				fig_mod = color
+			_draw_seated(token_pos, player["name"], i == _game.active_idx and not _ended,
+				player["alive"], fig_mod)
+		else:
+			draw_circle(token_pos, radius, color)
+			draw_arc(token_pos, radius, 0.0, TAU, 32, BORDER_COLOR, 1.5)
+			_draw_face(token_pos, player, is_winner)
 		_draw_hand_spoons(token_pos, player, i)
 
 		if is_winner:

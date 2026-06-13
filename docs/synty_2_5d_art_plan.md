@@ -485,6 +485,52 @@ That set is enough to render all 13 building exteriors + the town ground.
 
 These signature props have no Synty equivalent and stay custom.
 
+## Phase 7 — Frame-animated combat billboards (2026-06-13)
+
+**Supersedes the Phase 4 "no animation clips / single static pose" trade-off.** The
+owned **AnimLocomotion** pack (`synty_source/packs/AnimLocomotion/Animations/Polygon|Sidekick/…`)
+*does* ship full-body idle/walk/run clips, so the in-level combat duo is now
+**true-directional frame animation**, and *Gimme Dat Spoon* gets seated billboards.
+
+**Pipeline (git-ignored under `synty_source/blender/scripts/`):**
+- `render_anim_character.py` — renders one anim×azimuth as per-frame PNGs. Two modes:
+  *clip* (transfer a Synty action onto the character armature; Blender 5 needs the
+  action **slot** bound, else bones stay at rest) and *pose* (hand-authored keyframe
+  sequences in `POSE_SEQUENCES` for attack/special/hurt/down/dash/revive/seated —
+  no clips exist for these). `--freeze-arms` mutes the action's arm channels and
+  holds the A-pose: the clips were authored for an A-pose bind but CityCharacters
+  binds in a T-pose, so raw arm rotations splay outward. **Thigh forward pitch is
+  local Y on this rig, not X** (found empirically — sitting/collapse poses use Y).
+- `assemble_strips.py` (PIL) — union-crops every frame to one shared square box (so
+  scale + footing stay constant across anims) and concatenates each anim into a
+  horizontal strip `assets/art/synty/characters/anim/<key>/<anim>.png`.
+- `render_anim_lead.sh <key> <mesh>` — full per-lead job list. Facings: down=az225
+  (front), up=az45 (back), right=az135; **left = flip_h in engine**.
+
+**Godot:** `player.gd._load_animated_frames()` slices each strip into `AtlasTexture`
+frames (frame side == strip height), keyed loop/fps via `ANIM_LOOPING`/`ANIM_FPS`;
+`_try_synty_billboard()` prefers it, falling back to the single static billboard then
+PIL. `_set_state` routes attack/dash/hurt/down through the existing `_play_directional`
+(degrades gracefully when a facing is missing); the synthetic walk-bob is gated off
+when animated. `gimme_dat_spoon.gd` draws seated billboards (idle/grab/out per turn
+state) on colored seat pads instead of the circle tokens.
+
+**Done:** all 5 leads (29 strips each — idle, walk/run ×3, attack/special/hurt/down/
+dash/revive ×3, seated ×4) + Uncle Doug seated (Office `SM_Chr_Developer_Male_02`).
+Verified: loader builds 29 anims with correct frame/loop/fps; spoon table shows all 6
+seated; 69 GUT pass; clean boot.
+**Remaining (optional):** roll the same pipeline to the regular enemies; per-facing
+authored combat poses (currently one pose seq rendered at 3 azimuths).
+
+**To revisit (playtest feedback, 2026-06-13):** quality pass needed —
+- **Walk reads as skating/static**, not a real stride. Sample more frames across the
+  cycle and/or pick a clip with more vertical/leg travel; the union-crop + centered
+  paste may also be flattening the up/down bob (consider feet-anchored, not centered).
+- **More frames overall** — current counts (walk 8, poses 2–3) are below the old PIL
+  sheets; bump locomotion sampling and add in-between pose keys.
+- **Arms clip inside the torso** in some poses — the `--freeze-arms` A-pose and the
+  authored shoulder angles need widening / depth offset so hands clear the body.
+
 ## Practical acquisition order
 
 1. **Free Starter Pack** + **Town** + **City** + **Nature** (whole overworld pilot)

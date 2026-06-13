@@ -16,10 +16,12 @@ puzzle-solving with arcade-style beat-em-up combat across 13 distinct locations.
 > **Art direction:** the game is **not** retro/pixel-art. Do not assume a
 > 16-bit/8-bit look. Environments, props, town characters and bosses are Synty
 > billboards (`assets/art/synty/…`, baked from the licensed packs staged in
-> git-ignored `synty_source/`). `PlaceholderArt` (programmatic) and the older
-> PIL pixel sheets (`assets/art/sprites/…`, still used for in-level player and
-> regular-enemy combat animation) remain as fallbacks, not the target style.
-> Earlier `DESIGN.md` / `artwork/` / `gem/` pixel-art docs are legacy.
+> git-ignored `synty_source/`). The five leads now use **frame-animated,
+> true-directional Synty billboards** in combat (`assets/art/synty/characters/anim/<key>/`,
+> from the AnimLocomotion pack — see Phase 7 in `docs/synty_2_5d_art_plan.md`);
+> regular enemies remain single-pose billboards. `PlaceholderArt` (programmatic)
+> and the older PIL pixel sheets (`assets/art/sprites/…`) remain as fallbacks, not
+> the target style. Earlier `DESIGN.md` / `artwork/` / `gem/` pixel-art docs are legacy.
 
 **Goal:** Find and rescue "Uncle Doug". Players navigate an overworld map,
 unlock new locations and characters by solving puzzles and defeating enemies.
