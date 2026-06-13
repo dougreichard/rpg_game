@@ -385,8 +385,10 @@ one-line swap. Theme-matched across the WHOLE roster (not just western):
   W.Frontier `Priest`**. So packs map by theme: SciFiSpace→tech levels,
   HorrorCarnival→carnival, Office/City→modern, Western→period NPCs.
 Wired via a regex over the identical NPC-creation blocks; all boot clean, PIL
-fallback retained. Remaining pixel-art: the **controllable duo + regular enemies**
-(true 6b — needs the animation pipeline) and the church **congregation** crowd.
+fallback retained. The church **congregation** crowd (elder/deacon/choir/
+caretaker/widow/confused) also got their own ordinary-churchgoer billboards
+(CityCharacters + Office Cleaner). **Only pixel-art left: the controllable duo +
+regular enemies** (true 6b — needs the animation pipeline).
 
 ### Other things worth checking (noticed during the audit)
 - **Drop shadows** are characters-only; buildings, props, and level billboards

@@ -523,15 +523,18 @@ func _create_congregation() -> void:
 		var sprite := AnimatedSprite2D.new()
 		var sprite_name: String = NPC_SPRITE_NAME[npc_id]
 		var color: Color = NPC_COLOR[npc_id]
-		if sprite_name != "":
-			var loaded: SpriteFrames = SpriteLoader.try_load_npc(sprite_name)
-			if loaded != null:
-				sprite.sprite_frames = loaded
-				sprite.scale = Vector2(SpriteLoader.NPC_SPRITE_SCALE, SpriteLoader.NPC_SPRITE_SCALE)
+		# Each congregation member has its own ordinary-churchgoer Synty billboard
+		# (keyed by congregation id), falling back to the borrowed PIL sheet.
+		if not PlaceholderArt.apply_npc_billboard(sprite, npc_id):
+			if sprite_name != "":
+				var loaded: SpriteFrames = SpriteLoader.try_load_npc(sprite_name)
+				if loaded != null:
+					sprite.sprite_frames = loaded
+					sprite.scale = Vector2(SpriteLoader.NPC_SPRITE_SCALE, SpriteLoader.NPC_SPRITE_SCALE)
+				else:
+					sprite.sprite_frames = PlaceholderArt.make_player_frames(color, "")
 			else:
 				sprite.sprite_frames = PlaceholderArt.make_player_frames(color, "")
-		else:
-			sprite.sprite_frames = PlaceholderArt.make_player_frames(color, "")
 		sprite.play("idle")
 		sprite.position = NPC_POSITIONS[npc_id]
 		add_child(sprite)
