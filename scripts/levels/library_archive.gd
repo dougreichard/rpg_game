@@ -9,6 +9,21 @@ const FLOOR_COLS: int = 30
 const FLOOR_ROWS: int = 17
 const FLOOR_TILE_PLAIN: Vector2i = Vector2i(0, 0)
 const FLOOR_TILE_ACCENT: Vector2i = Vector2i(1, 0)
+# Synty 2.5D library (see docs/synty_2_5d_art_plan.md): marble floor + brick
+# walls; Town bookshelves + Office book stacks. Terminal = Synty monitor.
+const SYNTY_FLOOR: String = "res://assets/art/tiles/synty_floor_marble.png"
+const SYNTY_WALL: String = "res://assets/art/tiles/synty_wall_brick.png"
+const TERMINAL_BILLBOARD: String = "res://assets/art/synty/props/monitor.png"
+# [name, x, y, on-screen height px] archive dressing (stacks against the walls).
+const LIBRARY_PROPS: Array = [
+	["bookshelf", 110, 210, 66],
+	["bookshelf", 198, 210, 66],
+	["bookshelf", 762, 210, 66],
+	["bookshelf", 850, 210, 66],
+	["book_group", 430, 470, 20],
+	["chair", 300, 430, 38],
+	["plant", 150, 480, 40],
+]
 const FLOOR_ACCENT_PERIOD: int = 4
 
 const GRUNT_SCENE: PackedScene = preload("res://scenes/enemies/Grunt.tscn")
@@ -179,7 +194,7 @@ func _restore_progress() -> void:
 func _build_floor() -> void:
 	var tile_map := TileMap.new()
 	tile_map.name = "Floor"
-	tile_map.tile_set = PlaceholderArt.make_hb_tileset()
+	tile_map.tile_set = PlaceholderArt.make_synty_floor_tileset(SYNTY_FLOOR)
 	add_child(tile_map)
 	move_child(tile_map, 0)
 	tile_map.position = Vector2(CAMERA_LIMIT_LEFT, CAMERA_LIMIT_TOP)
@@ -195,15 +210,27 @@ func _build_floor() -> void:
 # (the LibrarianDesk is a sibling of $Walls, not a child, so it keeps its own
 # bespoke maroon-leather texture instead of the generic brick pattern).
 func _build_walls() -> void:
-	var wall_color: Color = FLOOR_BASE_COLOR.darkened(0.35)
+	var wall_tex: Texture2D = PlaceholderArt.make_synty_wall_tile(SYNTY_WALL)
 	for wall in $Walls.get_children():
 		if not wall is StaticBody2D:
 			continue
 		var shape: CollisionShape2D = wall.get_node("CollisionShape2D")
 		var rect: RectangleShape2D = shape.shape
 		var sprite := Sprite2D.new()
-		sprite.texture = PlaceholderArt.make_wall_texture(wall_color, int(rect.size.x), int(rect.size.y))
+		sprite.texture = wall_tex
+		sprite.texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
+		sprite.region_enabled = true
+		sprite.region_rect = Rect2(0.0, 0.0, rect.size.x, rect.size.y)
 		wall.add_child(sprite)
+
+func _apply_synty_billboard(spr: Sprite2D, path: String, target_h: float) -> bool:
+	if not ResourceLoader.exists(path):
+		return false
+	var tex: Texture2D = load(path)
+	spr.texture = tex
+	spr.offset = Vector2(0.0, -tex.get_height() / 2.0)
+	spr.scale = Vector2.ONE * (target_h / float(tex.get_height()))
+	return true
 
 # Grabs the .tscn-placed LibrarianDesk body's collider and dresses it with a
 # maroon-leather bordered-rectangle texture  --  visually distinct from the
@@ -246,9 +273,16 @@ func _step_aside_librarian(animate: bool) -> void:
 
 func _create_terminal() -> void:
 	_terminal_sprite = Sprite2D.new()
-	_terminal_sprite.texture = PlaceholderArt.make_gate_texture(Color(0.24, 0.34, 0.4), 48, 40)
+	if not _apply_synty_billboard(_terminal_sprite, TERMINAL_BILLBOARD, 30.0):
+		_terminal_sprite.texture = PlaceholderArt.make_gate_texture(Color(0.24, 0.34, 0.4), 48, 40)
 	_terminal_sprite.position = TERMINAL_POS
 	add_child(_terminal_sprite)
+	# Archive dressing: bookshelves, book stacks, chair, plant (Synty billboards).
+	for p: Array in LIBRARY_PROPS:
+		var spr := Sprite2D.new()
+		if _apply_synty_billboard(spr, "res://assets/art/synty/props/%s.png" % p[0], float(p[3])):
+			spr.position = Vector2(float(p[1]), float(p[2]))
+			add_child(spr)
 
 # Stealth: a shadowed alcove the duo can duck into to let a patrol pass
 # rather than fight through it  --  see CLAUDE.md "Stealth & awareness".
