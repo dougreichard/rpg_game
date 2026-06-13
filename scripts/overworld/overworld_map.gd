@@ -47,6 +47,7 @@ const NPC_BUBBLE_TEXT: Dictionary = {
 
 const PlayerScript: Script = preload("res://scripts/overworld/overworld_player.gd")
 const NpcScript: Script = preload("res://scripts/overworld/town_npc.gd")
+const BubbleCoordinatorScript: Script = preload("res://scripts/systems/bubble_coordinator.gd")
 const DialogBoxScript: Script = preload("res://scripts/ui/dialog_box.gd")
 const PauseMenuScript: Script = preload("res://scripts/ui/pause_menu.gd")
 const AchievementsOverlayScript: Script = preload("res://scripts/ui/achievements_overlay.gd")
@@ -380,6 +381,9 @@ func _player_sprite_scale(character_name: String) -> float:
 # its own `color` (set via setup()) so _talk_to_npc() never needs to index
 # back into the data arrays by position.
 func _spawn_npcs() -> void:
+	var bubble_coord = BubbleCoordinatorScript.new()
+	bubble_coord.set_pause_check(func() -> bool: return GameManager.is_paused())
+	add_child(bubble_coord)
 	for data: Dictionary in QuestData.NPC_DATA + QuestData.NPC_DATA_2:
 		var req: Dictionary = data.get("requires_flag", {})
 		if not req.is_empty() and not GameManager.get_level_flag(req["location"], req["flag"], false):
@@ -397,6 +401,7 @@ func _spawn_npcs() -> void:
 		var bubble_txt: Dictionary = NPC_BUBBLE_TEXT.get(data["quest_id"], {})
 		if not bubble_txt.is_empty():
 			npc.setup_bubble(bubble_txt["pre"], bubble_txt["post"])
+			bubble_coord.register(npc.fire_bubble)
 		_npcs.append(npc)
 
 func _build_ui() -> void:

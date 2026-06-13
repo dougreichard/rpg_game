@@ -12,8 +12,6 @@ const ARRIVE_DISTANCE: float = 4.0
 
 const SpeechBubbleScript: Script = preload("res://scripts/systems/speech_bubble.gd")
 const TOWN_ID: String = "town"
-const BUBBLE_INTERVAL_MIN: float = 8.0
-const BUBBLE_INTERVAL_MAX: float = 16.0
 const BUBBLE_DURATION: float = 3.5
 const BUBBLE_OFFSET := Vector2(0.0, -52.0)
 
@@ -28,7 +26,6 @@ var _rng := RandomNumberGenerator.new()
 var _bubble        = null  # SpeechBubbleScript instance — null until setup_bubble() called
 var _bubble_pre:  String = ""
 var _bubble_post: String = ""
-var _bubble_timer: float = 0.0
 
 
 # `name`/`quest` identify this townsfolk for overworld_map.gd's dialog/quest
@@ -56,7 +53,16 @@ func setup_bubble(pre: String, post: String) -> void:
 	_bubble = SpeechBubbleScript.new()
 	_bubble.position = BUBBLE_OFFSET
 	add_child(_bubble)
-	_bubble_timer = _rng.randf_range(BUBBLE_INTERVAL_MIN, BUBBLE_INTERVAL_MAX)
+
+# Called by BubbleCoordinator — reads current quest state and shows the
+# appropriate line. No-op if this NPC has no bubble configured.
+func fire_bubble() -> void:
+	if _bubble == null:
+		return
+	var state: String = GameManager.get_level_flag(TOWN_ID, "quest_" + quest_id, "not_started")
+	var txt: String = _bubble_post if state == "complete" else _bubble_pre
+	if txt != "":
+		_bubble.show_text(txt, BUBBLE_DURATION)
 
 func _pick_new_target() -> void:
 	var angle: float = _rng.randf_range(0.0, TAU)
@@ -65,15 +71,6 @@ func _pick_new_target() -> void:
 
 
 func _process(delta: float) -> void:
-	if _bubble != null and not GameManager.is_paused():
-		_bubble_timer -= delta
-		if _bubble_timer <= 0.0:
-			_bubble_timer = _rng.randf_range(BUBBLE_INTERVAL_MIN, BUBBLE_INTERVAL_MAX)
-			var state: String = GameManager.get_level_flag(TOWN_ID, "quest_" + quest_id, "not_started")
-			var txt: String = _bubble_post if state == "complete" else _bubble_pre
-			if txt != "":
-				_bubble.show_text(txt, BUBBLE_DURATION)
-
 	if _pause_timer > 0.0:
 		_pause_timer -= delta
 		return
