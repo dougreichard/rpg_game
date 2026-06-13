@@ -313,6 +313,30 @@ static func make_hb_tileset() -> TileSet:
 	_hb_ts = ts
 	return ts
 
+# Synty-derived overworld ground tileset (see docs/synty_2_5d_art_plan.md). A
+# 2x2 atlas of 32px tiles baked from NatureBiomes terrain textures:
+#   (0,0) grass   (1,0) grass accent   (0,1) path/road   (1,1) dirt accent
+# Used by overworld_map.gd's floor so the ground reads as Synty terrain under
+# the 3/4 building sprites.
+static var _synty_ground_ts: TileSet = null
+
+static func make_synty_ground_tileset() -> TileSet:
+	if _synty_ground_ts != null:
+		return _synty_ground_ts
+	var tex: Texture2D = load("res://assets/art/tiles/synty_ground.png")
+	var src := TileSetAtlasSource.new()
+	src.texture = tex
+	src.texture_region_size = Vector2i(32, 32)
+	src.use_texture_padding = false
+	for row: int in 2:
+		for col: int in 2:
+			src.create_tile(Vector2i(col, row))
+	var ts := TileSet.new()
+	ts.tile_size = Vector2i(32, 32)
+	ts.add_source(src, 0)
+	_synty_ground_ts = ts
+	return ts
+
 # Generic prop/gate texture: a beveled panel with an outer black frame.
 # Works for any rectangular prop — wall gates, containers, doors, etc.
 # Thick props (w>16, h>16) get an inner bevel for a 3-D recessed panel look.

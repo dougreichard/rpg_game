@@ -14,8 +14,14 @@ const TILE: int = 32
 # around the town like a level's camera-follow instead of showing it all at
 # once.
 const MAP_OFFSET: Vector2i = Vector2i(10, 8)
-const GRID_COLS: int = 40 + MAP_OFFSET.x * 2
-const GRID_ROWS: int = 19 + MAP_OFFSET.y * 2
+# Authored LOCS anchors / NPC homes live in a compact 40x19 grid. SPREAD scales
+# those coordinates apart (via _grid) so the 3/4 building sprites have breathing
+# room and the town reads as a bigger place; GRID grows to match.
+const SPREAD: float = 1.5
+const AUTHORED_COLS: int = 40
+const AUTHORED_ROWS: int = 19
+const GRID_COLS: int = int(AUTHORED_COLS * SPREAD) + MAP_OFFSET.x * 2
+const GRID_ROWS: int = int(AUTHORED_ROWS * SPREAD) + MAP_OFFSET.y * 2
 const INTERACT_RADIUS: float = 48.0
 const NPC_INTERACT_RADIUS: float = 40.0
 const CAMERA_SMOOTHING_SPEED: float = 5.0
@@ -74,20 +80,28 @@ const T_DOCK: int = 5
 const T_CARPET: int = 6
 const T_CYBER: int = 7
 
-const GRASS_TILE: Vector2i = Vector2i(4, T_OUTDOOR)
-const GRASS_ACCENT_TILE: Vector2i = Vector2i(2, T_OUTDOOR)
+# Tile coords into PlaceholderArt.make_synty_ground_tileset() (2x2 atlas):
+#   (0,0) grass  (1,0) grass accent  (0,1) path/road  (1,1) dirt accent
+const GRASS_TILE: Vector2i = Vector2i(0, 0)
+const GRASS_ACCENT_TILE: Vector2i = Vector2i(1, 0)
 const GRASS_ACCENT_PERIOD: int = 5
 # Roads previously reused the indoor STONE-row ashlar tile, which read as a
 # dropped-in dungeon floor square rather than a path. Gravel/packed-dirt
 # OUTDOOR tiles are non-directional (work for both horizontal and vertical
 # road runs) and contrast with the green grass tiles, so an L-shaped route
 # reads as a worn road cut through the lawn.
-const ROAD_TILE: Vector2i = Vector2i(3, T_OUTDOOR)
-const ROAD_ACCENT_TILE: Vector2i = Vector2i(1, T_OUTDOOR)
+const ROAD_TILE: Vector2i = Vector2i(0, 1)
+const ROAD_ACCENT_TILE: Vector2i = Vector2i(1, 1)
 const ROAD_ACCENT_PERIOD: int = 3
-# zip_line / the_drop share the OUTDOOR row with grass — use distinct columns
-# so their building footprints read as built structures, not more lawn.
-const OUTDOOR_BUILDING_TILES: Array = [Vector2i(5, T_OUTDOOR), Vector2i(8, T_OUTDOOR)]
+
+# Synty 2.5D building sprites (see docs/synty_2_5d_art_plan.md). One PNG per
+# location id, rendered at the locked 3/4 angle and trimmed to its alpha bounds.
+# When present, the sprite replaces the flat tile footprint; locations without a
+# sprite fall back to _paint_building's tile fill.
+const BUILDING_SPRITE_DIR: String = "res://assets/art/synty/buildings/"
+# A sprite is scaled so its display width ~= footprint width * this factor (3/4
+# buildings overhang their ground footprint, so a little wider than the tiles).
+const BUILDING_WIDTH_FACTOR: float = 1.4
 
 const LOCS: Array = [
 	{
@@ -197,6 +211,7 @@ const CONNECTIONS: Array = [
 var _id_to_idx: Dictionary = {}
 var _loc_pos: Array = []   # Vector2 pixel center per location, parallel to LOCS
 var _loc_door: Array = []  # Vector2i door tile per location, parallel to LOCS
+var _building_sprites: Array = []  # Sprite2D (or null) per location, parallel to LOCS
 var _nearby_idx: int = -1
 var _npcs: Array = []      # parallel to QuestData.NPC_DATA
 var _nearby_npc_idx: int = -1
@@ -214,7 +229,12 @@ var _inventory_overlay = null
 # LOCS anchors are authored against the original 40x19 layout; offset them
 # into the padded GRID_COLS x GRID_ROWS grid.
 func _anchor(loc: Dictionary) -> Vector2i:
-	return Vector2i(loc["anchor"]) + MAP_OFFSET
+	return _grid(Vector2i(loc["anchor"]))
+
+
+# Map an authored 40x19 tile coordinate into the spread-out, padded play grid.
+func _grid(c: Vector2i) -> Vector2i:
+	return Vector2i(roundi(c.x * SPREAD), roundi(c.y * SPREAD)) + MAP_OFFSET
 
 
 func _ready() -> void:
@@ -227,7 +247,11 @@ func _ready() -> void:
 		var size: Vector2i = loc["size"]
 		_loc_pos.append(Vector2((anchor.x + size.x / 2.0) * TILE, (anchor.y + size.y / 2.0) * TILE))
 		_loc_door.append(Vector2i(anchor.x + size.x / 2, mini(anchor.y + size.y, GRID_ROWS - 1)))
+	# Y-sort the root so building sprites, the duo, and town NPCs interleave by
+	# screen-Y -- the duo passes behind tall buildings and in front of near ones.
+	y_sort_enabled = true
 	_build_floor()
+	_build_building_sprites()
 	_build_building_colliders()
 	_build_ui()
 	_setup_camera()
@@ -251,7 +275,7 @@ func _setup_camera() -> void:
 func _build_floor() -> void:
 	var tile_map := TileMap.new()
 	tile_map.name = "Floor"
-	tile_map.tile_set = PlaceholderArt.make_hb_tileset()
+	tile_map.tile_set = PlaceholderArt.make_synty_ground_tileset()
 	add_child(tile_map)
 	move_child(tile_map, 0)
 	tile_map.add_layer(1)
@@ -270,7 +294,10 @@ func _build_floor() -> void:
 		_paint_road(tile_map, _loc_door[ai], _loc_door[bi])
 
 	for i: int in LOCS.size():
-		_paint_building(tile_map, i)
+		# Sprite'd buildings stand on the grass/road; only tile-fill the footprint
+		# for locations that have no rendered sprite yet (fallback).
+		if not _has_building_sprite(LOCS[i]["id"]):
+			_paint_building(tile_map, i)
 
 # Orthogonal L-shaped road: horizontal run from a along a's row to b's column,
 # then vertical run down/up b's column to b. Roads sit on layer 1, buildings
@@ -293,16 +320,45 @@ func _paint_road(tile_map: TileMap, a: Vector2i, b: Vector2i) -> void:
 func _road_tile_at(x: int, y: int) -> Vector2i:
 	return ROAD_ACCENT_TILE if (x * 7 + y * 13) % ROAD_ACCENT_PERIOD == 0 else ROAD_TILE
 
+# Fallback for a location with no rendered building sprite: pave its footprint
+# as a dirt "lot" so the spot still reads as built ground. With all 14 locations
+# now sprite'd this rarely runs, but it stays valid against the Synty ground atlas.
 func _paint_building(tile_map: TileMap, idx: int) -> void:
 	var loc: Dictionary = LOCS[idx]
 	var anchor: Vector2i = _anchor(loc)
 	var size: Vector2i = loc["size"]
-	var tiles: Array = OUTDOOR_BUILDING_TILES if loc["terrain_row"] == T_OUTDOOR else \
-			[Vector2i(0, loc["terrain_row"]), Vector2i(1, loc["terrain_row"])]
 	for x: int in range(anchor.x, anchor.x + size.x):
 		for y: int in range(anchor.y, anchor.y + size.y):
-			var tile: Vector2i = tiles[1] if (x + y) % 3 == 0 else tiles[0]
+			var tile: Vector2i = ROAD_ACCENT_TILE if (x + y) % 3 == 0 else ROAD_TILE
 			tile_map.set_cell(2, Vector2i(x, y), 0, tile)
+
+func _has_building_sprite(id: String) -> bool:
+	return ResourceLoader.exists(BUILDING_SPRITE_DIR + id + ".png")
+
+# Place a Synty 2.5D building sprite per location, anchored at the front-bottom
+# centre of its footprint so its base sits on the ground tile and it rises up
+# and back in 3/4 view. Added as a y-sorted root child so the duo interleaves.
+func _build_building_sprites() -> void:
+	_building_sprites.resize(LOCS.size())  # all null
+	for i: int in LOCS.size():
+		var loc: Dictionary = LOCS[i]
+		var path: String = BUILDING_SPRITE_DIR + String(loc["id"]) + ".png"
+		if not ResourceLoader.exists(path):
+			continue
+		var tex: Texture2D = load(path)
+		var anchor: Vector2i = _anchor(loc)
+		var size: Vector2i = loc["size"]
+		var spr := Sprite2D.new()
+		spr.texture = tex
+		# Bottom edge of the (alpha-trimmed) texture sits at the node origin.
+		spr.offset = Vector2(0.0, -tex.get_height() / 2.0)
+		var s: float = (size.x * TILE * BUILDING_WIDTH_FACTOR) / float(tex.get_width())
+		spr.scale = Vector2(s, s)
+		spr.position = Vector2((anchor.x + size.x / 2.0) * TILE, (anchor.y + size.y) * TILE)
+		if not _is_unlocked(i):
+			spr.modulate = Color(0.5, 0.5, 0.55)  # dim locked locations
+		add_child(spr)
+		_building_sprites[i] = spr
 
 # One StaticBody2D per building footprint so the duo can't walk through them —
 # the door tile (one row below the footprint) is left clear for entry.
@@ -390,7 +446,7 @@ func _spawn_npcs() -> void:
 			continue
 		var npc = NpcScript.new()
 		add_child(npc)
-		var home: Vector2 = Vector2(Vector2i(data["home"]) + MAP_OFFSET) * TILE + Vector2(TILE / 2.0, TILE / 2.0)
+		var home: Vector2 = Vector2(_grid(Vector2i(data["home"]))) * TILE + Vector2(TILE / 2.0, TILE / 2.0)
 		var npc_key: String = data["name"].to_lower()
 		var npc_frames: SpriteFrames = SpriteLoader.try_load_npc(npc_key)
 		var npc_scale: float = SpriteLoader.NPC_SPRITE_SCALE if npc_frames != null else 1.0
@@ -680,6 +736,10 @@ func _launch() -> void:
 	if loc["id"] == "gimme_dat_spoon":
 		TransitionManager.change_scene(loc["scene"])
 		return
+	# Remember which location we entered so any exit path -- doorway, level
+	# clear, or the pause menu's "Quit to Map" -- returns the duo to this
+	# building's door instead of always defaulting to Pipe Organ Works.
+	GameManager.last_location_id = loc["id"]
 	GameManager.pending_level = loc["scene"]
 	GameManager.pending_level_name = loc["name"]
 	GameManager.pending_level_duo = loc.get("duo", [])
@@ -703,14 +763,17 @@ func _draw_building_overlay(idx: int) -> void:
 	var anchor: Vector2i = _anchor(loc)
 	var size: Vector2i = loc["size"]
 	var rect := Rect2(Vector2(anchor) * TILE, Vector2(size) * TILE)
-
-	if not unlocked:
-		draw_rect(rect, Color(0.0, 0.0, 0.0, 0.55))
-	elif completed:
-		draw_rect(rect, Color(0.3, 1.0, 0.4, 0.10))
-
-	var icon_col: Color = Color(1.0, 1.0, 1.0, 0.9) if unlocked else Color(0.5, 0.5, 0.55, 0.6)
-	_draw_icon(icon, p, icon_col)
+	# A rendered building sprite (drawn as a y-sorted child) covers the footprint
+	# and carries its own identity + locked dimming, so skip the flat tile-era
+	# tint/icon for those; the name label below still renders for every location.
+	var has_sprite: bool = idx < _building_sprites.size() and _building_sprites[idx] != null
+	if not has_sprite:
+		if not unlocked:
+			draw_rect(rect, Color(0.0, 0.0, 0.0, 0.55))
+		elif completed:
+			draw_rect(rect, Color(0.3, 1.0, 0.4, 0.10))
+		var icon_col: Color = Color(1.0, 1.0, 1.0, 0.9) if unlocked else Color(0.5, 0.5, 0.55, 0.6)
+		_draw_icon(icon, p, icon_col)
 
 	var label_col: Color
 	if idx == _nearby_idx:  label_col = Color(1.0, 1.0, 0.4)
