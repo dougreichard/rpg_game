@@ -103,6 +103,18 @@ const BUILDING_SPRITE_DIR: String = "res://assets/art/synty/buildings/"
 # buildings overhang their ground footprint, so a little wider than the tiles).
 const BUILDING_WIDTH_FACTOR: float = 1.4
 
+# Synty scatter props (trees/bushes/hedges) sprinkled on free grass for town
+# cohesion. "h" is target display height in tiles; "weight" biases frequency.
+const PROP_DIR: String = "res://assets/art/synty/props/"
+const SCATTER_PROPS: Array = [
+	{"tex": "tree_01", "h": 2.6, "weight": 4},
+	{"tex": "tree_pine", "h": 2.9, "weight": 3},
+	{"tex": "bush_01", "h": 0.9, "weight": 3},
+	{"tex": "hedge_01", "h": 1.0, "weight": 2},
+]
+# Percent of eligible (free, near-town) grass tiles that receive a prop.
+const SCATTER_DENSITY: int = 14
+
 const LOCS: Array = [
 	{
 		"id": "pipe_organ_works", "name": "Bellows & Sons Pipe Organ Works",
@@ -212,6 +224,7 @@ var _id_to_idx: Dictionary = {}
 var _loc_pos: Array = []   # Vector2 pixel center per location, parallel to LOCS
 var _loc_door: Array = []  # Vector2i door tile per location, parallel to LOCS
 var _building_sprites: Array = []  # Sprite2D (or null) per location, parallel to LOCS
+var _occupied: Dictionary = {}  # Vector2i tile -> true (roads/buildings; no scatter)
 var _nearby_idx: int = -1
 var _npcs: Array = []      # parallel to QuestData.NPC_DATA
 var _nearby_npc_idx: int = -1
@@ -252,6 +265,7 @@ func _ready() -> void:
 	y_sort_enabled = true
 	_build_floor()
 	_build_building_sprites()
+	_scatter_props()
 	_build_building_colliders()
 	_build_ui()
 	_setup_camera()
@@ -307,12 +321,14 @@ func _paint_road(tile_map: TileMap, a: Vector2i, b: Vector2i) -> void:
 	var x: int = a.x
 	while true:
 		tile_map.set_cell(1, Vector2i(x, a.y), 0, _road_tile_at(x, a.y))
+		_occupied[Vector2i(x, a.y)] = true
 		if x == b.x:
 			break
 		x += signi(b.x - a.x)
 	var y: int = a.y
 	while true:
 		tile_map.set_cell(1, Vector2i(b.x, y), 0, _road_tile_at(b.x, y))
+		_occupied[Vector2i(b.x, y)] = true
 		if y == b.y:
 			break
 		y += signi(b.y - a.y)
@@ -359,6 +375,79 @@ func _build_building_sprites() -> void:
 			spr.modulate = Color(0.5, 0.5, 0.55)  # dim locked locations
 		add_child(spr)
 		_building_sprites[i] = spr
+
+# Sprinkle Synty trees/bushes/hedges on free grass around the town for cohesion.
+# Deterministic (hash-based) so the layout is stable across runs. Avoids road
+# and building/door tiles (via _occupied) plus NPC homes, and stays within a few
+# tiles of the built-up area so the far camera-padding grass reads as open field.
+func _scatter_props() -> void:
+	# Reserve building footprints (+1 tile margin), their doors, and NPC homes.
+	for i: int in LOCS.size():
+		var a: Vector2i = _anchor(LOCS[i])
+		var sz: Vector2i = LOCS[i]["size"]
+		for x: int in range(a.x - 1, a.x + sz.x + 1):
+			for y: int in range(a.y - 1, a.y + sz.y + 1):
+				_occupied[Vector2i(x, y)] = true
+		_occupied[_loc_door[i]] = true
+	for data: Dictionary in QuestData.NPC_DATA + QuestData.NPC_DATA_2:
+		_occupied[_grid(Vector2i(data["home"]))] = true
+
+	# Load prop textures into a weighted pick list.
+	var defs: Array = []
+	var total_w: int = 0
+	for p: Dictionary in SCATTER_PROPS:
+		var path: String = PROP_DIR + String(p["tex"]) + ".png"
+		if not ResourceLoader.exists(path):
+			continue
+		total_w += int(p["weight"])
+		defs.append({"texture": load(path), "h": float(p["h"]), "cum": total_w})
+	if defs.is_empty():
+		return
+
+	# Scatter region: building bounding box expanded a few tiles, clamped to grid.
+	var mn := Vector2i(GRID_COLS, GRID_ROWS)
+	var mx := Vector2i(0, 0)
+	for loc: Dictionary in LOCS:
+		var a2: Vector2i = _anchor(loc)
+		var sz2: Vector2i = loc["size"]
+		mn = Vector2i(mini(mn.x, a2.x), mini(mn.y, a2.y))
+		mx = Vector2i(maxi(mx.x, a2.x + sz2.x), maxi(mx.y, a2.y + sz2.y))
+	var pad: int = 5
+	var x0: int = maxi(1, mn.x - pad)
+	var x1: int = mini(GRID_COLS - 2, mx.x + pad)
+	var y0: int = maxi(1, mn.y - pad)
+	var y1: int = mini(GRID_ROWS - 2, mx.y + pad)
+
+	for ty: int in range(y0, y1 + 1):
+		for tx: int in range(x0, x1 + 1):
+			if _occupied.has(Vector2i(tx, ty)):
+				continue
+			var h: int = _hash2(tx, ty)
+			if h % 100 >= SCATTER_DENSITY:
+				continue
+			var pick: int = (h / 100) % total_w
+			var chosen: Dictionary = defs[defs.size() - 1]
+			for d: Dictionary in defs:
+				if pick < int(d["cum"]):
+					chosen = d
+					break
+			_place_prop(chosen, tx, ty, h)
+
+func _place_prop(d: Dictionary, tx: int, ty: int, h: int) -> void:
+	var tex: Texture2D = d["texture"]
+	var spr := Sprite2D.new()
+	spr.texture = tex
+	spr.offset = Vector2(0.0, -tex.get_height() / 2.0)  # bottom edge at origin
+	var s: float = (float(d["h"]) * TILE) / float(tex.get_height())
+	s *= 0.85 + float(h % 30) / 100.0  # subtle per-instance size variation
+	spr.scale = Vector2(s, s)
+	# Jitter within the tile so props don't sit on a rigid grid.
+	var jx: float = float((h >> 3) % TILE) - TILE / 2.0
+	spr.position = Vector2(tx * TILE + TILE / 2.0 + jx * 0.4, (ty + 1) * TILE)
+	add_child(spr)
+
+func _hash2(x: int, y: int) -> int:
+	return absi((x * 73856093) ^ (y * 19349663))
 
 # One StaticBody2D per building footprint so the duo can't walk through them —
 # the door tile (one row below the footprint) is left clear for entry.

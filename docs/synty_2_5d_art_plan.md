@@ -126,12 +126,12 @@ Original notes:
 | iron_strings_gym | Shop_01 | Town | ✅ |
 | recording_studio | Shop_02 | Town | ✅ |
 | clocktower | WaterTower_01 | Construction | tower stand-in (no clock face) |
-| harbor_docks | Crane_01 | Construction | bare crane mast (no jib) |
+| harbor_docks | SK_Veh_Crane_01 | Construction | ✅ full mobile crane |
 | library | CityHall_01 | City | ✅ columned civic |
 | carnival | Stall_03 | Adventure | ✅ fairground market booth |
 | underground | Portable_Office_01 | Construction | site-hut entrance |
 | zip_line | GardenShed_01 | Town | park hut |
-| vr_room | Bank_01 | SciFiCity | reads as building, plain |
+| vr_room | Large_04 | SciFiCity | ✅ sleek tech tower |
 | the_drop | Chopshop_01 | SciFiCity | garage/warehouse, plain |
 | grand_marquee | OfficeOld_Large_01 | City | ✅ grand facade |
 
@@ -147,9 +147,16 @@ Original notes:
 - Building PNGs are alpha-trimmed (PIL) so anchoring/scaling is tight; Godot
   `.import` files generated. Verified by screenshot — all 13 read as buildings.
 
-Remaining overworld polish (optional): tune `BUILDING_WIDTH_FACTOR`; ground/road
-tiles still use the old `hb_tiles` atlas (could swap to Synty ground later);
-flagged stand-ins (clocktower clock, harbor crane jib, plain vr_room/the_drop).
+**Stage 3 — props & cohesion: ✅ DONE (2026-06-13).**
+- Synty ground tileset baked from NatureBiomes terrain (grass + dirt path) →
+  `PlaceholderArt.make_synty_ground_tileset()`, replacing the old `hb_tiles`.
+- `SPREAD` (1.5x) + `_grid()` scale building anchors & NPC homes apart; grid grown.
+- `_scatter_props()` sprinkles Synty trees/bushes/hedges (assets/art/synty/props/)
+  on free grass via a deterministic hash, avoiding roads/buildings/doors/NPC homes.
+- Stand-in upgrades: harbor → full mobile crane; vr_room → sleek SciFi tower.
+
+Remaining (optional): clocktower clock face + the_drop are acceptable stand-ins;
+could add lamps/fences; tune `BUILDING_WIDTH_FACTOR` / `SCATTER_DENSITY`.
 
 Original notes:
 - Render the **13 building exteriors** (one fitting Synty building per location)
