@@ -278,6 +278,78 @@ displays, warehouse boxes. Verified billboards render cleanly. Rollout map:
 
 ---
 
+## Phase 6 — Hybrid cleanup (post-playtest, 2026-06-13)
+
+**Problem (from a playtest):** inside levels the look reads as a *hybrid* — Synty
+floors/props sit next to flat/programmatic and pixel-art elements, so it doesn't
+feel cohesively 2.5D. Audit of what's still NOT Synty in levels:
+
+| Element | Current | Impact |
+|---------|---------|--------|
+| **Walls** | Synty *texture* tiled FLAT on a top-down rect (no height/face) | **High** — reads flat next to 3/4 props; headline fix |
+| **In-level player + NPCs** | PIL pixel sheets (`try_load_player`/`try_load_npc`) | **High** — most obvious pixel-art remnant; it's the character you control |
+| **Regular enemies** | PIL pixel sheets | **High** — pixel-art vs Synty world |
+| **Puzzle-gate props** | `make_gate_texture` ×~20 (doors, levers, hatches, booth doors, containers) | **Med** — flat bevel rectangles |
+| **LootBox chest** | programmatic `_draw()` (draw_rect) | **Med** — one shared file, fixes every level at once |
+| **Secret / office-wing walls** | still `make_wall_texture` (old brick) ×~12 | **Med** — built outside the main `_build_walls` |
+| **Signature props** | `make_organ/bellows/gear/console/bell/...` | **Low** — no Synty equivalent; kept on purpose |
+| **HUD / menus** | programmatic Control UI | **Low** — optional reskin (ApocalypseHUD pack owned) |
+
+### Pass 6a — 2.5D walls (headline)
+Give walls real height instead of a flat texture. Options (pick one, prototype on
+one level first):
+1. **3/4 wall-segment billboards** (best look): render a Synty modular wall piece
+   (Shops/Office/SciFiSpace have them) at the locked 3/4 angle; tile/9-slice it
+   along each `$Walls` rect; add under a Y-sorted node so the duo passes behind
+   tall walls — same trick as the overworld buildings. Most work, most cohesive.
+2. **Faux-extruded wall**: keep the top-down rect but draw a Synty *top* strip +
+   a darker *front* face strip (a few px of fake height). Cheap, code-only, reads
+   far better than flat; no new renders.
+3. **Per-pack wall cap**: a thin 3/4 "wall cap" billboard along the south edge of
+   each wall run only (where height reads most), flat texture elsewhere.
+   Recommend prototyping **#2** (cheap, global via the shared `_build_walls`
+   helper) and reserving **#1** for hero rooms.
+
+### Pass 6b — in-level characters & enemies (the pixel-art remnant)
+The controllable duo, level NPCs, and regular enemies still use PIL sheets. Unlike
+the overworld, these need **combat animation** (attack/dash/hurt/death/windup), so
+static billboards don't fit cleanly — this is the **animated-sprite retarget**
+sub-project (Blender 5.x slotted-action API + rig-case remap). Until then they stay
+pixel-art. Decide: invest in animated Synty sheets, or treat PIL combat sprites as
+an intentional stylistic layer. (The code windup telegraph already added means a
+billboard *enemy* is at least viable; the player is the harder case.)
+
+### Pass 6c — puzzle-gate props
+Replace the ~20 `make_gate_texture` doors/levers/hatches/booth-doors/containers
+with Synty billboards (Office/SciFiSpace doors, Construction hatches, a lever prop)
+via the existing `_apply_synty_billboard` fallback pattern — keep the open/slide
+tweens (they animate `position`/`scale`, which billboards support).
+
+### Pass 6d — LootBox chest (one change, every level)
+Swap `loot_box.gd`'s programmatic `_draw()` for a Synty crate/chest billboard
+(open + closed states). Single shared file → fixes all 13 levels at once. Highest
+impact-per-effort item.
+
+### Pass 6e — leftover old-brick walls
+Convert the secret-wall / office-wing wall builders that still call
+`make_wall_texture` to `make_synty_wall_tile` (and whatever Pass 6a chooses).
+
+**Recommended order:** 6d (lootboxes, trivial global win) → 6a #2 (faux-height
+walls, global) → 6c (gate props) → 6e (leftover walls) → then decide on 6b.
+
+### Other things worth checking (noticed during the audit)
+- **Drop shadows** are characters-only; buildings, props, and level billboards
+  float slightly — extend the shadow helper to all billboards.
+- **In-level NPC portraits / dialog** use placeholder colors — fine, but verify.
+- **Projectiles / combat FX** (`projectile.gd`, CombatFX sparks) are programmatic
+  — likely fine stylistically, but check they don't read as "pixel" next to Synty.
+- **Per-level lighting**: a `CanvasModulate` tint per level would unify the mixed
+  art under one mood and hide a lot of the hybrid seams cheaply.
+- **Floor tile softness**: the baked 32px floor tiles are a bit muddy up close;
+  consider 64px tiles or a sharper downscale if any floor reads blurry.
+
+---
+
 ## How this maps to the six original goals
 
 1. **Buildings/roads look right** → Phase 2 (3/4 building sprites + Synty ground set).
