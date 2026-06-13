@@ -199,10 +199,20 @@ church-prop billboards — pews, altar (church stand), candles — via a reusabl
 PlaceholderArt if a PNG is missing). Stained-glass / arch windows kept as
 PlaceholderArt wall decals.
 
-**Still pending for the rollout:**
-- The other 11 levels (each migrates independently behind the fallback — no
-  big-bang): per-theme floor/wall textures + prop billboards, following the
-  recipe. See the interior-asset map above.
+**Phase 3 rollout: ✅ COMPLETE (2026-06-13).** All 13 location environments are
+on the Synty interior pipeline (per-theme floor/wall tiles baked from
+Shops/NatureBiomes textures + prop billboards). Levels: Pipe Organ Works, Old
+Parish Church, Carnival, Iron & Strings Gym, Recording Studio, Library &
+Archive, Underground Tunnels, VR Escape Room, Harbor & Docks, Clocktower, The
+Drop, Zip Line Park, Grand Marquee Cinema. Signature puzzle props with no Synty
+equivalent (pipe organ, bells, glass booth door, chute) stay PlaceholderArt; the
+"Gimme Dat Spoon" arcade is a programmatic `_draw()` UI minigame (no environment
+to reskin). Floor tilesets: workshop wood, church/clocktower cobblestone, gym
+tile, studio/cinema carpet, library marble, tunnel/dock/VR concrete, carnival/
+drop dirt, park grass. Walls: concrete, stone, brick, wood.
+
+**Remaining (optional):** in-level enemies + bosses via the Mech / Gang Warfare
+packs (combat sprites); the animation retarget if animated sprites are wanted.
 
 **Interior-asset survey (2026-06-13).** The Office + Shops + Casino packs cover
 every level's interior. Floor/wall textures: Shops has Marble, Carpet (×6),
