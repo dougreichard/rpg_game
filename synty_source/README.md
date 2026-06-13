@@ -21,7 +21,19 @@ synty_source/
                        Nature/ NatureBiomes_AridDesert/ NatureBiomes_MeadowForest/
                      Interiors/props: Office/ (servers, cabinets, signs)
                        SpyKit/ (Ethan gadgets) Kids/
-                     Characters: CityCharacters/  (Phase 4)
+                     Enemies/characters: CityCharacters/ GangWarfare/ Heist/
+                       Mech/ (robots+bosses) HorrorCarnival/ SciFiSpace/ Knights/
+                     Interiors (cont): CoffeeShop/ (NEW, cafe/lounge)
+                     Animation: AnimLocomotion/ (walk/idle/run; Sidekick + Polygon
+                       rig sets). CityCharacters v2 = modern *Sidekick* rig (binary
+                       FBX, ASCII issue gone) -> use Animations/Sidekick/* for it;
+                       old POLYGON-rig packs -> Animations/Polygon/*.
+                       -- NOTE: even matched, a bone-name CASE mismatch (UpperArm_L
+                       vs upperarm_l) leaves arms at rest; clean anim needs a
+                       case-normalizing retarget + Blender 5.x slotted-action API.
+                       Feasible but a mini-project; static billboards remain chosen.
+                     Refreshed to current versions: CityCharacters v2, Office v4,
+                       Adventure v4, SpyKit v4, Knights v3.
                      2D UI: ApocalypseHUD/ (INTERFACE sprite pack — HUD reskin)
                      Pack notes: Casino is MODULAR (kit walls/neon) + multi-atlas
                        — assemble, don't expect single hero FBX. Adventure has

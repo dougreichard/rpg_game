@@ -7,9 +7,21 @@ const FLOOR_BASE_COLOR: Color = Color(0.34, 0.29, 0.33)
 const FLOOR_ACCENT_COLOR: Color = Color(0.78, 0.55, 0.24)
 const FLOOR_COLS: int = 30
 const FLOOR_ROWS: int = 17
-const FLOOR_TILE_PLAIN: Vector2i = Vector2i(0, 2)
-const FLOOR_TILE_ACCENT: Vector2i = Vector2i(1, 2)
+const FLOOR_TILE_PLAIN: Vector2i = Vector2i(0, 0)
+const FLOOR_TILE_ACCENT: Vector2i = Vector2i(1, 0)
 const FLOOR_ACCENT_PERIOD: int = 4
+# Synty 2.5D fairground (see docs/synty_2_5d_art_plan.md): packed-dirt midway +
+# wood-hoarding walls; Horror Carnival ride/booth billboards.
+const SYNTY_FLOOR: String = "res://assets/art/tiles/synty_floor_dirt.png"
+const SYNTY_WALL: String = "res://assets/art/tiles/synty_wall_wood.png"
+const RIDE_BILLBOARD: String = "res://assets/art/synty/props/ferris_wheel.png"
+# [name, x, y, on-screen height px] fairground dressing.
+const CARNIVAL_PROPS: Array = [
+	["merry_go_round", 720, 180, 96],
+	["booth", 240, 300, 46],
+	["prize_wheel", 360, 420, 52],
+	["photo_stand", 780, 400, 54],
+]
 
 const GRUNT_SCENE: PackedScene = preload("res://scenes/enemies/Grunt.tscn")
 const BRUTE_SCENE: PackedScene = preload("res://scenes/enemies/Brute.tscn")
@@ -193,7 +205,7 @@ func _restore_progress() -> void:
 func _build_floor() -> void:
 	var tile_map := TileMap.new()
 	tile_map.name = "Floor"
-	tile_map.tile_set = PlaceholderArt.make_hb_tileset()
+	tile_map.tile_set = PlaceholderArt.make_synty_floor_tileset(SYNTY_FLOOR)
 	add_child(tile_map)
 	move_child(tile_map, 0)
 	tile_map.position = Vector2(CAMERA_LIMIT_LEFT, CAMERA_LIMIT_TOP)
@@ -209,21 +221,43 @@ func _build_floor() -> void:
 # sibling of $Walls, not a child, so it keeps its own bespoke curtain-purple
 # texture instead of the generic brick pattern).
 func _build_walls() -> void:
-	var wall_color: Color = FLOOR_BASE_COLOR.darkened(0.35)
+	var wall_tex: Texture2D = PlaceholderArt.make_synty_wall_tile(SYNTY_WALL)
 	for wall in $Walls.get_children():
 		if not wall is StaticBody2D:
 			continue
 		var shape: CollisionShape2D = wall.get_node("CollisionShape2D")
 		var rect: RectangleShape2D = shape.shape
 		var sprite := Sprite2D.new()
-		sprite.texture = PlaceholderArt.make_wall_texture(wall_color, int(rect.size.x), int(rect.size.y))
+		sprite.texture = wall_tex
+		sprite.texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
+		sprite.region_enabled = true
+		sprite.region_rect = Rect2(0.0, 0.0, rect.size.x, rect.size.y)
 		wall.add_child(sprite)
 
+# Feet-anchored Synty billboard on a Sprite2D, scaled to target_h px. Returns
+# false (untouched) if the PNG is missing so callers fall back to PlaceholderArt.
+func _apply_synty_billboard(spr: Sprite2D, path: String, target_h: float) -> bool:
+	if not ResourceLoader.exists(path):
+		return false
+	var tex: Texture2D = load(path)
+	spr.texture = tex
+	spr.offset = Vector2(0.0, -tex.get_height() / 2.0)
+	spr.scale = Vector2.ONE * (target_h / float(tex.get_height()))
+	return true
+
 func _create_ride() -> void:
+	# The Ferris wheel is the ride Quinn repairs (the level's repair puzzle).
 	_ride_sprite = Sprite2D.new()
-	_ride_sprite.texture = PlaceholderArt.make_gate_texture(Color(0.55, 0.32, 0.18), 56, 56)
+	if not _apply_synty_billboard(_ride_sprite, RIDE_BILLBOARD, 132.0):
+		_ride_sprite.texture = PlaceholderArt.make_gate_texture(Color(0.55, 0.32, 0.18), 56, 56)
 	_ride_sprite.position = RIDE_POS
 	add_child(_ride_sprite)
+	# Fairground dressing: carousel, game booths, prize wheel.
+	for p: Array in CARNIVAL_PROPS:
+		var spr := Sprite2D.new()
+		if _apply_synty_billboard(spr, "res://assets/art/synty/props/%s.png" % p[0], float(p[3])):
+			spr.position = Vector2(float(p[1]), float(p[2]))
+			add_child(spr)
 
 # Grabs the .tscn-placed BackstageGate body's collider and dresses it with a
 # curtain-purple bordered-rectangle texture  --  visually distinct from the
