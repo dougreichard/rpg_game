@@ -10,6 +10,13 @@ const FLOOR_ROWS: int = 21
 const FLOOR_TILE_PLAIN: Vector2i = Vector2i(0, 0)
 const FLOOR_TILE_ACCENT: Vector2i = Vector2i(1, 0)
 const FLOOR_ACCENT_PERIOD: int = 4
+# Synty 2.5D interior (see docs/synty_2_5d_art_plan.md): cobblestone floor +
+# stone-block walls; Town church-prop billboards.
+const SYNTY_FLOOR: String = "res://assets/art/tiles/synty_floor_church.png"
+const SYNTY_WALL: String = "res://assets/art/tiles/synty_wall_stone.png"
+const PEW_BILLBOARD: String = "res://assets/art/synty/props/pew.png"
+const ALTAR_BILLBOARD: String = "res://assets/art/synty/props/church_stand.png"
+const CANDLE_BILLBOARD: String = "res://assets/art/synty/props/candles.png"
 
 # Collectibles  --  see CLAUDE.md "Collectibles & Inventory".
 const LootBoxScript: Script = preload("res://scripts/systems/loot_box.gd")
@@ -286,7 +293,7 @@ func _restore_progress() -> void:
 func _build_floor() -> void:
 	var tile_map := TileMap.new()
 	tile_map.name = "Floor"
-	tile_map.tile_set = PlaceholderArt.make_hb_tileset()
+	tile_map.tile_set = PlaceholderArt.make_synty_floor_tileset(SYNTY_FLOOR)
 	add_child(tile_map)
 	move_child(tile_map, 0)
 	tile_map.position = Vector2(CAMERA_LIMIT_LEFT, CAMERA_LIMIT_TOP)
@@ -296,15 +303,31 @@ func _build_floor() -> void:
 			tile_map.set_cell(0, Vector2i(x, y), 0, variant)
 
 func _build_walls() -> void:
-	var wall_color: Color = FLOOR_BASE_COLOR.darkened(0.35)
+	var wall_tex: Texture2D = PlaceholderArt.make_synty_wall_tile(SYNTY_WALL)
 	for wall in $Walls.get_children():
 		if not wall is StaticBody2D:
 			continue
 		var shape: CollisionShape2D = wall.get_node("CollisionShape2D")
 		var rect: RectangleShape2D = shape.shape
 		var sprite := Sprite2D.new()
-		sprite.texture = PlaceholderArt.make_wall_texture(wall_color, int(rect.size.x), int(rect.size.y))
+		sprite.texture = wall_tex
+		sprite.texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
+		sprite.region_enabled = true
+		sprite.region_rect = Rect2(0.0, 0.0, rect.size.x, rect.size.y)
 		wall.add_child(sprite)
+
+# Configure a Sprite2D as a feet-anchored Synty billboard scaled to target_w px.
+# Returns false (leaving the sprite untouched) if the billboard PNG is missing,
+# so callers fall back to the PlaceholderArt prop.
+func _apply_synty_billboard(spr: Sprite2D, path: String, target_w: float) -> bool:
+	if not ResourceLoader.exists(path):
+		return false
+	var tex: Texture2D = load(path)
+	spr.texture = tex
+	spr.offset = Vector2(0.0, -tex.get_height() / 2.0)
+	var s: float = target_w / float(tex.get_width())
+	spr.scale = Vector2(s, s)
+	return true
 
 func _build_props() -> void:
 	for x: float in [WEST_PEW_X, EAST_PEW_X]:
@@ -327,7 +350,8 @@ func _place_pew(pos: Vector2) -> void:
 	shape.shape = rect
 	body.add_child(shape)
 	var sprite := Sprite2D.new()
-	sprite.texture = PlaceholderArt.make_pew_texture(PEW_COLOR, int(PEW_SIZE.x), int(PEW_SIZE.y))
+	if not _apply_synty_billboard(sprite, PEW_BILLBOARD, PEW_SIZE.x):
+		sprite.texture = PlaceholderArt.make_pew_texture(PEW_COLOR, int(PEW_SIZE.x), int(PEW_SIZE.y))
 	body.add_child(sprite)
 	add_child(body)
 
@@ -341,13 +365,15 @@ func _place_altar() -> void:
 	shape.shape = rect
 	body.add_child(shape)
 	var sprite := Sprite2D.new()
-	sprite.texture = PlaceholderArt.make_altar_texture(int(ALTAR_SIZE.x), int(ALTAR_SIZE.y))
+	if not _apply_synty_billboard(sprite, ALTAR_BILLBOARD, ALTAR_SIZE.x + 12.0):
+		sprite.texture = PlaceholderArt.make_altar_texture(int(ALTAR_SIZE.x), int(ALTAR_SIZE.y))
 	body.add_child(sprite)
 	add_child(body)
 
 func _place_candle(pos: Vector2) -> void:
 	var sprite := Sprite2D.new()
-	sprite.texture = PlaceholderArt.make_candle_texture(8, 24, true)
+	if not _apply_synty_billboard(sprite, CANDLE_BILLBOARD, 14.0):
+		sprite.texture = PlaceholderArt.make_candle_texture(8, 24, true)
 	sprite.position = pos
 	add_child(sprite)
 

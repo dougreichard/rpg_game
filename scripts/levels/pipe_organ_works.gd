@@ -92,9 +92,13 @@ const FLOOR_BASE_COLOR: Color = Color(0.32, 0.29, 0.27)
 const FLOOR_ACCENT_COLOR: Color = Color(0.6, 0.48, 0.22)
 const FLOOR_COLS: int = 43
 const FLOOR_ROWS: int = 20
-const FLOOR_TILE_PLAIN: Vector2i = Vector2i(0, 1)
-const FLOOR_TILE_ACCENT: Vector2i = Vector2i(1, 1)
+const FLOOR_TILE_PLAIN: Vector2i = Vector2i(0, 0)
+const FLOOR_TILE_ACCENT: Vector2i = Vector2i(1, 0)
 const FLOOR_ACCENT_PERIOD: int = 4
+# Synty 2.5D interior surfaces (see docs/synty_2_5d_art_plan.md): wood workshop
+# floor + concrete walls baked from Shops textures.
+const SYNTY_FLOOR: String = "res://assets/art/tiles/synty_floor_workshop.png"
+const SYNTY_WALL: String = "res://assets/art/tiles/synty_wall_concrete.png"
 
 @onready var camera: Camera2D = $Camera2D
 @onready var quinn: Player = $Players/Quinn
@@ -210,7 +214,7 @@ func _add_wall(parent: Node2D, wall_name: String, pos: Vector2, size: Vector2) -
 func _build_floor() -> void:
 	var tile_map := TileMap.new()
 	tile_map.name = "Floor"
-	tile_map.tile_set = PlaceholderArt.make_hb_tileset()
+	tile_map.tile_set = PlaceholderArt.make_synty_floor_tileset(SYNTY_FLOOR)
 	add_child(tile_map)
 	move_child(tile_map, 0)
 	tile_map.position = Vector2(CAMERA_LIMIT_LEFT, CAMERA_LIMIT_TOP)
@@ -228,14 +232,18 @@ func _build_floor() -> void:
 # secret closet)  --  it iterates whatever StaticBody2D children it finds, so
 # carving out more rooms needed zero changes here, only more .tscn nodes.
 func _build_walls() -> void:
-	var wall_color: Color = FLOOR_BASE_COLOR.darkened(0.35)
+	# Synty concrete tiled across each wall rect via region + texture_repeat.
+	var wall_tex: Texture2D = PlaceholderArt.make_synty_wall_tile(SYNTY_WALL)
 	for wall in $Walls.get_children():
 		if not wall is StaticBody2D:
 			continue
 		var shape: CollisionShape2D = wall.get_node("CollisionShape2D")
 		var rect: RectangleShape2D = shape.shape
 		var sprite := Sprite2D.new()
-		sprite.texture = PlaceholderArt.make_wall_texture(wall_color, int(rect.size.x), int(rect.size.y))
+		sprite.texture = wall_tex
+		sprite.texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
+		sprite.region_enabled = true
+		sprite.region_rect = Rect2(0.0, 0.0, rect.size.x, rect.size.y)
 		wall.add_child(sprite)
 
 # Stealth: a shadowed alcove the duo can duck into to let a patrol pass
@@ -338,6 +346,35 @@ func _create_visual_props() -> void:
 	desk.texture = PlaceholderArt.make_workbench_texture(Color(0.45, 0.32, 0.2), 64, 32)
 	desk.position = DESK_POS
 	add_child(desk)
+
+	_create_synty_props()
+
+# Synty 2.5D workshop dressing (see docs/synty_2_5d_art_plan.md): bottom-anchored
+# billboard props placed against walls / in corners. Signature organ, bellows and
+# pipe racks stay as-is (no Synty equivalent). [name, x, y, on-screen height px].
+const SYNTY_PROPS_DIR: String = "res://assets/art/synty/props/"
+const WORKSHOP_PROPS: Array = [
+	["barrel_stack", 1200, 168, 72],
+	["barrel", 1096, 470, 54],
+	["brick_stack", 512, 516, 52],
+	["crate", 660, 232, 46],
+	["bucket", 884, 486, 32],
+	["toolbox", 300, 300, 30],
+]
+
+func _create_synty_props() -> void:
+	for p: Array in WORKSHOP_PROPS:
+		var path: String = SYNTY_PROPS_DIR + String(p[0]) + ".png"
+		if not ResourceLoader.exists(path):
+			continue
+		var tex: Texture2D = load(path)
+		var spr := Sprite2D.new()
+		spr.texture = tex
+		spr.offset = Vector2(0.0, -tex.get_height() / 2.0)  # feet at position
+		var s: float = float(p[3]) / float(tex.get_height())
+		spr.scale = Vector2(s, s)
+		spr.position = Vector2(float(p[1]), float(p[2]))
+		add_child(spr)
 
 # Mr. Bellows, Quinn's manager  --  see CLAUDE.md "1. Bellows & Sons Pipe Organ
 # Works". Stationary AnimatedSprite2D (idle frame of the generic humanoid

@@ -13,3 +13,9 @@ build/
 
 # macOS
 .DS_Store
+
+# Synty raw assets & Blender working files — licensed + large, staged locally.
+# Keep the folder's README + .gdignore tracked so the convention travels.
+synty_source/*
+!synty_source/README.md
+!synty_source/.gdignore

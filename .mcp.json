@@ -6,6 +6,10 @@
       "env": {
         "GODOT_PATH": "/Users/dougreichard/Library/Application Support/Steam/steamapps/common/Godot Engine/Godot.app/Contents/MacOS/Godot"
       }
+    },
+    "blender": {
+      "command": "uvx",
+      "args": ["blender-mcp"]
     }
   }
 }
