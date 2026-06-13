@@ -347,6 +347,27 @@ The Pass 6a rollout replaced every level's `_build_walls` body, so no active
 **Recommended order:** 6d (lootboxes, trivial global win) → 6a #2 (faux-height
 walls, global) → 6c (gate props) → 6e (leftover walls) → then decide on 6b.
 
+### Updated-art candidates — new packs (2026-06-13)
+Added & processed: **LegendaryChest**, **Western** (Cowboy/Sheriff/Gunman/
+Business_Man/Cowgirl/Badguy — binary `Characters.fbx`), **WesternFrontier**
+(Priest, GoldMiner, Bandit, Salesman, … — binary individual `SK_Chr_*` files).
+Initial dig done (samples rendered to `/tmp/{legendary_chest,priest,goldminer}.png`).
+Tasks to "dig in" later:
+- **Father Aldric (church NPC) → Western Frontier `SK_Chr_Priest_Male_01`** — a
+  black-suited preacher, ideal fit. Wire as the church's in-level NPC billboard.
+- **Quinn → a Western character** (GoldMiner reads as a rugged mechanic/worker;
+  Cowboy/Business_Man are alternates). Re-render his overworld billboard +
+  consider his in-level sprite.
+- **LegendaryChest → optional loot-box upgrade.** Fancier than the wooden crate
+  but **fantasy gold-ornate** (may clash with the modern town — taste call). It's
+  modular: `Chest_01` (open body) + `Lid_01` → assemble for closed/open states.
+- **Blocker / prerequisite:** the Western/Frontier character rig uses bone names
+  not yet in `render_character.py`'s `POSE` dict, so they render **T-pose**. Add
+  their arm/leg bone names (inspect one rig in Blender) so the arms-down pose
+  applies, like we did for the old POLYGON + modern Sidekick rigs.
+- These also tie into **Phase 6b** (in-level characters) — if we tackle animated
+  sprites, the priest/Quinn come along.
+
 ### Other things worth checking (noticed during the audit)
 - **Drop shadows** are characters-only; buildings, props, and level billboards
   float slightly — extend the shadow helper to all billboards.
