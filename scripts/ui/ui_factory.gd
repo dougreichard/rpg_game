@@ -20,8 +20,15 @@ static func make_label(
 		wrap: bool = false) -> Label:
 	var lbl := Label.new()
 	lbl.text = text
-	lbl.position = pos
-	lbl.size = size
+	# Set the rect via explicit offsets, not position/size: Control.set_size()
+	# clamps width *up* to the label's minimum (full single-line text width),
+	# which silently defeats autowrap and lets text overflow the intended rect.
+	# Anchors default to top-left (0,0,0,0), so offsets are absolute coordinates.
+	lbl.offset_left = pos.x
+	lbl.offset_top = pos.y
+	lbl.offset_right = pos.x + size.x
+	lbl.offset_bottom = pos.y + size.y
+	lbl.clip_contents = true
 	lbl.add_theme_font_size_override("font_size", font_size)
 	lbl.add_theme_color_override("font_color", color)
 	lbl.horizontal_alignment = halign

@@ -424,8 +424,14 @@ func _create_goal_banner() -> void:
 	add_child(layer)
 	var label := Label.new()
 	label.text = GOAL_TEXT
-	label.position = Vector2(8.0, 8.0)
-	label.size = Vector2(1264.0, 48.0)
+	# Set geometry via offsets, not position/size: Control.set_size() clamps
+	# width up to the text's single-line width, defeating autowrap and letting
+	# the banner spill past the screen edges. Offsets honor the rect exactly.
+	label.offset_left = 8.0
+	label.offset_top = 8.0
+	label.offset_right = 1272.0
+	label.offset_bottom = 56.0
+	label.clip_contents = true
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD
 	label.add_theme_font_size_override("font_size", 16)

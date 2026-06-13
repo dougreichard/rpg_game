@@ -6,16 +6,16 @@ extends CanvasLayer
 
 signal closed
 
-const HELP_RECT    := Rect2(160.0, 60.0, 960.0, 600.0)
+const HELP_RECT    := Rect2(40.0, 30.0, 1200.0, 660.0)
 const BORDER_COLOR  : Color = Color(0.55, 0.45, 0.75)
 const TITLE_COLOR   : Color = Color(0.95, 0.85, 0.2)
 const KEY_COLOR     : Color = Color(0.75, 0.70, 1.0)
 const NORMAL_COLOR  : Color = Color(0.72, 0.72, 0.82)
 const HINT_COLOR    : Color = Color(0.45, 0.45, 0.55)
 const PAGE_COUNT    : int   = 3
-const ROW_H         : float = 52.0
-const CONTENT_START_Y: float = 140.0   # offset from HELP_RECT.position.y
-const SECTION_Y     : float = 80.0     # offset from HELP_RECT.position.y
+const ROW_H         : float = 56.0
+const CONTENT_START_Y: float = 130.0
+const SECTION_Y     : float = 72.0
 
 var _page: int = 0
 var _page_nodes: Array = [[], [], []]   # Array[Array[Node]], one per page
@@ -132,29 +132,26 @@ func _build_page_controls() -> void:
 		_add_label(0, rows[i][1], desc_x, y, desc_w, 17, NORMAL_COLOR)
 
 func _build_page_characters() -> void:
-	var lx: float = HELP_RECT.position.x + 44.0
-	var cw: float = HELP_RECT.size.x - 88.0
-	var name_w: float = 82.0
-	var weapon_w: float = 82.0
-	var weapon_x: float = lx + name_w + 14.0
-	var desc_x: float = weapon_x + weapon_w + 14.0
-	var desc_w: float = cw - name_w - weapon_w - 28.0
-	var sy: float = HELP_RECT.position.y + SECTION_Y
+	var lx:     float = HELP_RECT.position.x + 44.0
+	var cw:     float = HELP_RECT.size.x - 88.0
+	var name_w: float = 100.0
+	var gap:    float = 28.0
+	var desc_x: float = lx + name_w + gap
+	var desc_w: float = cw - name_w - gap
 
-	_add_label(1, "YOUR TEAM", lx, sy, cw, 18, TITLE_COLOR)
+	_add_label(1, "YOUR TEAM", lx, HELP_RECT.position.y + SECTION_Y, cw, 18, TITLE_COLOR)
 
 	var rows: Array = [
-		["Quinn",  "Wrench",  "Repairs machinery  ·  HA laugh stuns nearby enemies"],
-		["Erin",   "Fire",    "Stealth & fast-talk  ·  calms and distracts guards"],
-		["Evan",   "Fists",   "Super strength & animals  ·  commands companions"],
-		["Ben",    "Keytar",  "Rhythm attacks  ·  perfect pitch for sound puzzles"],
-		["Ethan",  "Tech",    "Hacks panels, doors, and electronic enemies"],
+		["Quinn", "Wrench — repairs machinery. HA laugh stuns nearby enemies."],
+		["Erin",  "Fire — stealth and fast-talk. Calms and distracts guards."],
+		["Evan",  "Fists — super strength. Commands animal companions."],
+		["Ben",   "Keytar — rhythm attacks. Perfect pitch for sound puzzles."],
+		["Ethan", "Tech — hacks panels, doors, and electronic enemies."],
 	]
 	for i in rows.size():
 		var y: float = _content_y(i)
-		_add_label(1, rows[i][0], lx, y, name_w, 17, KEY_COLOR)
-		_add_label(1, rows[i][1], weapon_x, y, weapon_w, 17, HINT_COLOR)
-		_add_label(1, rows[i][2], desc_x, y, desc_w, 17, NORMAL_COLOR)
+		_add_label(1, rows[i][0], lx,     y, name_w, 17, KEY_COLOR)
+		_add_label(1, rows[i][1], desc_x, y, desc_w, 17, NORMAL_COLOR)
 
 func _build_page_tips() -> void:
 	var lx: float = HELP_RECT.position.x + 44.0
