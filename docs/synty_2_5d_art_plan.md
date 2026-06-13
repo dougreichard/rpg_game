@@ -185,12 +185,17 @@ Original notes:
   `synty_wall_concrete.png` (Shops concrete), baked via PIL.
 - `pipe_organ_works.gd` `_build_floor`/`_build_walls` now use them.
 
+**Pilot props: ✅ DONE (2026-06-13).** Pipe Organ Works dressed with Synty
+billboard props (barrel, oil-drum stack, brick pallet, crate, bucket, toolbox —
+`assets/art/synty/props/`) via `_create_synty_props()` (bottom-anchored, fixed
+positions). Signature organ/bellows/pipe-racks kept as PlaceholderArt (no Synty
+equivalent). LootBox `_draw()` untouched (shared across levels). → Pipe Organ
+Works is now a fully-Synty pilot level (floor + walls + props).
+
 **Still pending for the rollout:**
-- Per-location props: replace `PlaceholderArt.make_*_texture()` (organ, pews,
-  consoles, gears…) with Synty prop billboards; keep signature items (the organ)
-  as placeholders where Synty has no equivalent.
-- Remaining 12 levels (each migrates independently behind the fallback — no
-  big-bang), with their own floor/wall textures per theme.
+- The other 12 levels (each migrates independently behind the fallback — no
+  big-bang): per-theme floor/wall textures + prop billboards, following the
+  Pipe Organ Works recipe.
 
 ### Phase 4 — Characters & enemies
 

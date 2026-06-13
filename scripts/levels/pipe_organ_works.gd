@@ -347,6 +347,35 @@ func _create_visual_props() -> void:
 	desk.position = DESK_POS
 	add_child(desk)
 
+	_create_synty_props()
+
+# Synty 2.5D workshop dressing (see docs/synty_2_5d_art_plan.md): bottom-anchored
+# billboard props placed against walls / in corners. Signature organ, bellows and
+# pipe racks stay as-is (no Synty equivalent). [name, x, y, on-screen height px].
+const SYNTY_PROPS_DIR: String = "res://assets/art/synty/props/"
+const WORKSHOP_PROPS: Array = [
+	["barrel_stack", 1200, 168, 72],
+	["barrel", 1096, 470, 54],
+	["brick_stack", 512, 516, 52],
+	["crate", 660, 232, 46],
+	["bucket", 884, 486, 32],
+	["toolbox", 300, 300, 30],
+]
+
+func _create_synty_props() -> void:
+	for p: Array in WORKSHOP_PROPS:
+		var path: String = SYNTY_PROPS_DIR + String(p[0]) + ".png"
+		if not ResourceLoader.exists(path):
+			continue
+		var tex: Texture2D = load(path)
+		var spr := Sprite2D.new()
+		spr.texture = tex
+		spr.offset = Vector2(0.0, -tex.get_height() / 2.0)  # feet at position
+		var s: float = float(p[3]) / float(tex.get_height())
+		spr.scale = Vector2(s, s)
+		spr.position = Vector2(float(p[1]), float(p[2]))
+		add_child(spr)
+
 # Mr. Bellows, Quinn's manager  --  see CLAUDE.md "1. Bellows & Sons Pipe Organ
 # Works". Stationary AnimatedSprite2D (idle frame of the generic humanoid
 # placeholder, same as town NPCs  --  see overworld_map.gd._spawn_npcs) at his
