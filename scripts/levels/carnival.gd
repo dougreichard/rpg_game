@@ -227,12 +227,7 @@ func _build_walls() -> void:
 			continue
 		var shape: CollisionShape2D = wall.get_node("CollisionShape2D")
 		var rect: RectangleShape2D = shape.shape
-		var sprite := Sprite2D.new()
-		sprite.texture = wall_tex
-		sprite.texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
-		sprite.region_enabled = true
-		sprite.region_rect = Rect2(0.0, 0.0, rect.size.x, rect.size.y)
-		wall.add_child(sprite)
+		PlaceholderArt.add_synty_wall_faces(wall, rect.size, wall_tex)
 
 # Feet-anchored Synty billboard on a Sprite2D, scaled to target_h px. Returns
 # false (untouched) if the PNG is missing so callers fall back to PlaceholderArt.

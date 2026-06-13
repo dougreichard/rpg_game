@@ -295,7 +295,14 @@ feel cohesively 2.5D. Audit of what's still NOT Synty in levels:
 | **Signature props** | `make_organ/bellows/gear/console/bell/...` | **Low** — no Synty equivalent; kept on purpose |
 | **HUD / menus** | programmatic Control UI | **Low** — optional reskin (ApocalypseHUD pack owned) |
 
-### Pass 6a — 2.5D walls (headline)
+### Pass 6a — 2.5D walls (headline) — ✅ DONE (2026-06-13)
+Implemented option #2 (faux-extruded): `PlaceholderArt.add_synty_wall_faces(wall,
+size, tex)` builds a **lit top surface + a shadowed "front face" strip** (15 px)
+along each wall's south edge, so walls read as low blocks instead of flat tiles.
+Rolled out to all 13 levels' `_build_walls`. (Hero-room 3/4 wall billboards —
+option #1 — remain a future upgrade.)
+
+Original options considered:
 Give walls real height instead of a flat texture. Options (pick one, prototype on
 one level first):
 1. **3/4 wall-segment billboards** (best look): render a Synty modular wall piece
@@ -325,10 +332,10 @@ with Synty billboards (Office/SciFiSpace doors, Construction hatches, a lever pr
 via the existing `_apply_synty_billboard` fallback pattern — keep the open/slide
 tweens (they animate `position`/`scale`, which billboards support).
 
-### Pass 6d — LootBox chest (one change, every level)
-Swap `loot_box.gd`'s programmatic `_draw()` for a Synty crate/chest billboard
-(open + closed states). Single shared file → fixes all 13 levels at once. Highest
-impact-per-effort item.
+### Pass 6d — LootBox chest (one change, every level) — ✅ DONE (2026-06-13)
+`loot_box.gd` now shows a Synty wooden crate (`loot_crate.png`), dimmed when
+looted; the programmatic `_draw()` chest stays as fallback. One shared file →
+fixed all 13 levels at once.
 
 ### Pass 6e — leftover old-brick walls
 Convert the secret-wall / office-wing wall builders that still call

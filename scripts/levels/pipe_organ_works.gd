@@ -232,19 +232,14 @@ func _build_floor() -> void:
 # secret closet)  --  it iterates whatever StaticBody2D children it finds, so
 # carving out more rooms needed zero changes here, only more .tscn nodes.
 func _build_walls() -> void:
-	# Synty concrete tiled across each wall rect via region + texture_repeat.
+	# Synty concrete with a 2.5D front face (top surface + shadowed south face).
 	var wall_tex: Texture2D = PlaceholderArt.make_synty_wall_tile(SYNTY_WALL)
 	for wall in $Walls.get_children():
 		if not wall is StaticBody2D:
 			continue
 		var shape: CollisionShape2D = wall.get_node("CollisionShape2D")
 		var rect: RectangleShape2D = shape.shape
-		var sprite := Sprite2D.new()
-		sprite.texture = wall_tex
-		sprite.texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
-		sprite.region_enabled = true
-		sprite.region_rect = Rect2(0.0, 0.0, rect.size.x, rect.size.y)
-		wall.add_child(sprite)
+		PlaceholderArt.add_synty_wall_faces(wall, rect.size, wall_tex)
 
 # Stealth: a shadowed alcove the duo can duck into to let a patrol pass
 # rather than fight through it  --  see CLAUDE.md "Stealth & awareness".
