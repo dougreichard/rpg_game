@@ -9,6 +9,19 @@ const FLOOR_COLS: int = 25
 const FLOOR_ROWS: int = 17
 const FLOOR_TILE_PLAIN: Vector2i = Vector2i(0, 0)
 const FLOOR_TILE_ACCENT: Vector2i = Vector2i(1, 0)
+# Synty 2.5D VR room (see docs/synty_2_5d_art_plan.md): concrete base floor +
+# stone walls; SciFi Space control panels. Themed stage-floor patches kept as-is.
+const SYNTY_FLOOR: String = "res://assets/art/tiles/synty_floor_concrete.png"
+const SYNTY_WALL: String = "res://assets/art/tiles/synty_wall_stone.png"
+const GLITCH_BILLBOARD: String = "res://assets/art/synty/props/scifi_node.png"
+const SYSTEM_BILLBOARD: String = "res://assets/art/synty/props/scifi_console.png"
+# [name, x, y, on-screen height px] sci-fi dressing.
+const VR_PROPS: Array = [
+	["scifi_crate", 150, 200, 40],
+	["server", 680, 180, 52],
+	["barrel", 690, 470, 48],
+	["monitor", 150, 470, 30],
+]
 const FLOOR_ACCENT_PERIOD: int = 4
 
 # Themed-stage floor overlays  --  each painted as its own TileMap, ON TOP of the
@@ -196,26 +209,38 @@ func _restore_progress() -> void:
 # two-corridor + two-stage layout (20 wall segments) needed zero changes here,
 # only more .tscn nodes.
 func _build_walls() -> void:
-	var wall_color: Color = FLOOR_BASE_COLOR.darkened(0.35)
+	var wall_tex: Texture2D = PlaceholderArt.make_synty_wall_tile(SYNTY_WALL)
 	for wall in $Walls.get_children():
 		if not wall is StaticBody2D:
 			continue
 		var shape: CollisionShape2D = wall.get_node("CollisionShape2D")
 		var rect: RectangleShape2D = shape.shape
 		var sprite := Sprite2D.new()
-		sprite.texture = PlaceholderArt.make_wall_texture(wall_color, int(rect.size.x), int(rect.size.y))
+		sprite.texture = wall_tex
+		sprite.texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
+		sprite.region_enabled = true
+		sprite.region_rect = Rect2(0.0, 0.0, rect.size.x, rect.size.y)
 		wall.add_child(sprite)
+
+func _apply_synty_billboard(spr: Sprite2D, path: String, target_h: float) -> bool:
+	if not ResourceLoader.exists(path):
+		return false
+	var tex: Texture2D = load(path)
+	spr.texture = tex
+	spr.offset = Vector2(0.0, -tex.get_height() / 2.0)
+	spr.scale = Vector2.ONE * (target_h / float(tex.get_height()))
+	return true
 
 func _build_floor() -> void:
 	var tile_map := TileMap.new()
 	tile_map.name = "Floor"
-	tile_map.tile_set = PlaceholderArt.make_hb_tileset()
+	tile_map.tile_set = PlaceholderArt.make_synty_floor_tileset(SYNTY_FLOOR)
 	add_child(tile_map)
 	move_child(tile_map, 0)
 	tile_map.position = Vector2(CAMERA_LIMIT_LEFT, CAMERA_LIMIT_TOP)
 	for x: int in range(FLOOR_COLS):
 		for y: int in range(FLOOR_ROWS):
-			var variant: Vector2i = Vector2i(1, 7) if (x + y) % FLOOR_ACCENT_PERIOD == 0 else Vector2i(0, 7)
+			var variant: Vector2i = FLOOR_TILE_ACCENT if (x + y) % FLOOR_ACCENT_PERIOD == 0 else FLOOR_TILE_PLAIN
 			tile_map.set_cell(0, Vector2i(x, y), 0, variant)
 	_paint_stage_floor("FloorStageAlpha", STAGE_ALPHA_BASE_COLOR, STAGE_ALPHA_ACCENT_COLOR, STAGE_ALPHA_COL_RANGE, STAGE_ALPHA_ROW_RANGE)
 	_paint_stage_floor("FloorStageBeta", STAGE_BETA_BASE_COLOR, STAGE_BETA_ACCENT_COLOR, STAGE_BETA_COL_RANGE, STAGE_BETA_ROW_RANGE)
@@ -244,15 +269,23 @@ func _paint_stage_floor(map_name: String, base_color: Color, accent_color: Color
 # simulated rather than physical machine).
 func _create_glitch() -> void:
 	_glitch_sprite = Sprite2D.new()
-	_glitch_sprite.texture = PlaceholderArt.make_gear_prop_texture(Color(0.4, 0.2, 0.5), 48, 48)
+	if not _apply_synty_billboard(_glitch_sprite, GLITCH_BILLBOARD, 40.0):
+		_glitch_sprite.texture = PlaceholderArt.make_gear_prop_texture(Color(0.4, 0.2, 0.5), 48, 48)
 	_glitch_sprite.position = GLITCH_POS
 	add_child(_glitch_sprite)
+	# Sci-fi dressing (SciFi Space + reused billboards).
+	for p: Array in VR_PROPS:
+		var spr := Sprite2D.new()
+		if _apply_synty_billboard(spr, "res://assets/art/synty/props/%s.png" % p[0], float(p[3])):
+			spr.position = Vector2(float(p[1]), float(p[2]))
+			add_child(spr)
 
 # Stage Beta  --  the glitched "underwater" simulation. A corrupted control
 # console Ethan reads the code underneath to hack and rewrite.
 func _create_system() -> void:
 	_system_sprite = Sprite2D.new()
-	_system_sprite.texture = PlaceholderArt.make_console_texture(Color(0.18, 0.42, 0.46), 48, 44)
+	if not _apply_synty_billboard(_system_sprite, SYSTEM_BILLBOARD, 42.0):
+		_system_sprite.texture = PlaceholderArt.make_console_texture(Color(0.18, 0.42, 0.46), 48, 44)
 	_system_sprite.position = SYSTEM_POS
 	add_child(_system_sprite)
 
