@@ -192,10 +192,41 @@ positions). Signature organ/bellows/pipe-racks kept as PlaceholderArt (no Synty
 equivalent). LootBox `_draw()` untouched (shared across levels). → Pipe Organ
 Works is now a fully-Synty pilot level (floor + walls + props).
 
+**Old Parish Church: ✅ DONE (2026-06-13).** Cobblestone floor
+(`synty_floor_church.png`) + stone-block walls (`synty_wall_stone.png`); Town
+church-prop billboards — pews, altar (church stand), candles — via a reusable
+`_apply_synty_billboard()` helper (feet-anchored, scaled, falls back to
+PlaceholderArt if a PNG is missing). Stained-glass / arch windows kept as
+PlaceholderArt wall decals.
+
 **Still pending for the rollout:**
-- The other 12 levels (each migrates independently behind the fallback — no
+- The other 11 levels (each migrates independently behind the fallback — no
   big-bang): per-theme floor/wall textures + prop billboards, following the
-  Pipe Organ Works recipe.
+  recipe. See the interior-asset map above.
+
+**Interior-asset survey (2026-06-13).** The Office + Shops + Casino packs cover
+every level's interior. Floor/wall textures: Shops has Marble, Carpet (×6),
+Tile (×5), Cobblestone, Concrete/Concrete_Blocks/Stripe, Brick (white/coloured),
+ArcadeCarpet; Casino adds **Church_Wall**, HotelWall (×13), more Carpet. Props:
+Office = servers, monitors, modems, **projector**, ducting, cable trays, pipes,
+desks, chairs, couches, bookshelves, book groups, plants, rugs, posters; Shops =
+gym benches, shelves, counters, registers, freezers, clothes racks, food/produce
+displays, warehouse boxes. Verified billboards render cleanly. Rollout map:
+
+| Level | Floor / Wall | Key Synty props |
+|-------|--------------|-----------------|
+| Old Parish Church | Cobblestone / **Church_Wall** | pews, shelves, candles |
+| Iron & Strings Gym | Tile / Brick_White | gym benches, racks (Shops) |
+| Recording Studio | Carpet / Concrete | desk, monitor, couch, server, posters (Office) |
+| Clocktower | Concrete / stone Brick | gears (keep) + crates |
+| Harbor & Docks | Concrete_Blocks / Concrete | warehouse boxes, barrels (Construction) |
+| Library & Archive | Marble / Brick_White | bookshelves, book groups, desks, chairs (Office) |
+| Carnival | ArcadeCarpet / Brick_Coloured | food/produce displays, market (Shops) |
+| Underground Tunnels | Concrete / Concrete_Blocks | ducting, pipes, cable trays, server (Office) |
+| VR Escape Room | Tile / Arcade_Wall | servers, monitors, modems, ducting, projector (Office) |
+| Grand Marquee | Carpet/Marble / HotelWall | projector, couch, art, posters (Office) |
+| Gimme Dat Spoon | ArcadeCarpet / Arcade_Wall | (arcade dressing) |
+| Zip Line Park / The Drop | outdoor (grass/dirt) | nature + Construction crates |
 
 ### Phase 4 — Characters & enemies
 
