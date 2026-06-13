@@ -7,9 +7,21 @@ const FLOOR_BASE_COLOR: Color = Color(0.28, 0.31, 0.33)
 const FLOOR_ACCENT_COLOR: Color = Color(0.45, 0.55, 0.50)
 const FLOOR_COLS: int = 30
 const FLOOR_ROWS: int = 17
-const FLOOR_TILE_PLAIN: Vector2i = Vector2i(0, 5)
-const FLOOR_TILE_ACCENT: Vector2i = Vector2i(1, 5)
+const FLOOR_TILE_PLAIN: Vector2i = Vector2i(0, 0)
+const FLOOR_TILE_ACCENT: Vector2i = Vector2i(1, 0)
 const FLOOR_ACCENT_PERIOD: int = 4
+# Synty 2.5D docks (see docs/synty_2_5d_art_plan.md): concrete floor + walls;
+# Construction cargo billboards. The shipping container is the puzzle Evan hoists.
+const SYNTY_FLOOR: String = "res://assets/art/tiles/synty_floor_concrete.png"
+const SYNTY_WALL: String = "res://assets/art/tiles/synty_wall_concrete.png"
+const CONTAINER_BILLBOARD: String = "res://assets/art/synty/props/container.png"
+# [name, x, y, on-screen height px] dock dressing.
+const HARBOR_PROPS: Array = [
+	["crate_stack", 200, 470, 50],
+	["pallet_stack", 830, 480, 42],
+	["crate_large", 160, 210, 44],
+	["barrel", 480, 480, 48],
+]
 
 const GRUNT_SCENE: PackedScene = preload("res://scenes/enemies/Grunt.tscn")
 const RUNNER_SCENE: PackedScene = preload("res://scenes/enemies/Runner.tscn")
@@ -183,7 +195,7 @@ func _restore_progress() -> void:
 func _build_floor() -> void:
 	var tile_map := TileMap.new()
 	tile_map.name = "Floor"
-	tile_map.tile_set = PlaceholderArt.make_hb_tileset()
+	tile_map.tile_set = PlaceholderArt.make_synty_floor_tileset(SYNTY_FLOOR)
 	add_child(tile_map)
 	move_child(tile_map, 0)
 	tile_map.position = Vector2(CAMERA_LIMIT_LEFT, CAMERA_LIMIT_TOP)
@@ -199,15 +211,27 @@ func _build_floor() -> void:
 # maze crates are siblings of $Walls, not children, so they keep their own
 # bespoke cargo-brown textures instead of the generic brick pattern).
 func _build_walls() -> void:
-	var wall_color: Color = FLOOR_BASE_COLOR.darkened(0.35)
+	var wall_tex: Texture2D = PlaceholderArt.make_synty_wall_tile(SYNTY_WALL)
 	for wall in $Walls.get_children():
 		if not wall is StaticBody2D:
 			continue
 		var shape: CollisionShape2D = wall.get_node("CollisionShape2D")
 		var rect: RectangleShape2D = shape.shape
 		var sprite := Sprite2D.new()
-		sprite.texture = PlaceholderArt.make_wall_texture(wall_color, int(rect.size.x), int(rect.size.y))
+		sprite.texture = wall_tex
+		sprite.texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
+		sprite.region_enabled = true
+		sprite.region_rect = Rect2(0.0, 0.0, rect.size.x, rect.size.y)
 		wall.add_child(sprite)
+
+func _apply_synty_billboard(spr: Sprite2D, path: String, target_h: float) -> bool:
+	if not ResourceLoader.exists(path):
+		return false
+	var tex: Texture2D = load(path)
+	spr.texture = tex
+	spr.offset = Vector2(0.0, -tex.get_height() / 2.0)
+	spr.scale = Vector2.ONE * (target_h / float(tex.get_height()))
+	return true
 
 # Grabs the .tscn-placed Container body's collider and dresses it with a
 # cargo-brown bordered-rectangle texture  --  visually distinct from the
@@ -215,8 +239,15 @@ func _build_walls() -> void:
 func _create_container() -> void:
 	_container_shape = _container.get_node("CollisionShape2D")
 	_container_sprite = Sprite2D.new()
-	_container_sprite.texture = PlaceholderArt.make_gate_texture(MAZE_CRATE_COLOR, 300, 16)
+	if not _apply_synty_billboard(_container_sprite, CONTAINER_BILLBOARD, 52.0):
+		_container_sprite.texture = PlaceholderArt.make_gate_texture(MAZE_CRATE_COLOR, 300, 16)
 	_container.add_child(_container_sprite)
+	# Dock dressing (Construction cargo billboards).
+	for p: Array in HARBOR_PROPS:
+		var spr := Sprite2D.new()
+		if _apply_synty_billboard(spr, "res://assets/art/synty/props/%s.png" % p[0], float(p[3])):
+			spr.position = Vector2(float(p[1]), float(p[2]))
+			add_child(spr)
 
 func _move_container(animate: bool) -> void:
 	_container_shape.disabled = true
