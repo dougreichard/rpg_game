@@ -92,7 +92,11 @@ func _try_synty_billboard() -> bool:
 		sf.set_animation_loop(a, true)
 		sf.add_frame(a, tex)
 	sprite.sprite_frames = sf
-	var target_h: float = 64.0 if data.is_boss else 38.0
+	var target_h: float = 38.0
+	if data.is_boss:
+		target_h = 64.0
+	elif data.is_stocky:
+		target_h = 46.0  # brute reads heavier
 	sprite.scale = Vector2.ONE * (target_h / float(tex.get_height()))
 	return true
 

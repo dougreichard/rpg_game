@@ -82,7 +82,7 @@ func _ready() -> void:
 	col_shape.shape = rect
 	hurtbox.hit.connect(_on_hurtbox_hit)
 	hitbox.hit_landed.connect(register_hit_landed)
-	if sprite.sprite_frames == null:
+	if sprite.sprite_frames == null and not _try_synty_billboard():
 		var loaded: SpriteFrames = SpriteLoader.try_load_player(data.character_name)
 		if loaded != null:
 			sprite.sprite_frames = loaded
@@ -90,6 +90,47 @@ func _ready() -> void:
 		else:
 			sprite.sprite_frames = PlaceholderArt.make_player_frames(data.sprite_color, data.character_name)
 	sprite.play("idle")
+
+# In-level combat billboard: reuse the character's overworld Synty billboard
+# (assets/art/synty/characters/<name>.png) for every player anim. Static (no walk
+# frames), but the code-driven attack arc (_draw), hit-flash, dash motion + i-
+# frames, and a walk bob carry combat readability. Centered so it aligns with the
+# hurtbox; PIL combat sheet is the fallback.
+const PLAYER_BILLBOARD_H: float = 42.0
+const PLAYER_BILLBOARD_ANIMS: Array = ["idle", "walk_down", "walk_up", "walk_right",
+	"run_down", "run_up", "run_right", "attack", "special", "talk", "talk_closeup",
+	"hurt", "down", "revive", "dash", "interact", "doorway"]
+const PLAYER_BOB_AMPLITUDE: float = 2.4
+const PLAYER_BOB_SPEED: float = 13.0
+const PLAYER_SHADOW_OFFSET: Vector2 = Vector2(0.0, 15.0)
+const PLAYER_SHADOW_RADIUS: float = 8.0
+const PLAYER_SHADOW_COLOR: Color = Color(0.0, 0.0, 0.0, 0.24)
+
+var _is_billboard: bool = false
+var _bob_phase: float = 0.0
+
+func _try_synty_billboard() -> bool:
+	var path: String = "res://assets/art/synty/characters/" + data.character_name.to_lower() + ".png"
+	if not ResourceLoader.exists(path):
+		return false
+	var tex: Texture2D = load(path)
+	var sf := SpriteFrames.new()
+	sf.remove_animation("default")
+	for a: String in PLAYER_BILLBOARD_ANIMS:
+		sf.add_animation(a)
+		sf.set_animation_loop(a, true)
+		sf.add_frame(a, tex)
+	sprite.sprite_frames = sf
+	sprite.scale = Vector2.ONE * (PLAYER_BILLBOARD_H / float(tex.get_height()))
+	_is_billboard = true
+	return true
+
+func _update_bob(delta: float) -> void:
+	if _state == State.WALK:
+		_bob_phase += delta * PLAYER_BOB_SPEED
+		sprite.position.y = -absf(sin(_bob_phase)) * PLAYER_BOB_AMPLITUDE
+	else:
+		sprite.position.y = move_toward(sprite.position.y, 0.0, delta * 30.0)
 
 func _physics_process(delta: float) -> void:
 	if GameManager.is_paused() or input_locked:
@@ -111,6 +152,8 @@ func _physics_process(delta: float) -> void:
 		State.DASH:   _tick_dash()
 		State.HURT:   _tick_hurt(delta)
 		State.DOWN:   _tick_down()
+	if _is_billboard:
+		_update_bob(delta)
 
 func _tick_timers(delta: float) -> void:
 	_attack_timer = maxf(_attack_timer - delta, 0.0)
@@ -298,6 +341,10 @@ func revive() -> void:
 	queue_redraw()
 
 func _draw() -> void:
+	if _is_billboard:
+		draw_set_transform(PLAYER_SHADOW_OFFSET, 0.0, Vector2(1.0, 0.45))
+		draw_circle(Vector2.ZERO, PLAYER_SHADOW_RADIUS, PLAYER_SHADOW_COLOR)
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	if _state == State.ATTACK:
 		var half := data.attack_cooldown * 0.5
 		if _attack_timer > half:
