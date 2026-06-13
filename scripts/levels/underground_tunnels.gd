@@ -372,9 +372,10 @@ func _create_doorway() -> void:
 
 func _create_cyrus_npc() -> void:
 	_cyrus_sprite = AnimatedSprite2D.new()
-	var loaded: SpriteFrames = SpriteLoader.try_load_npc("cyrus")
-	_cyrus_sprite.sprite_frames = loaded if loaded != null else PlaceholderArt.make_player_frames(CYRUS_COLOR, "")
-	_cyrus_sprite.scale = Vector2(SpriteLoader.NPC_SPRITE_SCALE, SpriteLoader.NPC_SPRITE_SCALE) if loaded != null else Vector2.ONE
+	if not PlaceholderArt.apply_npc_billboard(_cyrus_sprite, "cyrus"):
+		var loaded: SpriteFrames = SpriteLoader.try_load_npc("cyrus")
+		_cyrus_sprite.sprite_frames = loaded if loaded != null else PlaceholderArt.make_player_frames(CYRUS_COLOR, "")
+		_cyrus_sprite.scale = Vector2(SpriteLoader.NPC_SPRITE_SCALE, SpriteLoader.NPC_SPRITE_SCALE) if loaded != null else Vector2.ONE
 	_cyrus_sprite.play("idle")
 	_cyrus_sprite.position = CYRUS_POS
 	add_child(_cyrus_sprite)

@@ -240,9 +240,10 @@ func _create_doorway() -> void:
 
 func _create_hieronymus_npc() -> void:
 	_hieronymus_sprite = AnimatedSprite2D.new()
-	var loaded: SpriteFrames = SpriteLoader.try_load_npc("hieronymus")
-	_hieronymus_sprite.sprite_frames = loaded if loaded != null else PlaceholderArt.make_player_frames(HIERONYMUS_COLOR, "")
-	_hieronymus_sprite.scale = Vector2(SpriteLoader.NPC_SPRITE_SCALE, SpriteLoader.NPC_SPRITE_SCALE) if loaded != null else Vector2.ONE
+	if not PlaceholderArt.apply_npc_billboard(_hieronymus_sprite, "hieronymus"):
+		var loaded: SpriteFrames = SpriteLoader.try_load_npc("hieronymus")
+		_hieronymus_sprite.sprite_frames = loaded if loaded != null else PlaceholderArt.make_player_frames(HIERONYMUS_COLOR, "")
+		_hieronymus_sprite.scale = Vector2(SpriteLoader.NPC_SPRITE_SCALE, SpriteLoader.NPC_SPRITE_SCALE) if loaded != null else Vector2.ONE
 	_hieronymus_sprite.play("idle")
 	_hieronymus_sprite.position = HIERONYMUS_POS
 	add_child(_hieronymus_sprite)

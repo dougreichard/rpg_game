@@ -269,9 +269,10 @@ func _create_backstage_gate() -> void:
 	_backstage_gate.add_child(_gate_sprite)
 	# Carnival guard sprite — stands at the curtain in idle until talked down
 	_guard_sprite = AnimatedSprite2D.new()
-	var loaded: SpriteFrames = SpriteLoader.try_load_npc("carnival_guard")
-	_guard_sprite.sprite_frames = loaded if loaded != null else PlaceholderArt.make_player_frames(Color(0.8, 0.2, 0.2), "")
-	_guard_sprite.scale = Vector2(SpriteLoader.NPC_SPRITE_SCALE, SpriteLoader.NPC_SPRITE_SCALE) if loaded != null else Vector2.ONE
+	if not PlaceholderArt.apply_npc_billboard(_guard_sprite, "carnival_guard"):
+		var loaded: SpriteFrames = SpriteLoader.try_load_npc("carnival_guard")
+		_guard_sprite.sprite_frames = loaded if loaded != null else PlaceholderArt.make_player_frames(Color(0.8, 0.2, 0.2), "")
+		_guard_sprite.scale = Vector2(SpriteLoader.NPC_SPRITE_SCALE, SpriteLoader.NPC_SPRITE_SCALE) if loaded != null else Vector2.ONE
 	_guard_sprite.play("idle")
 	_guard_sprite.position = BACKSTAGE_POS + Vector2(0.0, 8.0)
 	add_child(_guard_sprite)

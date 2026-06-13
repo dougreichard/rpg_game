@@ -312,9 +312,10 @@ func _create_doorway() -> void:
 
 func _create_aria_npc() -> void:
 	_aria_sprite = AnimatedSprite2D.new()
-	var loaded: SpriteFrames = SpriteLoader.try_load_npc("aria")
-	_aria_sprite.sprite_frames = loaded if loaded != null else PlaceholderArt.make_player_frames(ARIA_COLOR, "")
-	_aria_sprite.scale = Vector2(SpriteLoader.NPC_SPRITE_SCALE, SpriteLoader.NPC_SPRITE_SCALE) if loaded != null else Vector2.ONE
+	if not PlaceholderArt.apply_npc_billboard(_aria_sprite, "aria"):
+		var loaded: SpriteFrames = SpriteLoader.try_load_npc("aria")
+		_aria_sprite.sprite_frames = loaded if loaded != null else PlaceholderArt.make_player_frames(ARIA_COLOR, "")
+		_aria_sprite.scale = Vector2(SpriteLoader.NPC_SPRITE_SCALE, SpriteLoader.NPC_SPRITE_SCALE) if loaded != null else Vector2.ONE
 	_aria_sprite.play("idle")
 	_aria_sprite.position = ARIA_POS
 	add_child(_aria_sprite)

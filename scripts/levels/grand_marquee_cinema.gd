@@ -295,9 +295,10 @@ func _create_projector() -> void:
 			add_child(spr)
 	# Uncle Doug — hidden until the level is cleared; appears in the booth
 	_uncle_doug_sprite = AnimatedSprite2D.new()
-	var loaded: SpriteFrames = SpriteLoader.try_load_npc("uncle_doug")
-	_uncle_doug_sprite.sprite_frames = loaded if loaded != null else PlaceholderArt.make_player_frames(Color(0.70, 0.63, 0.48), "")
-	_uncle_doug_sprite.scale = Vector2(SpriteLoader.NPC_SPRITE_SCALE, SpriteLoader.NPC_SPRITE_SCALE) if loaded != null else Vector2.ONE
+	if not PlaceholderArt.apply_npc_billboard(_uncle_doug_sprite, "uncle_doug"):
+		var loaded: SpriteFrames = SpriteLoader.try_load_npc("uncle_doug")
+		_uncle_doug_sprite.sprite_frames = loaded if loaded != null else PlaceholderArt.make_player_frames(Color(0.70, 0.63, 0.48), "")
+		_uncle_doug_sprite.scale = Vector2(SpriteLoader.NPC_SPRITE_SCALE, SpriteLoader.NPC_SPRITE_SCALE) if loaded != null else Vector2.ONE
 	_uncle_doug_sprite.play("idle")
 	_uncle_doug_sprite.position = PROJECTOR_POS + Vector2(48.0, 0.0)
 	_uncle_doug_sprite.visible = false
@@ -364,9 +365,10 @@ func _add(scene: PackedScene, pos: Vector2) -> void:
 
 func _create_usher_npc() -> void:
 	_usher_sprite = AnimatedSprite2D.new()
-	var loaded: SpriteFrames = SpriteLoader.try_load_npc("usher")
-	_usher_sprite.sprite_frames = loaded if loaded != null else PlaceholderArt.make_player_frames(USHER_COLOR, "")
-	_usher_sprite.scale = Vector2(SpriteLoader.NPC_SPRITE_SCALE, SpriteLoader.NPC_SPRITE_SCALE) if loaded != null else Vector2.ONE
+	if not PlaceholderArt.apply_npc_billboard(_usher_sprite, "usher"):
+		var loaded: SpriteFrames = SpriteLoader.try_load_npc("usher")
+		_usher_sprite.sprite_frames = loaded if loaded != null else PlaceholderArt.make_player_frames(USHER_COLOR, "")
+		_usher_sprite.scale = Vector2(SpriteLoader.NPC_SPRITE_SCALE, SpriteLoader.NPC_SPRITE_SCALE) if loaded != null else Vector2.ONE
 	_usher_sprite.play("idle")
 	_usher_sprite.position = USHER_POS
 	add_child(_usher_sprite)

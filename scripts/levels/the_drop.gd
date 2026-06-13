@@ -276,9 +276,10 @@ func _create_hiding_spot() -> void:
 
 func _create_rio_npc() -> void:
 	_rio_sprite = AnimatedSprite2D.new()
-	var loaded: SpriteFrames = SpriteLoader.try_load_npc("rio")
-	_rio_sprite.sprite_frames = loaded if loaded != null else PlaceholderArt.make_player_frames(RIO_COLOR, "")
-	_rio_sprite.scale = Vector2(SpriteLoader.NPC_SPRITE_SCALE, SpriteLoader.NPC_SPRITE_SCALE) if loaded != null else Vector2.ONE
+	if not PlaceholderArt.apply_npc_billboard(_rio_sprite, "rio"):
+		var loaded: SpriteFrames = SpriteLoader.try_load_npc("rio")
+		_rio_sprite.sprite_frames = loaded if loaded != null else PlaceholderArt.make_player_frames(RIO_COLOR, "")
+		_rio_sprite.scale = Vector2(SpriteLoader.NPC_SPRITE_SCALE, SpriteLoader.NPC_SPRITE_SCALE) if loaded != null else Vector2.ONE
 	_rio_sprite.play("idle")
 	_rio_sprite.position = RIO_POS
 	add_child(_rio_sprite)
