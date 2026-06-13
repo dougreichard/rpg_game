@@ -115,6 +115,13 @@ const SCATTER_PROPS: Array = [
 # Percent of eligible (free, near-town) grass tiles that receive a prop.
 const SCATTER_DENSITY: int = 14
 
+# Synty character billboards (CityCharacters, posed + rendered front-3/4). One
+# PNG per lead (lowercase name) or town NPC (quest_id). When present it replaces
+# the PIL sheet; the billboard is a single pose shown for every facing (flip_h
+# conveys left/right). See docs/synty_2_5d_art_plan.md.
+const CHAR_DIR: String = "res://assets/art/synty/characters/"
+const CHAR_TARGET_H: float = 58.0  # on-screen character height in px (~1.8 tiles)
+
 const LOCS: Array = [
 	{
 		"id": "pipe_organ_works", "name": "Bellows & Sons Pipe Organ Works",
@@ -482,7 +489,7 @@ func _spawn_duo() -> void:
 
 	_active_player = PlayerScript.new()
 	add_child(_active_player)
-	_active_player.setup(_load_player_frames(active_name), _player_sprite_scale(active_name), active_name)
+	_setup_duo_visual(_active_player, active_name)
 	_active_player.global_position = spawn
 	_active_player.mode = PlayerScript.Mode.ACTIVE
 
@@ -495,7 +502,7 @@ func _spawn_duo() -> void:
 		var standby_name: String = String(names[1]).capitalize()
 		_standby_player = PlayerScript.new()
 		add_child(_standby_player)
-		_standby_player.setup(_load_player_frames(standby_name), _player_sprite_scale(standby_name), standby_name)
+		_setup_duo_visual(_standby_player, standby_name)
 		_standby_player.global_position = spawn + Vector2(-TILE, 0.0)
 		_standby_player.mode = PlayerScript.Mode.FOLLOW
 		_inventory_overlay.call("setup", active_name, standby_name)
@@ -518,6 +525,41 @@ func _player_sprite_scale(character_name: String) -> float:
 		return SpriteLoader.PLAYER_SPRITE_SCALE
 	return 1.0
 
+# Returns the Synty character billboard texture for a lead name / NPC quest_id,
+# or null if none exists (caller falls back to the PIL sheet / placeholder).
+func _char_billboard_tex(key: String) -> Texture2D:
+	var path: String = CHAR_DIR + key.to_lower() + ".png"
+	return load(path) if ResourceLoader.exists(path) else null
+
+# SpriteFrames whose idle + directional-walk anims all point at the single 3/4
+# billboard, so overworld_player / town_npc (which play those anims + flip_h)
+# work unchanged.
+func _billboard_frames(tex: Texture2D) -> SpriteFrames:
+	var sf := SpriteFrames.new()
+	sf.remove_animation("default")
+	for anim: String in ["idle", "walk_down", "walk_up", "walk_right"]:
+		sf.add_animation(anim)
+		sf.set_animation_loop(anim, true)
+		sf.add_frame(anim, tex)
+	return sf
+
+# Configure an overworld_player/town_npc AnimatedSprite2D as a feet-anchored
+# billboard sprite: scaled to CHAR_TARGET_H and offset so the feet sit at the
+# node origin (matching the building/prop ground anchoring for y-sort).
+func _apply_billboard(spr: AnimatedSprite2D, tex: Texture2D) -> void:
+	spr.scale = Vector2.ONE * (CHAR_TARGET_H / float(tex.get_height()))
+	spr.offset = Vector2(0.0, -tex.get_height() / 2.0)
+
+# Set up a duo member's sprite: Synty billboard if one exists, else the existing
+# PIL sheet / placeholder.
+func _setup_duo_visual(player, display_name: String) -> void:
+	var tex: Texture2D = _char_billboard_tex(display_name)
+	if tex != null:
+		player.setup(_billboard_frames(tex), 1.0, display_name)
+		_apply_billboard(player.sprite, tex)
+	else:
+		player.setup(_load_player_frames(display_name), _player_sprite_scale(display_name), display_name)
+
 # NPC_DATA_2 entries may carry a "requires_flag" ({location, flag}) -- those
 # townsfolk represent characters "freed" by a secret-passage discovery
 # elsewhere (see CLAUDE.md "Numbered Spoons") and are skipped entirely until
@@ -536,13 +578,18 @@ func _spawn_npcs() -> void:
 		var npc = NpcScript.new()
 		add_child(npc)
 		var home: Vector2 = Vector2(_grid(Vector2i(data["home"]))) * TILE + Vector2(TILE / 2.0, TILE / 2.0)
-		var npc_key: String = data["name"].to_lower()
-		var npc_frames: SpriteFrames = SpriteLoader.try_load_npc(npc_key)
-		var npc_scale: float = SpriteLoader.NPC_SPRITE_SCALE if npc_frames != null else 1.0
-		if npc_frames == null:
-			npc_frames = PlaceholderArt.make_player_frames(data["color"], "")
-		npc.setup(npc_frames, home, data["name"], data["quest_id"], data["color"])
-		npc.sprite.scale = Vector2(npc_scale, npc_scale)
+		var bb_tex: Texture2D = _char_billboard_tex(data["quest_id"])
+		if bb_tex != null:
+			npc.setup(_billboard_frames(bb_tex), home, data["name"], data["quest_id"], data["color"])
+			_apply_billboard(npc.sprite, bb_tex)
+		else:
+			var npc_key: String = data["name"].to_lower()
+			var npc_frames: SpriteFrames = SpriteLoader.try_load_npc(npc_key)
+			var npc_scale: float = SpriteLoader.NPC_SPRITE_SCALE if npc_frames != null else 1.0
+			if npc_frames == null:
+				npc_frames = PlaceholderArt.make_player_frames(data["color"], "")
+			npc.setup(npc_frames, home, data["name"], data["quest_id"], data["color"])
+			npc.sprite.scale = Vector2(npc_scale, npc_scale)
 		var bubble_txt: Dictionary = NPC_BUBBLE_TEXT.get(data["quest_id"], {})
 		if not bubble_txt.is_empty():
 			npc.setup_bubble(bubble_txt["pre"], bubble_txt["post"])

@@ -178,11 +178,26 @@ Original notes:
   drawn by `PlaceholderArt.make_*_texture()` (organ, pews, consoles, gears, etc.).
 - Each level migrates independently behind the fallback — no big-bang.
 
-### Phase 4 — Characters & enemies (last, optional)
-- The 5 characters + enemies already have hand-made PIL sheets. Re-rendering Synty
-  characters to multi-direction animated sheets is the **largest** sub-project, so
-  it's deliberately last and gated on whether the rendered environment demands it.
-  The new world can ship with current character art.
+### Phase 4 — Characters & enemies
+
+**Overworld characters: ✅ DONE (2026-06-13).**
+- CityCharacters ships all 19 characters in one binary FBX (`FBX/Character.fbx`)
+  sharing a single armature, with **no animation clips**. So billboards, not
+  animated sheets: `render_character.py` isolates a mesh, poses the shared rig
+  from T-pose into a relaxed arms-down idle + slight stride, and renders the
+  **front 3/4** (az 225 / el 30) → `assets/art/synty/characters/<key>.png`.
+- 17 rendered: 5 leads (quinn=Roadworker, erin=HipsterGirl, evan=Jock,
+  ben=PunkGuy, ethan=HipsterGuy) + 12 town NPCs (by quest_id).
+- `overworld_map.gd`: `_billboard_frames()` builds a SpriteFrames whose
+  idle/walk anims all point at the single billboard, so `overworld_player` /
+  `town_npc` (which play those anims + flip_h) work unchanged; `_apply_billboard`
+  scales to `CHAR_TARGET_H` and feet-anchors for y-sort. Falls back to the PIL
+  sheet / placeholder when no billboard exists.
+- Trade-off: billboards are a single static pose (no walk cycle) — motion reads
+  via movement + flip; a code-driven bob could be added later. In-level
+  characters/enemies still use the PIL sheets (unchanged).
+
+**Remaining (optional):** in-level characters + enemies; a 2-frame idle/walk bob.
 
 ---
 
