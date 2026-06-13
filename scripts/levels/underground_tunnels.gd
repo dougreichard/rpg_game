@@ -299,13 +299,15 @@ func _create_rubble() -> void:
 
 func _create_shortcut_door() -> void:
 	_shortcut_door_sprite = Sprite2D.new()
-	_shortcut_door_sprite.texture = PlaceholderArt.make_gate_texture(Color(0.38, 0.28, 0.22), 32, 48)
+	if not _apply_synty_billboard(_shortcut_door_sprite, "res://assets/art/synty/props/door.png", 48.0):
+		_shortcut_door_sprite.texture = PlaceholderArt.make_gate_texture(Color(0.38, 0.28, 0.22), 32, 48)
 	_shortcut_door_sprite.position = SHORTCUT_DOOR_POS
 	add_child(_shortcut_door_sprite)
 
 func _create_hatch() -> void:
 	_hatch_sprite = Sprite2D.new()
-	_hatch_sprite.texture = PlaceholderArt.make_gate_texture(Color(0.26, 0.32, 0.36), 44, 44)
+	if not _apply_synty_billboard(_hatch_sprite, "res://assets/art/synty/props/hatch.png", 30.0):
+		_hatch_sprite.texture = PlaceholderArt.make_gate_texture(Color(0.26, 0.32, 0.36), 44, 44)
 	_hatch_sprite.position = HATCH_POS
 	add_child(_hatch_sprite)
 

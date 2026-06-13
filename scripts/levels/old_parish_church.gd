@@ -393,7 +393,8 @@ func _create_secret_passage() -> void:
 			_secret_wall_sprite = child
 			break
 	var lever := Sprite2D.new()
-	lever.texture = PlaceholderArt.make_gate_texture(Color(0.45, 0.45, 0.52), 16, 22)
+	if not _apply_synty_billboard(lever, "res://assets/art/synty/props/switch.png", 18.0):
+		lever.texture = PlaceholderArt.make_gate_texture(Color(0.45, 0.45, 0.52), 16, 22)
 	lever.position = LEVER_POS
 	add_child(lever)
 	_organ_prop = Sprite2D.new()

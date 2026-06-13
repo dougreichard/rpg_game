@@ -244,7 +244,8 @@ func _create_panel() -> void:
 
 func _create_release() -> void:
 	_release_sprite = Sprite2D.new()
-	_release_sprite.texture = PlaceholderArt.make_gate_texture(Color(0.42, 0.36, 0.18), 48, 36)
+	if not _apply_synty_billboard(_release_sprite, "res://assets/art/synty/props/switch.png", 28.0):
+		_release_sprite.texture = PlaceholderArt.make_gate_texture(Color(0.42, 0.36, 0.18), 48, 36)
 	_release_sprite.position = RELEASE_POS
 	add_child(_release_sprite)
 

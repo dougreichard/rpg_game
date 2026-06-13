@@ -326,20 +326,23 @@ pixel-art. Decide: invest in animated Synty sheets, or treat PIL combat sprites 
 an intentional stylistic layer. (The code windup telegraph already added means a
 billboard *enemy* is at least viable; the player is the harder case.)
 
-### Pass 6c — puzzle-gate props
-Replace the ~20 `make_gate_texture` doors/levers/hatches/booth-doors/containers
-with Synty billboards (Office/SciFiSpace doors, Construction hatches, a lever prop)
-via the existing `_apply_synty_billboard` fallback pattern — keep the open/slide
-tweens (they animate `position`/`scale`, which billboards support).
+### Pass 6c — puzzle-gate props — ✅ DONE (2026-06-13, active ones)
+Most `make_gate_texture` calls were already **fallbacks** (inside
+`if not _apply_synty_billboard()`), so they never run. Swapped the remaining
+**active** flat props for Synty billboards: underground **hatch** (SciFi floor
+hatch) + **shortcut door** (Office door); the 3 **levers/switches** (pipe organ,
+church, zip-line release) → SciFi button panel. Left as-is (signature/animated):
+the house **organs**, the **glass booth door** + **librarian desk** (they scale/
+fade-tween), the **Doug poster**, and the harbor **maze crates**.
 
 ### Pass 6d — LootBox chest (one change, every level) — ✅ DONE (2026-06-13)
 `loot_box.gd` now shows a Synty wooden crate (`loot_crate.png`), dimmed when
 looted; the programmatic `_draw()` chest stays as fallback. One shared file →
 fixed all 13 levels at once.
 
-### Pass 6e — leftover old-brick walls
-Convert the secret-wall / office-wing wall builders that still call
-`make_wall_texture` to `make_synty_wall_tile` (and whatever Pass 6a chooses).
+### Pass 6e — leftover old-brick walls — ✅ DONE (2026-06-13)
+The Pass 6a rollout replaced every level's `_build_walls` body, so no active
+`make_wall_texture` calls remain in levels (only stale comments). Nothing to do.
 
 **Recommended order:** 6d (lootboxes, trivial global win) → 6a #2 (faux-height
 walls, global) → 6c (gate props) → 6e (leftover walls) → then decide on 6b.

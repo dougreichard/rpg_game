@@ -266,7 +266,14 @@ func _create_secret_passage() -> void:
 			_secret_wall_sprite = child
 			break
 	var lever := Sprite2D.new()
-	lever.texture = PlaceholderArt.make_gate_texture(Color(0.45, 0.45, 0.52), 16, 22)
+	var lever_path := "res://assets/art/synty/props/switch.png"
+	if ResourceLoader.exists(lever_path):
+		var lt: Texture2D = load(lever_path)
+		lever.texture = lt
+		lever.offset = Vector2(0.0, -lt.get_height() / 2.0)
+		lever.scale = Vector2.ONE * (18.0 / float(lt.get_height()))
+	else:
+		lever.texture = PlaceholderArt.make_gate_texture(Color(0.45, 0.45, 0.52), 16, 22)
 	lever.position = LEVER_POS
 	add_child(lever)
 
