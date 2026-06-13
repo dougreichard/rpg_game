@@ -523,6 +523,14 @@ seated; 69 GUT pass; clean boot.
 authored combat poses (currently one pose seq rendered at 3 azimuths).
 
 **To revisit (playtest feedback, 2026-06-13):** quality pass needed —
+- **Start by switching Blender to 4.2 LTS.** The slot-binding pain (`action_slot`
+  must be bound; `action.fcurves` moved under `action.layers[].channelbags`) is a
+  Blender 4.4+ "slotted actions" thing. 4.2 LTS predates it → classic
+  `armature.animation_data.action = act` + `action.fcurves` just work, matching all
+  docs. Still has EEVEE Next. (4.5 LTS does NOT help — it's post-4.4.) Point the
+  scripts at the 4.2 install, drop the slot/channelbag code back to legacy calls,
+  re-validate POC, re-render (all scripted). NOTE: a version switch only makes the
+  pipeline reliable — it does NOT fix the three quality issues below.
 - **Walk reads as skating/static**, not a real stride. Sample more frames across the
   cycle and/or pick a clip with more vertical/leg travel; the union-crop + centered
   paste may also be flattening the up/down bob (consider feet-anchored, not centered).
