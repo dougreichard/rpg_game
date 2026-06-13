@@ -403,6 +403,30 @@ const MOOD_TINTS: Dictionary = {
 	"grand_marquee": Color(1.07, 0.95, 0.82),       # warm cinema amber
 }
 
+# Configure an in-level NPC AnimatedSprite2D as a Synty character billboard
+# (assets/art/synty/characters/<key>.png) — one 3/4 pose mapped to every NPC
+# animation name, feet-anchored. Returns false if no PNG, so callers fall back to
+# the PIL sheet / placeholder. NPCs are stationary, so a billboard reads fine.
+const NPC_BILLBOARD_ANIMS: Array = ["idle", "idle_alt", "walk_right", "walk_down",
+	"walk_up", "talk", "talk_closeup", "talk_pleased", "talk_amused",
+	"talk_annoyed", "relieved", "hand_over_item", "refuse", "step_aside", "wave"]
+
+static func apply_npc_billboard(spr: AnimatedSprite2D, key: String, target_h: float = 54.0) -> bool:
+	var path: String = "res://assets/art/synty/characters/" + key + ".png"
+	if not ResourceLoader.exists(path):
+		return false
+	var tex: Texture2D = load(path)
+	var sf := SpriteFrames.new()
+	sf.remove_animation("default")
+	for a: String in NPC_BILLBOARD_ANIMS:
+		sf.add_animation(a)
+		sf.set_animation_loop(a, true)
+		sf.add_frame(a, tex)
+	spr.sprite_frames = sf
+	spr.offset = Vector2(0.0, -tex.get_height() / 2.0)
+	spr.scale = Vector2.ONE * (target_h / float(tex.get_height()))
+	return true
+
 static func add_mood_light(parent: Node, location_id: String) -> void:
 	if not MOOD_TINTS.has(location_id):
 		return
