@@ -370,6 +370,33 @@ static func make_synty_wall_tile(tex_path: String) -> Texture2D:
 	_synty_wall_tex_cache[tex_path] = tex
 	return tex
 
+# 2.5D wall faces: builds a top surface + a darker "front face" strip along the
+# south edge of a wall rect, so flat top-down walls read with a little height
+# instead of a flat tile (see docs/synty_2_5d_art_plan.md Phase 6a). Adds the two
+# Sprite2Ds as children of `wall_body`; call once per wall in a level's
+# `_build_walls`. The front face is added first so it sits under the top surface.
+const WALL_FACE_HEIGHT: float = 15.0
+const WALL_FACE_SHADE: Color = Color(0.40, 0.40, 0.45)  # shadowed front face
+const WALL_TOP_TINT: Color = Color(1.18, 1.18, 1.20)    # lit top surface
+
+static func add_synty_wall_faces(wall_body: Node, size: Vector2, tex: Texture2D) -> void:
+	var front := Sprite2D.new()
+	front.texture = tex
+	front.texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
+	front.region_enabled = true
+	front.region_rect = Rect2(0.0, 0.0, size.x, WALL_FACE_HEIGHT)
+	front.position = Vector2(0.0, size.y * 0.5 + WALL_FACE_HEIGHT * 0.5)
+	front.modulate = WALL_FACE_SHADE
+	wall_body.add_child(front)
+
+	var top := Sprite2D.new()
+	top.texture = tex
+	top.texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
+	top.region_enabled = true
+	top.region_rect = Rect2(0.0, 0.0, size.x, size.y)
+	top.modulate = WALL_TOP_TINT
+	wall_body.add_child(top)
+
 # Generic prop/gate texture: a beveled panel with an outer black frame.
 # Works for any rectangular prop — wall gates, containers, doors, etc.
 # Thick props (w>16, h>16) get an inner bevel for a 3-D recessed panel look.

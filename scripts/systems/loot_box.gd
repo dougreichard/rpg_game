@@ -14,17 +14,37 @@ const CLOSED_COLOR := Color(0.48, 0.34, 0.18)
 const OPEN_COLOR   := Color(0.35, 0.82, 0.42)
 const BAND_COLOR   := Color(0.72, 0.6, 0.18)    # gold metal band
 const LID_OFFSET   := 0.38                       # lid takes top 38% of height
+# Synty 2.5D loot crate (replaces the programmatic chest _draw across all levels);
+# dimmed when looted. Falls back to the _draw chest if the PNG is missing.
+const SYNTY_CRATE := "res://assets/art/synty/props/loot_crate.png"
+const CRATE_TARGET_H: float = 30.0
+const SYNTY_OPEN_MODULATE := Color(0.6, 0.62, 0.66)  # looted/empty look
 
 var item: ItemData = null
 var is_open: bool = false
+var _sprite: Sprite2D = null
 
 func setup(item_data: ItemData, pos: Vector2, already_open: bool = false) -> void:
 	item = item_data
 	position = pos
+	_build_synty_sprite()
 	if already_open:
 		is_open = true
-		modulate = OPEN_COLOR
+		_apply_open_visual()
 	queue_redraw()
+
+func _build_synty_sprite() -> void:
+	if not ResourceLoader.exists(SYNTY_CRATE):
+		return
+	var tex: Texture2D = load(SYNTY_CRATE)
+	_sprite = Sprite2D.new()
+	_sprite.texture = tex
+	_sprite.offset = Vector2(0.0, -tex.get_height() / 2.0)  # base sits at the box position
+	_sprite.scale = Vector2.ONE * (CRATE_TARGET_H / float(tex.get_height()))
+	add_child(_sprite)
+
+func _apply_open_visual() -> void:
+	modulate = SYNTY_OPEN_MODULATE if _sprite != null else OPEN_COLOR
 
 # Returns true if this box was opened by the call (false if already open or
 # the character isn't close enough) — lets a level chain it into its own
@@ -35,11 +55,13 @@ func try_open(character_name: String, character_pos: Vector2) -> bool:
 	is_open = true
 	GameManager.grant_item(character_name, item.id)
 	Audio.play("loot_open")
-	modulate = OPEN_COLOR
+	_apply_open_visual()
 	queue_redraw()
 	return true
 
 func _draw() -> void:
+	if _sprite != null:
+		return  # Synty crate billboard handles the visual
 	var wood: Color  = OPEN_COLOR if is_open else CLOSED_COLOR
 	var dark: Color  = wood.darkened(0.38)
 	var light: Color = wood.lightened(0.28)
