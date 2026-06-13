@@ -106,10 +106,23 @@ const PLAYER_SHADOW_OFFSET: Vector2 = Vector2(0.0, 15.0)
 const PLAYER_SHADOW_RADIUS: float = 8.0
 const PLAYER_SHADOW_COLOR: Color = Color(0.0, 0.0, 0.0, 0.24)
 
+# Per-animation playback speed (fps) and which animations loop. Keyed by the base
+# name (the _down/_up/_right facing suffix is stripped before lookup).
+const ANIM_FPS: Dictionary = {
+	"idle": 6.0, "walk": 10.0, "run": 12.0, "attack": 14.0, "special": 10.0,
+	"hurt": 12.0, "down": 8.0, "dash": 16.0, "revive": 10.0,
+}
+const ANIM_LOOPING: Array = ["idle", "walk", "run"]
+
 var _is_billboard: bool = false
+var _is_animated_billboard: bool = false
 var _bob_phase: float = 0.0
 
 func _try_synty_billboard() -> bool:
+	# Prefer a multi-frame directional set (assets/art/synty/characters/anim/<name>/)
+	# baked by render_anim_lead.sh; fall back to the single static billboard PNG.
+	if _load_animated_frames("res://assets/art/synty/characters/anim/" + data.character_name.to_lower()):
+		return true
 	var path: String = "res://assets/art/synty/characters/" + data.character_name.to_lower() + ".png"
 	if not ResourceLoader.exists(path):
 		return false
@@ -125,7 +138,59 @@ func _try_synty_billboard() -> bool:
 	_is_billboard = true
 	return true
 
+# Builds a SpriteFrames from sprite-strip PNGs (one per animation) under dir_path.
+# Each strip is a row of square frames (frame side == strip height); the file
+# basename is the animation name. Combat/seated strips and the directional walk/run
+# set all live together; scale is locked to the "idle" frame so actions don't resize
+# the character. Returns false (caller falls back) if the directory has no strips.
+func _load_animated_frames(dir_path: String) -> bool:
+	var da: DirAccess = DirAccess.open(dir_path)
+	if da == null:
+		return false
+	var sf := SpriteFrames.new()
+	sf.remove_animation("default")
+	var scale_h: float = 0.0
+	var any: bool = false
+	for f: String in da.get_files():
+		if not f.ends_with(".png"):
+			continue
+		var tex: Texture2D = load(dir_path + "/" + f)
+		if tex == null:
+			continue
+		var anim: String = f.get_basename()
+		var side: int = tex.get_height()
+		var cols: int = maxi(1, tex.get_width() / side)
+		sf.add_animation(anim)
+		sf.set_animation_loop(anim, _anim_base(anim) in ANIM_LOOPING)
+		sf.set_animation_speed(anim, ANIM_FPS.get(_anim_base(anim), 10.0))
+		for c: int in cols:
+			var at := AtlasTexture.new()
+			at.atlas = tex
+			at.region = Rect2(c * side, 0, side, side)
+			sf.add_frame(anim, at)
+		if anim == "idle" or scale_h == 0.0:
+			scale_h = float(side)
+		any = true
+	if not any:
+		return false
+	sprite.sprite_frames = sf
+	sprite.scale = Vector2.ONE * (PLAYER_BILLBOARD_H / scale_h)
+	_is_billboard = true
+	_is_animated_billboard = true
+	return true
+
+# Strips the directional facing suffix: "walk_right" -> "walk", "idle" -> "idle".
+func _anim_base(anim: String) -> String:
+	for suffix: String in ["_down", "_up", "_right", "_left"]:
+		if anim.ends_with(suffix):
+			return anim.trim_suffix(suffix)
+	return anim
+
 func _update_bob(delta: float) -> void:
+	# Real walk frames already convey stride; the synthetic bob is only for the
+	# static single-frame billboard.
+	if _is_animated_billboard:
+		return
 	if _state == State.WALK:
 		_bob_phase += delta * PLAYER_BOB_SPEED
 		sprite.position.y = -absf(sin(_bob_phase)) * PLAYER_BOB_AMPLITUDE
@@ -262,13 +327,16 @@ func _enter_dash() -> void:
 
 func _set_state(new_state: State) -> void:
 	_state = new_state
+	# Combat/reaction states use directional strips too when the animated
+	# billboard provides them; _play_directional falls back to the bare name
+	# (single static billboard / PIL sheet) when a facing variant is absent.
 	match _state:
 		State.IDLE:   sprite.play("idle")
 		State.WALK:   _play_directional("walk")
-		State.ATTACK: sprite.play("attack")
-		State.DASH:   sprite.play("dash")
-		State.HURT:   sprite.play("hurt")
-		State.DOWN:   sprite.play("down")
+		State.ATTACK: _play_directional("attack")
+		State.DASH:   _play_directional("dash")
+		State.HURT:   _play_directional("hurt")
+		State.DOWN:   _play_directional("down")
 
 # Picks walk_down / walk_up / walk_right (or run_*) based on facing.
 # Flipping for left-facing is handled by sprite.flip_h in _tick_walk.
