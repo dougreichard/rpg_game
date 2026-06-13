@@ -211,8 +211,25 @@ to reskin). Floor tilesets: workshop wood, church/clocktower cobblestone, gym
 tile, studio/cinema carpet, library marble, tunnel/dock/VR concrete, carnival/
 drop dirt, park grass. Walls: concrete, stone, brick, wood.
 
-**Remaining (optional):** in-level enemies + bosses via the Mech / Gang Warfare
-packs (combat sprites); the animation retarget if animated sprites are wanted.
+### Phase 5 — Enemies & bosses (2026-06-13)
+
+- **Code-driven windup telegraph** added to `enemy.gd`: a filling warning ring +
+  intensifying red flash during WINDUP (was animation-only). Satisfies the
+  "attacks must be telegraphed" guardrail for *any* sprite — animated or billboard
+  — and improves combat readability across the board.
+- **Boss → Synty Mech billboard.** `enemy.gd._try_synty_billboard()` loads
+  `assets/art/synty/enemies/<enemy_name>.png` when present, building a SpriteFrames
+  with every combat-state anim pointing at the single 3/4 pose (centered, like the
+  PIL sheets). The clockwork/cinema guardian bosses now appear as the Mech
+  `SM_Veh_Mech_01`. Works for any enemy that gets a billboard PNG later.
+- **Regular enemies kept on their animated PIL sheets** — they have full
+  windup/attack/death frames, which read better in melee than a static billboard.
+  Gang Warfare/Heist humans are ASCII-only (not importable) and CityCharacters
+  overlap the townsfolk, so a billboard reskin of regular enemies was declined.
+
+**Remaining (optional):** animated character/enemy sheets (needs the rig-case
+retarget); converting Gang Warfare/Heist ASCII FBX if distinct human enemies are
+wanted; minor polish (clocktower clock face, richer cinema walls).
 
 **Interior-asset survey (2026-06-13).** The Office + Shops + Casino packs cover
 every level's interior. Floor/wall textures: Shops has Marble, Carpet (×6),
