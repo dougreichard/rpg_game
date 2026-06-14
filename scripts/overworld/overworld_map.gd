@@ -562,9 +562,22 @@ func _apply_billboard(spr: AnimatedSprite2D, tex: Texture2D) -> void:
 	spr.scale = Vector2.ONE * (CHAR_TARGET_H / float(tex.get_height()))
 	spr.offset = Vector2(0.0, -tex.get_height() / 2.0)
 
-# Set up a duo member's sprite: Synty billboard if one exists, else the existing
-# PIL sheet / placeholder.
+# Same feet-anchoring for an animated billboard, whose frames are square
+# (side = strip height). Walk/idle frames come from the shared SpriteLoader.
+func _apply_anim_billboard(spr: AnimatedSprite2D, side: int) -> void:
+	if side <= 0:
+		return
+	spr.scale = Vector2.ONE * (CHAR_TARGET_H / float(side))
+	spr.offset = Vector2(0.0, -float(side) * 0.5)
+
+# Set up a duo member's sprite: animated Synty billboard (walks!) if a strip set
+# exists, else the single static billboard, else the PIL sheet / placeholder.
 func _setup_duo_visual(player, display_name: String) -> void:
+	var anim: SpriteFrames = SpriteLoader.try_load_anim_billboard(display_name)
+	if anim != null:
+		player.setup(anim, 1.0, display_name)
+		_apply_anim_billboard(player.sprite, SpriteLoader.anim_frame_side(display_name))
+		return
 	var tex: Texture2D = _char_billboard_tex(display_name)
 	if tex != null:
 		player.setup(_billboard_frames(tex), 1.0, display_name)
@@ -590,8 +603,12 @@ func _spawn_npcs() -> void:
 		var npc = NpcScript.new()
 		add_child(npc)
 		var home: Vector2 = Vector2(_grid(Vector2i(data["home"]))) * TILE + Vector2(TILE / 2.0, TILE / 2.0)
+		var npc_anim: SpriteFrames = SpriteLoader.try_load_anim_billboard(data["quest_id"])
 		var bb_tex: Texture2D = _char_billboard_tex(data["quest_id"])
-		if bb_tex != null:
+		if npc_anim != null:
+			npc.setup(npc_anim, home, data["name"], data["quest_id"], data["color"])
+			_apply_anim_billboard(npc.sprite, SpriteLoader.anim_frame_side(data["quest_id"]))
+		elif bb_tex != null:
 			npc.setup(_billboard_frames(bb_tex), home, data["name"], data["quest_id"], data["color"])
 			_apply_billboard(npc.sprite, bb_tex)
 		else:

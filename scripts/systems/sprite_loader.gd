@@ -198,6 +198,63 @@ static var _player_cache: Dictionary = {}
 static var _enemy_cache: Dictionary = {}
 static var _npc_cache: Dictionary = {}
 static var _companion_cache: Dictionary = {}
+static var _anim_billboard_cache: Dictionary = {}
+static var _anim_side_cache: Dictionary = {}
+
+# Synty animated billboards: per-character directional strips baked under
+# assets/art/synty/characters/anim/<key>/ (idle, walk_down/up/right, …). Shared by
+# the in-level Player, the overworld duo, and town NPCs.
+const _ANIM_BILLBOARD_DIR: String = "res://assets/art/synty/characters/anim/"
+const _ANIM_LOOPING: Array = ["idle", "walk", "run"]
+const _ANIM_FPS: Dictionary = {"idle": 7.0, "walk": 14.0, "run": 18.0}
+
+# Builds a directional SpriteFrames from the anim strips for `key`, or null if the
+# dir/strips are absent (caller falls back to a static billboard). Each <anim>.png is
+# a row of square frames (frame side == strip height). anim_frame_side(key) returns
+# that side afterward, for feet-anchored scaling.
+static func try_load_anim_billboard(key: String) -> SpriteFrames:
+	var k: String = key.to_lower()
+	if k in _anim_billboard_cache:
+		return _anim_billboard_cache[k]
+	var dir_path: String = _ANIM_BILLBOARD_DIR + k
+	var da: DirAccess = DirAccess.open(dir_path)
+	var sf: SpriteFrames = null
+	if da != null:
+		sf = SpriteFrames.new()
+		sf.remove_animation("default")
+		var any: bool = false
+		for f: String in da.get_files():
+			if not f.ends_with(".png"):
+				continue
+			var tex: Texture2D = load(dir_path + "/" + f)
+			if tex == null:
+				continue
+			var anim: String = f.get_basename()
+			var s: int = tex.get_height()
+			var cols: int = maxi(1, tex.get_width() / s)
+			sf.add_animation(anim)
+			sf.set_animation_loop(anim, _anim_base(anim) in _ANIM_LOOPING)
+			sf.set_animation_speed(anim, _ANIM_FPS.get(_anim_base(anim), 10.0))
+			for c: int in cols:
+				var at := AtlasTexture.new()
+				at.atlas = tex
+				at.region = Rect2(c * s, 0, s, s)
+				sf.add_frame(anim, at)
+			_anim_side_cache[k] = s
+			any = true
+		if not any:
+			sf = null
+	_anim_billboard_cache[k] = sf
+	return sf
+
+static func anim_frame_side(key: String) -> int:
+	return _anim_side_cache.get(key.to_lower(), 0)
+
+static func _anim_base(anim: String) -> String:
+	for suffix: String in ["_down", "_up", "_right", "_left"]:
+		if anim.ends_with(suffix):
+			return anim.trim_suffix(suffix)
+	return anim
 
 # Returns a SpriteFrames built from assets/art/sprites/<character_name>.png,
 # or null if the file is absent (caller should use PlaceholderArt instead).
