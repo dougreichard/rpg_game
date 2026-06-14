@@ -412,6 +412,26 @@ const NPC_BILLBOARD_ANIMS: Array = ["idle", "idle_alt", "walk_right", "walk_down
 	"talk_annoyed", "relieved", "hand_over_item", "refuse", "step_aside", "wave"]
 
 static func apply_npc_billboard(spr: AnimatedSprite2D, key: String, target_h: float = 54.0) -> bool:
+	# Prefer the animated set (idle breathe / walk / conduct). It's authoritative —
+	# any expected NPC anim without its own strip (e.g. talk_*) is aliased to idle so
+	# playback never fails — because mixing animated + static frame sizes in one
+	# SpriteFrames would resize the figure between anims. Falls back to the single
+	# static billboard, else returns false.
+	var anim: SpriteFrames = SpriteLoader.try_load_anim_billboard(key)
+	if anim != null:
+		if anim.has_animation("idle"):
+			for a: String in NPC_BILLBOARD_ANIMS:
+				if not anim.has_animation(a):
+					anim.add_animation(a)
+					anim.set_animation_loop(a, true)
+					for i: int in anim.get_frame_count("idle"):
+						anim.add_frame(a, anim.get_frame_texture("idle", i))
+		spr.sprite_frames = anim
+		var side: int = SpriteLoader.anim_frame_side(key)
+		if side > 0:
+			spr.scale = Vector2.ONE * (target_h / float(side))
+			spr.offset = Vector2(0.0, -float(side) * 0.5)
+		return true
 	var path: String = "res://assets/art/synty/characters/" + key + ".png"
 	if not ResourceLoader.exists(path):
 		return false

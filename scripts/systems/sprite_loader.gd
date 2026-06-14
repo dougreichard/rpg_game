@@ -205,8 +205,8 @@ static var _anim_side_cache: Dictionary = {}
 # assets/art/synty/characters/anim/<key>/ (idle, walk_down/up/right, …). Shared by
 # the in-level Player, the overworld duo, and town NPCs.
 const _ANIM_BILLBOARD_DIR: String = "res://assets/art/synty/characters/anim/"
-const _ANIM_LOOPING: Array = ["idle", "walk", "run"]
-const _ANIM_FPS: Dictionary = {"idle": 7.0, "walk": 14.0, "run": 18.0}
+const _ANIM_LOOPING: Array = ["idle", "walk", "run", "conduct"]
+const _ANIM_FPS: Dictionary = {"idle": 7.0, "walk": 14.0, "run": 18.0, "conduct": 8.0}
 
 # Builds a directional SpriteFrames from the anim strips for `key`, or null if the
 # dir/strips are absent (caller falls back to a static billboard). Each <anim>.png is

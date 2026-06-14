@@ -243,11 +243,13 @@ var _doorway = null
 var _dialog_box = null
 
 var _choir_leader: Node2D
+var _cl_sprite: AnimatedSprite2D
 var _choir_leader_bubble  # SpeechBubbleScript instance (untyped — no class_name)
 var _cl_walking: bool = false
 var _cl_target: Vector2 = Vector2.ZERO
 var _cl_idle_timer: float = 0.0
 var _cl_yell_timer: float = 0.0
+var _cong_phase: float = 0.0  # drives a subtle desynced breathe on the congregation
 
 func _ready() -> void:
 	_build_floor()
@@ -651,14 +653,11 @@ func _create_choir_leader() -> void:
 	_choir_leader.position = CHOIR_LEADER_START_POS
 
 	var sprite := AnimatedSprite2D.new()
-	var loaded: SpriteFrames = SpriteLoader.try_load_npc("aria")
-	if loaded != null:
-		sprite.sprite_frames = loaded
-		sprite.scale = Vector2(SpriteLoader.NPC_SPRITE_SCALE, SpriteLoader.NPC_SPRITE_SCALE)
-	else:
+	if not PlaceholderArt.apply_npc_billboard(sprite, "choir_leader", 54.0):
 		sprite.sprite_frames = PlaceholderArt.make_player_frames(CHOIR_LEADER_COLOR, "")
 	sprite.play("idle")
 	_choir_leader.add_child(sprite)
+	_cl_sprite = sprite
 
 	_choir_leader_bubble = SpeechBubbleScript.new()
 	_choir_leader_bubble.position = CHOIR_LEADER_BUBBLE_OFS
@@ -693,6 +692,36 @@ func _update_choir_leader(delta: float) -> void:
 			_cl_idle_timer = CHOIR_LEADER_IDLE_TIME
 		else:
 			_choir_leader.position += to_target.normalized() * CHOIR_LEADER_SPEED * delta
+	_update_cl_animation()
+
+# The congregation members have static billboards (their source meshes aren't on
+# record to render an idle), so a tiny desynced vertical breathe keeps the crowd alive.
+func _update_congregation_bob(delta: float) -> void:
+	_cong_phase += delta
+	var i: int = 0
+	for npc_id: String in _npc_sprites:
+		var spr: AnimatedSprite2D = _npc_sprites[npc_id]
+		if is_instance_valid(spr) and NPC_POSITIONS.has(npc_id):
+			var ph: float = _cong_phase * 2.2 + float(i) * 0.9
+			spr.position.y = NPC_POSITIONS[npc_id].y - absf(sin(ph)) * 1.6
+		i += 1
+
+# Sprite playback: directional walk while pacing, conduct while a yell bubble is up,
+# else a standing idle. (Movement/timers above are unchanged.)
+func _update_cl_animation() -> void:
+	if not is_instance_valid(_cl_sprite):
+		return
+	var anim: String = "idle"
+	if _cl_walking:
+		var d: Vector2 = _cl_target - _choir_leader.position
+		_cl_sprite.flip_h = d.x < 0.0
+		anim = ("walk_down" if d.y > 0.0 else "walk_up") if abs(d.y) > abs(d.x) else "walk_right"
+	elif is_instance_valid(_choir_leader_bubble) and _choir_leader_bubble.visible:
+		anim = "conduct"
+	if not _cl_sprite.sprite_frames.has_animation(anim):
+		anim = "idle"
+	if _cl_sprite.animation != anim:
+		_cl_sprite.play(anim)
 
 # ── Shared dialog closed handler ──────────────────────────────────────────────
 
@@ -762,6 +791,7 @@ func _process(delta: float) -> void:
 			_dialog_box.advance()
 		return
 	_update_choir_leader(delta)
+	_update_congregation_bob(delta)
 	if is_instance_valid(GameManager.active_player):
 		var active_pos: Vector2 = GameManager.active_player.global_position
 		camera.global_position = active_pos
