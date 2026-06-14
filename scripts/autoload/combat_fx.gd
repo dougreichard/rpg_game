@@ -3,6 +3,8 @@ extends Node
 var _trauma: float = 0.0
 var _time: float = 0.0
 var _spark_tex: ImageTexture = null
+var _dust_tex: Texture2D = null
+const DUST_TEX_PATH: String = "res://assets/art/synty/fx/dust_puff.png"
 
 const TRAUMA_DECAY: float = 3.0
 const MAX_SHAKE_PX: float = 6.0
@@ -38,7 +40,7 @@ func sparks(pos: Vector2, color: Color, count: int = 8) -> void:
 
 # Soft ground puff — footsteps, dash kick-off, landings, death. Low + outward,
 # settles quickly. Warm dust colour by default to match the Synty palette.
-func dust(pos: Vector2, count: int = 6, color: Color = Color(0.82, 0.78, 0.68, 0.65),
+func dust(pos: Vector2, count: int = 5, color: Color = Color(0.82, 0.78, 0.68, 0.6),
 		power: float = 1.0) -> void:
 	var scene := get_tree().current_scene
 	if not is_instance_valid(scene):
@@ -48,19 +50,21 @@ func dust(pos: Vector2, count: int = 6, color: Color = Color(0.82, 0.78, 0.68, 0
 	p.emitting = true
 	p.one_shot = true
 	p.amount = count
-	p.lifetime = 0.45
+	p.lifetime = 0.5
 	p.explosiveness = 0.9
 	p.direction = Vector2.UP
 	p.spread = 95.0
-	p.initial_velocity_min = 14.0 * power
-	p.initial_velocity_max = 40.0 * power
-	p.gravity = Vector2(0.0, 70.0)
-	p.scale_amount_min = 2.0 * power
-	p.scale_amount_max = 5.0 * power
+	p.initial_velocity_min = 9.0 * power
+	p.initial_velocity_max = 26.0 * power
+	p.gravity = Vector2(0.0, 55.0)
+	# Soft dust mote (baked from Synty Western Dust_Mask). scale_amount multiplies the
+	# 48px texture, so these are small ~9-19px puffs.
+	p.scale_amount_min = 0.18 * power
+	p.scale_amount_max = 0.4 * power
 	p.color = color
-	p.texture = _get_spark_tex()
+	p.texture = _get_dust_tex()
 	scene.add_child(p)
-	get_tree().create_timer(0.7, false).timeout.connect(func() -> void:
+	get_tree().create_timer(0.8, false).timeout.connect(func() -> void:
 		if is_instance_valid(p):
 			p.queue_free()
 	)
@@ -87,6 +91,14 @@ func ring(pos: Vector2, color: Color = Color(1.0, 0.95, 0.6, 0.9), radius: float
 	tw.tween_property(r, "scale", Vector2.ONE, 0.22).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	tw.tween_property(r, "modulate:a", 0.0, 0.22)
 	tw.chain().tween_callback(r.queue_free)
+
+func _get_dust_tex() -> Texture2D:
+	if _dust_tex == null:
+		if ResourceLoader.exists(DUST_TEX_PATH):
+			_dust_tex = load(DUST_TEX_PATH)
+		else:
+			_dust_tex = _get_spark_tex()  # fallback to the square if the bake is missing
+	return _dust_tex
 
 func _get_spark_tex() -> ImageTexture:
 	if _spark_tex == null:

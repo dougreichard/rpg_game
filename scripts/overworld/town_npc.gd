@@ -15,11 +15,12 @@ const TOWN_ID: String = "town"
 const BUBBLE_DURATION: float = 3.5
 const BUBBLE_OFFSET := Vector2(0.0, -52.0)
 
-# Billboard juice — matches overworld_player: a soft ground shadow. (The walk is
-# frame-animated now, so the old programmatic sine bob was dropped.)
-const SHADOW_OFFSET: Vector2 = Vector2(0.0, 2.0)
-const SHADOW_RADIUS: float = 8.0
-const SHADOW_COLOR: Color = Color(0.0, 0.0, 0.0, 0.24)
+# Billboard juice — matches overworld_player: footstep dust while wandering. (The
+# bob + ground-shadow ellipse were dropped — the shadow looked like a detached
+# circle that made the NPC float.)
+const STEP_DUST_INTERVAL: float = 0.34
+const DUST_FEET_OFFSET: Vector2 = Vector2(0.0, 4.0)
+var _step_dust_t: float = 0.0
 
 var sprite: AnimatedSprite2D
 var npc_name: String = ""
@@ -99,9 +100,7 @@ func _process(delta: float) -> void:
 		sprite.flip_h = bool(fb[1])
 	sprite.play(anim)
 	global_position += dir * WANDER_SPEED * delta
-
-
-func _draw() -> void:
-	draw_set_transform(SHADOW_OFFSET, 0.0, Vector2(1.0, 0.45))
-	draw_circle(Vector2.ZERO, SHADOW_RADIUS, SHADOW_COLOR)
-	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	_step_dust_t -= delta
+	if _step_dust_t <= 0.0:
+		_step_dust_t = STEP_DUST_INTERVAL
+		CombatFX.dust(global_position + DUST_FEET_OFFSET, 3)

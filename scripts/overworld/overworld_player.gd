@@ -13,12 +13,12 @@ const FOLLOW_SPEED: float = 170.0
 const FOLLOW_STOP_DISTANCE: float = 36.0
 const TELEPORT_DISTANCE: float = 300.0
 
-# Billboard juice: a soft ground shadow so the feet-anchored Synty character
-# billboard reads as standing on the map. (The walk cycle is now frame-animated,
-# so the old programmatic sine bob was dropped — it competed with the animation.)
-const SHADOW_OFFSET: Vector2 = Vector2(0.0, 2.0)
-const SHADOW_RADIUS: float = 8.5
-const SHADOW_COLOR: Color = Color(0.0, 0.0, 0.0, 0.26)
+# Billboard juice: footstep dust kicked up at the feet while walking. (The old
+# programmatic bob + ground-shadow ellipse were dropped — the shadow read as a
+# detached circle that made the character look like it was floating.)
+const STEP_DUST_INTERVAL: float = 0.32
+const DUST_FEET_OFFSET: Vector2 = Vector2(0.0, 4.0)
+var _step_dust_t: float = 0.0
 
 var mode: Mode = Mode.ACTIVE
 var follow_target: Vector2 = Vector2.ZERO
@@ -46,7 +46,7 @@ func setup(frames: SpriteFrames, sprite_scale: float = 1.0, name_in: String = ""
 	character_name = name_in
 
 
-func _physics_process(_delta: float) -> void:
+func _physics_process(delta: float) -> void:
 	if GameManager.is_paused() or input_locked:
 		return
 	match mode:
@@ -54,12 +54,10 @@ func _physics_process(_delta: float) -> void:
 			_tick_active()
 		Mode.FOLLOW:
 			_tick_follow()
-
-
-func _draw() -> void:
-	draw_set_transform(SHADOW_OFFSET, 0.0, Vector2(1.0, 0.45))
-	draw_circle(Vector2.ZERO, SHADOW_RADIUS, SHADOW_COLOR)
-	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	_step_dust_t -= delta
+	if _step_dust_t <= 0.0 and velocity.length() > 10.0:
+		_step_dust_t = STEP_DUST_INTERVAL
+		CombatFX.dust(global_position + DUST_FEET_OFFSET, 4)
 
 
 func _tick_active() -> void:
