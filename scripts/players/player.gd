@@ -59,6 +59,10 @@ const REVIVE_RING_FILL_COLOR: Color = Color(0.4, 1.0, 0.6, 0.95)
 # range may hear it and go investigate even if they can't see the player.
 const ATTACK_NOISE_RADIUS: float = 110.0
 const DASH_NOISE_RADIUS: float = 160.0
+
+# Footstep dust cadence (seconds between feet puffs while walking).
+const STEP_DUST_INTERVAL: float = 0.3
+var _step_dust_t: float = 0.0
 # Stealth: Erin's Fast Talk doubles as a "stand down" tool — guards within
 # this radius who are suspicious or alerted are talked back into patrolling.
 const FAST_TALK_CALM_RADIUS: float = 130.0
@@ -268,6 +272,10 @@ func _tick_walk(delta: float) -> void:
 	# Tie the step cadence to actual ground speed so the feet don't slide ("skate").
 	if _is_animated_billboard:
 		sprite.speed_scale = clampf(velocity.length() / data.move_speed, 0.7, 1.5)
+	_step_dust_t -= delta
+	if _step_dust_t <= 0.0 and velocity.length() > 8.0:
+		_step_dust_t = STEP_DUST_INTERVAL
+		CombatFX.dust(global_position + PLAYER_SHADOW_OFFSET, 4)
 	if Input.is_action_just_pressed(action_prefix + "attack"):
 		_enter_attack()
 	elif Input.is_action_just_pressed(action_prefix + "dash"):
@@ -342,6 +350,7 @@ func _enter_dash() -> void:
 	_iframe_timer = data.dash_iframe_duration
 	Audio.play("dash")
 	GameManager.emit_noise(global_position, DASH_NOISE_RADIUS)
+	CombatFX.dust(global_position + PLAYER_SHADOW_OFFSET, 9, Color(0.82, 0.78, 0.68, 0.7), 1.7)
 	_set_state(State.DASH)
 
 func _set_state(new_state: State) -> void:
@@ -351,7 +360,7 @@ func _set_state(new_state: State) -> void:
 	# billboard provides them; _play_directional falls back to the bare name
 	# (single static billboard / PIL sheet) when a facing variant is absent.
 	match _state:
-		State.IDLE:   sprite.play("idle")
+		State.IDLE:   _play_idle()
 		State.WALK:   _play_directional("walk")
 		State.ATTACK: _play_directional("attack")
 		State.DASH:   _play_directional("dash")
@@ -378,11 +387,28 @@ func _play_directional(base: String) -> void:
 	if sprite.animation != anim:
 		sprite.play(anim)
 
+# Directional idle: keep facing the last heading when stopped. Reuses the walk
+# strip frozen on its neutral (legs-together) mid frame — no separate idle render,
+# so feet/scale anchoring stays identical to walk. Static/PIL sheets get bare "idle".
+func _play_idle() -> void:
+	if _is_animated_billboard:
+		var anim: String = "walk_" + SpriteLoader.dir_suffix(facing)
+		if sprite.sprite_frames.has_animation(anim):
+			sprite.flip_h = false
+			sprite.play(anim)
+			sprite.set_frame_and_progress(sprite.sprite_frames.get_frame_count(anim) / 2, 0.0)
+			sprite.pause()
+			return
+	sprite.play("idle")
+
 func _use_special() -> void:
 	Audio.play("special")
 	if data.character_name == "Erin":
 		GameManager.calm_enemies(global_position, FAST_TALK_CALM_RADIUS)
 	special_used.emit(data.character_name)
+	# Punctuate the special with an expanding ring + shake so it reads as a burst.
+	CombatFX.ring(global_position, Color(0.6, 0.85, 1.0, 0.9), 40.0)
+	CombatFX.shake(0.4)
 	# Play the special animation (HA laugh, etc.) so the ability reads on-screen.
 	_special_timer = SPECIAL_DURATION
 	_set_state(State.SPECIAL)

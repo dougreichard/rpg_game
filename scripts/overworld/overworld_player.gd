@@ -70,7 +70,7 @@ func _tick_active() -> void:
 		_play_walk()
 	else:
 		velocity = Vector2.ZERO
-		sprite.play("idle")
+		_play_idle()
 	move_and_slide()
 
 
@@ -82,7 +82,7 @@ func _tick_follow() -> void:
 	var to_target: Vector2 = follow_target - global_position
 	if to_target.length() <= FOLLOW_STOP_DISTANCE:
 		velocity = Vector2.ZERO
-		sprite.play("idle")
+		_play_idle()
 	else:
 		facing = to_target.normalized()
 		velocity = facing * FOLLOW_SPEED
@@ -101,3 +101,16 @@ func _play_walk() -> void:
 		anim = "walk_" + String(fb[0])
 		sprite.flip_h = bool(fb[1])
 	sprite.play(anim)
+
+
+# Directional idle: freeze the walk strip on its neutral mid frame so the duo keeps
+# facing their last heading when stopped (falls back to a bare "idle" if present).
+func _play_idle() -> void:
+	var anim: String = "walk_" + SpriteLoader.dir_suffix(facing)
+	if sprite.sprite_frames.has_animation(anim):
+		sprite.flip_h = false
+		sprite.play(anim)
+		sprite.set_frame_and_progress(sprite.sprite_frames.get_frame_count(anim) / 2, 0.0)
+		sprite.pause()
+	elif sprite.sprite_frames.has_animation("idle"):
+		sprite.play("idle")

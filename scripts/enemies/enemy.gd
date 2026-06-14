@@ -30,6 +30,8 @@ var _patrol_pause_timer: float = 0.0
 var _facing_dir: Vector2 = Vector2.DOWN
 var _animated: bool = false  # true = 8-way directional strips; false = single-pose/PIL (flip)
 var _dying: bool = false
+const ENEMY_STEP_DUST_INTERVAL: float = 0.36
+var _step_dust_t: float = 0.0
 var _alert_meter: float = 0.0
 var _investigate_target: Vector2 = Vector2.ZERO
 var _investigate_look_timer: float = 0.0
@@ -199,6 +201,10 @@ func _physics_process(delta: float) -> void:
 		State.HIT:           _tick_hit(delta)
 		State.AOE_TELEGRAPH: _tick_aoe_telegraph(delta)
 		State.AOE_SLAM:      _tick_aoe_slam()
+	_step_dust_t -= delta
+	if _step_dust_t <= 0.0 and velocity.length() > 12.0:
+		_step_dust_t = ENEMY_STEP_DUST_INTERVAL
+		CombatFX.dust(global_position + Vector2(0.0, 14.0), 3)
 	queue_redraw()
 
 func _tick_timers(delta: float) -> void:
@@ -483,8 +489,9 @@ func _on_hurtbox_hit(damage: float, knockback: Vector2) -> void:
 		_hit_timer = HIT_DURATION
 		return
 	hp = maxf(hp - damage, 0.0)
-	CombatFX.sparks(global_position, Color(1.0, 0.95, 0.4), 10)
-	CombatFX.shake(0.3)
+	CombatFX.sparks(global_position, Color(1.0, 0.95, 0.4), 12)
+	CombatFX.ring(global_position, Color(1.0, 0.92, 0.55, 0.9), 20.0)
+	CombatFX.shake(0.35)
 	if hp == 0.0:
 		_die()
 		return
@@ -507,6 +514,13 @@ func _die() -> void:
 	if _slam_hitbox != null:
 		_slam_hitbox.set_deferred("monitoring", false)
 	_play_directional("death")
+	# Juice: dust burst at the feet + a quick squash-pop on the collapse.
+	CombatFX.dust(global_position + Vector2(0.0, 14.0), 9, Color(0.82, 0.78, 0.68, 0.7), 1.5)
+	CombatFX.sparks(global_position, Color(1.0, 0.95, 0.4), 8)
+	var base_scale: Vector2 = sprite.scale
+	var sq := sprite.create_tween()
+	sq.tween_property(sprite, "scale", Vector2(base_scale.x * 1.12, base_scale.y * 0.9), 0.07)
+	sq.tween_property(sprite, "scale", Vector2(base_scale.x * 0.85, base_scale.y * 1.0), 0.18)
 	var tw := create_tween()
 	tw.tween_interval(0.35)
 	tw.tween_property(sprite, "modulate:a", 0.0, 0.2)
