@@ -223,7 +223,7 @@ func _tick_mote(mote: Dictionary, delta: float) -> void:
 	mote["pos"] = pos
 
 func _draw() -> void:
-	draw_rect(Rect2(0.0, 0.0, 1280.0, 720.0), Color(0.06, 0.05, 0.1))
+	draw_rect(Rect2(0.0, 0.0, 1280.0, 720.0), Color(0.09, 0.07, 0.05))
 
 	var total_row_w: float = float(CHAR_NAMES.size()) * CHIP_W + float(CHAR_NAMES.size() - 1) * CHIP_SPACING
 	var start_x: float = (1280.0 - total_row_w) * 0.5

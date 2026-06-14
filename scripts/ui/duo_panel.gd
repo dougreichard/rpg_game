@@ -47,7 +47,7 @@ func _draw_chip(pos: Vector2, p: Player, active: bool) -> void:
 	var swatch_center: Vector2 = pos + Vector2(26.0, CHIP_SIZE.y * 0.5)
 	draw_circle(swatch_center, SWATCH_RADIUS, p.data.sprite_color)
 	draw_arc(swatch_center, SWATCH_RADIUS, 0.0, TAU, 24, Color(1.0, 1.0, 1.0, 0.5), 1.5)
-	var font: Font = ThemeDB.fallback_font
+	var font: Font = UITheme.font()
 	draw_string(font, pos + Vector2(50.0, 22.0), p.data.character_name, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color.WHITE)
 	draw_string(font, pos + Vector2(50.0, 39.0), p.data.special_name, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.8, 0.8, 0.85))
 	if active:

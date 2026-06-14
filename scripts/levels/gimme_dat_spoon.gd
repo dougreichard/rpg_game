@@ -58,7 +58,7 @@ const SPOON_DESCRIPTIONS := {
 }
 
 const BG_COLOR := Color(0.05, 0.06, 0.1, 1.0)
-const PANEL_COLOR := Color(0.08, 0.07, 0.14, 0.97)
+const PANEL_COLOR := UITheme.PANEL_BG
 const BORDER_COLOR := Color(0.85, 0.78, 0.35, 1.0)
 const TITLE_COLOR := Color(0.95, 0.85, 0.2, 1.0)
 const TEXT_COLOR := Color(0.92, 0.92, 0.95, 1.0)
@@ -147,7 +147,7 @@ var _pending_recipient_idx: int = -1
 
 
 func _ready() -> void:
-	_font = ThemeDB.fallback_font
+	_font = UITheme.font()
 	for char_name in CHAR_RESOURCE_ORDER:
 		var data = load(CHAR_RESOURCES[char_name])
 		_roster.append({"name": char_name, "color": data.sprite_color})

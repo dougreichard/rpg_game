@@ -6,7 +6,9 @@ extends Node2D
 # Reads GameManager.pending_level_duo; on confirm sets GameManager.preferred_active
 # and loads GameManager.pending_level.
 
-const FONT: Font = preload("res://assets/fonts/PressStart2P-Regular.ttf")
+# Cozy-warm Nunito (was the PressStart2P pixel font); sizes/spacing below rebalanced
+# for the proportional font.
+@onready var FONT: Font = UITheme.font()
 
 const CHAR_COLORS: Dictionary = {
 	"Quinn": Color(0.3,  0.45, 0.85),
@@ -39,8 +41,8 @@ const CARD_H: float  = 400.0
 const CARD_Y: float  = 130.0
 const GAP: float     = 90.0
 const PORTRAIT_H: float = 128.0
-const BG_COLOR := Color(0.04, 0.04, 0.10)
-const PANEL_DARK := Color(0.08, 0.08, 0.18, 0.97)
+const BG_COLOR := Color(0.08, 0.06, 0.05)
+const PANEL_DARK := UITheme.PANEL_BG
 
 var _duo: Array = []
 var _selected: int = 0
@@ -81,8 +83,8 @@ func _build_ui() -> void:
 	location_lbl.position = Vector2(0.0, 30.0)
 	location_lbl.size = Vector2(1280.0, 28.0)
 	location_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	location_lbl.add_theme_font_size_override("font_size", 12)
-	location_lbl.add_theme_color_override("font_color", Color(0.48, 0.48, 0.60))
+	location_lbl.add_theme_font_size_override("font_size", 15)
+	location_lbl.add_theme_color_override("font_color", UITheme.TEXT_DIM)
 	canvas.add_child(location_lbl)
 
 	var title := Label.new()
@@ -90,17 +92,17 @@ func _build_ui() -> void:
 	title.position = Vector2(0.0, 68.0)
 	title.size = Vector2(1280.0, 44.0)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 30)
-	title.add_theme_color_override("font_color", Color(0.95, 0.85, 0.2))
+	title.add_theme_font_size_override("font_size", 34)
+	title.add_theme_color_override("font_color", UITheme.GOLD)
 	canvas.add_child(title)
 
 	var sub := Label.new()
 	sub.text = "The active lead fights first  —  swap with  Tab  at any time"
 	sub.position = Vector2(0.0, 116.0)
-	sub.size = Vector2(1280.0, 20.0)
+	sub.size = Vector2(1280.0, 24.0)
 	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	sub.add_theme_font_size_override("font_size", 8)
-	sub.add_theme_color_override("font_color", Color(0.40, 0.40, 0.52))
+	sub.add_theme_font_size_override("font_size", 15)
+	sub.add_theme_color_override("font_color", UITheme.TEXT_DIM)
 	canvas.add_child(sub)
 
 	_press_label = Label.new()
@@ -108,8 +110,8 @@ func _build_ui() -> void:
 	_press_label.position = Vector2(0.0, 586.0)
 	_press_label.size = Vector2(1280.0, 36.0)
 	_press_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_press_label.add_theme_font_size_override("font_size", 20)
-	_press_label.add_theme_color_override("font_color", Color(0.45, 0.95, 0.55))
+	_press_label.add_theme_font_size_override("font_size", 22)
+	_press_label.add_theme_color_override("font_color", Color(0.55, 0.95, 0.6))
 	canvas.add_child(_press_label)
 
 	var hint := Label.new()
@@ -117,8 +119,8 @@ func _build_ui() -> void:
 	hint.position = Vector2(0.0, 672.0)
 	hint.size = Vector2(1280.0, 26.0)
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	hint.add_theme_font_size_override("font_size", 8)
-	hint.add_theme_color_override("font_color", Color(0.34, 0.34, 0.42))
+	hint.add_theme_font_size_override("font_size", 14)
+	hint.add_theme_color_override("font_color", UITheme.TEXT_DIM)
 	canvas.add_child(hint)
 
 func _card_x(i: int) -> float:
@@ -184,8 +186,8 @@ func _draw() -> void:
 	# Arrow hint in the gap between cards
 	var gap_cx: float = _card_x(0) + CARD_W + GAP * 0.5
 	var arrow_y: float = CARD_Y + CARD_H * 0.5 + 8.0
-	draw_string(FONT, Vector2(gap_cx - 20.0, arrow_y),
-			"<   >", HORIZONTAL_ALIGNMENT_CENTER, 40.0, 14, Color(0.55, 0.55, 0.65))
+	draw_string(FONT, Vector2(gap_cx - 24.0, arrow_y),
+			"<   >", HORIZONTAL_ALIGNMENT_CENTER, 48.0, 20, UITheme.GOLD)
 
 func _draw_card(i: int) -> void:
 	var char_name: String = _duo[i]
@@ -231,46 +233,46 @@ func _draw_card(i: int) -> void:
 	var by: float = card_y + PORTRAIT_H + 10.0
 
 	# Active / standby badge
-	var badge_text: String = ">> LEADS <<" if is_active else "   follows   "
-	var badge_col: Color = Color(0.95, 0.85, 0.2) if is_active else Color(0.40, 0.40, 0.52)
-	draw_string(FONT, Vector2(cx, by + 4.0),
-			badge_text, HORIZONTAL_ALIGNMENT_CENTER, CARD_W, 8, badge_col)
+	var badge_text: String = ">> LEADS <<" if is_active else "follows"
+	var badge_col: Color = UITheme.GOLD if is_active else UITheme.TEXT_DIM
+	draw_string(FONT, Vector2(cx, by + 8.0),
+			badge_text, HORIZONTAL_ALIGNMENT_CENTER, CARD_W, 13, badge_col)
 
 	# Character name
-	var name_col: Color = Color(0.95, 0.95, 0.95) if is_active else Color(0.50, 0.50, 0.60)
-	draw_string(FONT, Vector2(cx, by + 26.0),
-			char_name, HORIZONTAL_ALIGNMENT_CENTER, CARD_W, 18, name_col)
+	var name_col: Color = UITheme.CREAM if is_active else UITheme.TEXT_DIM
+	draw_string(FONT, Vector2(cx, by + 38.0),
+			char_name, HORIZONTAL_ALIGNMENT_CENTER, CARD_W, 26, name_col)
 
-	# Special description
+	# Special description (wrapped so longer specials don't clip)
 	var spec: String = CHAR_SPECIALS.get(char_name, "")
-	var spec_col: Color = base.lightened(0.05) if is_active else Color(0.35, 0.35, 0.43)
-	draw_string(FONT, Vector2(cx, by + 56.0),
-			spec, HORIZONTAL_ALIGNMENT_CENTER, CARD_W, 7, spec_col)
+	var spec_col: Color = base.lightened(0.15) if is_active else UITheme.TEXT_DIM
+	draw_multiline_string(FONT, Vector2(cx + 18.0, by + 74.0),
+			spec, HORIZONTAL_ALIGNMENT_CENTER, CARD_W - 36.0, 14, 2, spec_col)
 
 	# Stats row  (HP / Speed / Damage)
 	var stats: Array = CHAR_STATS.get(char_name, [0, 0, 0])
-	var stats_str: String = "HP %3d    SPD %3d    ATK %2d" % [stats[0], stats[1], stats[2]]
-	var stats_col: Color = Color(0.60, 0.60, 0.72) if is_active else Color(0.32, 0.32, 0.40)
-	draw_string(FONT, Vector2(cx, by + 80.0),
-			stats_str, HORIZONTAL_ALIGNMENT_CENTER, CARD_W, 7, stats_col)
+	var stats_str: String = "HP %d    SPD %d    ATK %d" % [stats[0], stats[1], stats[2]]
+	var stats_col: Color = UITheme.TEXT if is_active else UITheme.TEXT_DIM
+	draw_string(FONT, Vector2(cx, by + 134.0),
+			stats_str, HORIZONTAL_ALIGNMENT_CENTER, CARD_W, 14, stats_col)
 
 	# Divider line
-	var line_col: Color = base.darkened(0.35)
-	line_col.a = 0.35 if is_active else 0.18
-	draw_line(Vector2(cx + 20.0, by + 100.0), Vector2(cx + CARD_W - 20.0, by + 100.0),
+	var line_col: Color = UITheme.GOLD_DIM
+	line_col.a = 0.45 if is_active else 0.20
+	draw_line(Vector2(cx + 24.0, by + 158.0), Vector2(cx + CARD_W - 24.0, by + 158.0),
 			line_col, 1.0)
 
 	# Held items
 	var items: Array = GameManager.inventories.get(char_name.to_lower(), []) as Array
 	if items.is_empty():
-		draw_string(FONT, Vector2(cx, by + 112.0),
-				"no items yet", HORIZONTAL_ALIGNMENT_CENTER, CARD_W, 7,
-				Color(0.30, 0.30, 0.38, 0.6))
+		draw_string(FONT, Vector2(cx, by + 182.0),
+				"no items yet", HORIZONTAL_ALIGNMENT_CENTER, CARD_W, 13,
+				Color(UITheme.TEXT_DIM.r, UITheme.TEXT_DIM.g, UITheme.TEXT_DIM.b, 0.7))
 	else:
 		var item_text: String = str(items.size()) + " item" + ("s" if items.size() > 1 else "") + " in pack"
-		draw_string(FONT, Vector2(cx, by + 112.0),
-				item_text, HORIZONTAL_ALIGNMENT_CENTER, CARD_W, 7,
-				Color(0.80, 0.68, 0.25) if is_active else Color(0.48, 0.40, 0.15))
+		draw_string(FONT, Vector2(cx, by + 182.0),
+				item_text, HORIZONTAL_ALIGNMENT_CENTER, CARD_W, 13,
+				UITheme.GOLD if is_active else UITheme.GOLD_DIM)
 		# Small color pips — one per item, cycling through the character's color
 		var pip_r: float = 4.0
 		var pip_spacing: float = 12.0

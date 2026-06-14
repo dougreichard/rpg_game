@@ -7,6 +7,7 @@ extends CanvasLayer
 @onready var label_a: Label = $Panel/LabelA
 @onready var label_b: Label = $Panel/LabelB
 @onready var bies_label: Label = $Panel/BiasLabel
+@onready var panel: Panel = $Panel
 @onready var duo_panel: Node = $DuoPanel
 @onready var inventory_panel: Node = $InventoryPanel
 @onready var inventory_overlay: Node = $InventoryOverlay
@@ -18,9 +19,17 @@ var _b: Player = null
 func setup(a: Player, b: Player) -> void:
 	_a = a
 	_b = b
-	label_a.add_theme_font_size_override("font_size", 8)
-	label_b.add_theme_font_size_override("font_size", 8)
-	bies_label.add_theme_font_size_override("font_size", 8)
+	# Cozy-warm Synty skin: framed panel, textured bars tinted to each character.
+	panel.theme = UITheme.get_theme()
+	label_a.add_theme_font_size_override("font_size", 11)
+	label_b.add_theme_font_size_override("font_size", 11)
+	bies_label.add_theme_font_size_override("font_size", 11)
+	label_a.add_theme_color_override("font_color", UITheme.TEXT)
+	label_b.add_theme_color_override("font_color", UITheme.TEXT)
+	bies_label.add_theme_color_override("font_color", UITheme.TEXT)
+	bar_a.add_theme_stylebox_override("fill", UITheme.bar_fill_box(a.data.sprite_color))
+	bar_b.add_theme_stylebox_override("fill", UITheme.bar_fill_box(b.data.sprite_color))
+	bies_bar.add_theme_stylebox_override("fill", UITheme.bar_fill_box(UITheme.ACCENT))
 	a.hp_changed.connect(_on_a_hp)
 	b.hp_changed.connect(_on_b_hp)
 	a.bies_charge_changed.connect(_on_bies_charge)

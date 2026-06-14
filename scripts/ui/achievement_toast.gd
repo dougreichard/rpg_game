@@ -11,8 +11,8 @@ const ON_SCREEN_X: float = 1280.0 - PANEL_SIZE.x - MARGIN
 const OFF_SCREEN_X: float = 1280.0 + MARGIN
 const SLIDE_DURATION: float = 0.35
 const HOLD_DURATION: float = 3.0
-const PANEL_COLOR: Color = Color(0.08, 0.07, 0.14, 0.95)
-const BORDER_COLOR: Color = Color(0.55, 0.45, 0.75)
+const PANEL_COLOR: Color = UITheme.PANEL_BG
+const BORDER_COLOR: Color = UITheme.GOLD_DIM
 const TITLE_COLOR: Color = Color(0.95, 0.85, 0.2)
 const NAME_COLOR: Color = Color(0.95, 0.95, 0.95)
 

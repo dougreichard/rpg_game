@@ -259,7 +259,7 @@ func _grid(c: Vector2i) -> Vector2i:
 
 func _ready() -> void:
 	Audio.play_music("overworld")
-	_font = ThemeDB.fallback_font
+	_font = UITheme.font()
 	for i in LOCS.size():
 		var loc: Dictionary = LOCS[i]
 		_id_to_idx[loc["id"]] = i
