@@ -108,9 +108,8 @@ const PLAYER_BILLBOARD_ANIMS: Array = ["idle", "walk_down", "walk_up", "walk_rig
 	"hurt", "down", "revive", "dash", "interact", "doorway"]
 const PLAYER_BOB_AMPLITUDE: float = 2.4
 const PLAYER_BOB_SPEED: float = 13.0
-const PLAYER_SHADOW_OFFSET: Vector2 = Vector2(0.0, 15.0)
-const PLAYER_SHADOW_RADIUS: float = 8.0
-const PLAYER_SHADOW_COLOR: Color = Color(0.0, 0.0, 0.0, 0.24)
+# Feet position relative to the node origin — where footstep/dash dust spawns.
+const PLAYER_FEET_OFFSET: Vector2 = Vector2(0.0, 15.0)
 
 # Per-animation playback speed (fps) and which animations loop. Keyed by the base
 # name (the _down/_up/_right facing suffix is stripped before lookup).
@@ -275,7 +274,7 @@ func _tick_walk(delta: float) -> void:
 	_step_dust_t -= delta
 	if _step_dust_t <= 0.0 and velocity.length() > 8.0:
 		_step_dust_t = STEP_DUST_INTERVAL
-		CombatFX.dust(global_position + PLAYER_SHADOW_OFFSET, 4)
+		CombatFX.dust(global_position + PLAYER_FEET_OFFSET, 4)
 	if Input.is_action_just_pressed(action_prefix + "attack"):
 		_enter_attack()
 	elif Input.is_action_just_pressed(action_prefix + "dash"):
@@ -350,7 +349,7 @@ func _enter_dash() -> void:
 	_iframe_timer = data.dash_iframe_duration
 	Audio.play("dash")
 	GameManager.emit_noise(global_position, DASH_NOISE_RADIUS)
-	CombatFX.dust(global_position + PLAYER_SHADOW_OFFSET, 9, Color(0.82, 0.78, 0.68, 0.4), 1.7)
+	CombatFX.dust(global_position + PLAYER_FEET_OFFSET, 9, Color(0.82, 0.78, 0.68, 0.4), 1.7)
 	_set_state(State.DASH)
 
 func _set_state(new_state: State) -> void:
@@ -463,10 +462,6 @@ func revive() -> void:
 	queue_redraw()
 
 func _draw() -> void:
-	if _is_billboard:
-		draw_set_transform(PLAYER_SHADOW_OFFSET, 0.0, Vector2(1.0, 0.45))
-		draw_circle(Vector2.ZERO, PLAYER_SHADOW_RADIUS, PLAYER_SHADOW_COLOR)
-		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	if _state == State.ATTACK:
 		var half := data.attack_cooldown * 0.5
 		if _attack_timer > half:
