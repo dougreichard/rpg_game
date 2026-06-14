@@ -515,7 +515,7 @@ func _die() -> void:
 		_slam_hitbox.set_deferred("monitoring", false)
 	_play_directional("death")
 	# Juice: dust burst at the feet + a quick squash-pop on the collapse.
-	CombatFX.dust(global_position + Vector2(0.0, 14.0), 9, Color(0.82, 0.78, 0.68, 0.7), 1.5)
+	CombatFX.dust(global_position + Vector2(0.0, 14.0), 9, Color(0.82, 0.78, 0.68, 0.5), 1.5)
 	CombatFX.sparks(global_position, Color(1.0, 0.95, 0.4), 8)
 	var base_scale: Vector2 = sprite.scale
 	var sq := sprite.create_tween()
