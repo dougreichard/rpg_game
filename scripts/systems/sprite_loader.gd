@@ -205,18 +205,21 @@ static var _anim_side_cache: Dictionary = {}
 # assets/art/synty/characters/anim/<key>/ (idle, walk_down/up/right, …). Shared by
 # the in-level Player, the overworld duo, and town NPCs.
 const _ANIM_BILLBOARD_DIR: String = "res://assets/art/synty/characters/anim/"
-const _ANIM_LOOPING: Array = ["idle", "walk", "run", "conduct"]
-const _ANIM_FPS: Dictionary = {"idle": 7.0, "walk": 14.0, "run": 18.0, "conduct": 8.0}
+# Enemies use the same directional-strip layout under their own folder.
+const _ANIM_ENEMY_DIR: String = "res://assets/art/synty/enemies/anim/"
+const _ANIM_LOOPING: Array = ["idle", "walk", "run", "conduct", "chase"]
+const _ANIM_FPS: Dictionary = {"idle": 7.0, "walk": 14.0, "run": 18.0, "conduct": 8.0, "chase": 18.0}
 
 # Builds a directional SpriteFrames from the anim strips for `key`, or null if the
 # dir/strips are absent (caller falls back to a static billboard). Each <anim>.png is
 # a row of square frames (frame side == strip height). anim_frame_side(key) returns
 # that side afterward, for feet-anchored scaling.
-static func try_load_anim_billboard(key: String) -> SpriteFrames:
+static func try_load_anim_billboard(key: String, base_dir: String = _ANIM_BILLBOARD_DIR) -> SpriteFrames:
 	var k: String = key.to_lower()
-	if k in _anim_billboard_cache:
-		return _anim_billboard_cache[k]
-	var dir_path: String = _ANIM_BILLBOARD_DIR + k
+	var ck: String = base_dir + k
+	if ck in _anim_billboard_cache:
+		return _anim_billboard_cache[ck]
+	var dir_path: String = base_dir + k
 	var da: DirAccess = DirAccess.open(dir_path)
 	var sf: SpriteFrames = null
 	if da != null:
@@ -240,15 +243,15 @@ static func try_load_anim_billboard(key: String) -> SpriteFrames:
 				at.atlas = tex
 				at.region = Rect2(c * s, 0, s, s)
 				sf.add_frame(anim, at)
-			_anim_side_cache[k] = s
+			_anim_side_cache[ck] = s
 			any = true
 		if not any:
 			sf = null
-	_anim_billboard_cache[k] = sf
+	_anim_billboard_cache[ck] = sf
 	return sf
 
-static func anim_frame_side(key: String) -> int:
-	return _anim_side_cache.get(key.to_lower(), 0)
+static func anim_frame_side(key: String, base_dir: String = _ANIM_BILLBOARD_DIR) -> int:
+	return _anim_side_cache.get(base_dir + key.to_lower(), 0)
 
 # Consistent on-screen figure height (px) for in-level humanoids. Billboards must
 # scale by the FIGURE height (the non-transparent bbox), not the padded square frame
@@ -259,20 +262,29 @@ static var _fig_metrics: Dictionary = {}  # key -> {h, feet, side}
 
 # Measures the idle frame's figure bbox for `key`: {h: figure px height, feet: y of
 # the bbox bottom in the frame, side: square frame side}. Lazily cached.
-static func anim_figure_metrics(key: String) -> Dictionary:
-	var k: String = key.to_lower()
-	if _fig_metrics.has(k):
-		return _fig_metrics[k]
+static func anim_figure_metrics(key: String, base_dir: String = _ANIM_BILLBOARD_DIR,
+		probe: String = "idle.png") -> Dictionary:
+	var ck: String = base_dir + key.to_lower()
+	if _fig_metrics.has(ck):
+		return _fig_metrics[ck]
 	var m: Dictionary = {"h": 0, "feet": 0, "side": 0}
-	var path: String = _ANIM_BILLBOARD_DIR + k + "/idle.png"
+	var path: String = base_dir + key.to_lower() + "/" + probe
 	if ResourceLoader.exists(path):
 		var img: Image = (load(path) as Texture2D).get_image()
 		var side: int = img.get_height()
 		var frame: Image = img.get_region(Rect2i(0, 0, side, side))
 		var bb: Rect2i = frame.get_used_rect()
 		m = {"h": bb.size.y, "feet": bb.position.y + bb.size.y, "side": side}
-	_fig_metrics[k] = m
+	_fig_metrics[ck] = m
 	return m
+
+# Enemy convenience wrappers — same directional-strip pipeline, enemies/anim/<key>/.
+# Enemies have no idle frame, so the figure metric probes walk_down.png.
+static func try_load_enemy_anim(key: String) -> SpriteFrames:
+	return try_load_anim_billboard(key, _ANIM_ENEMY_DIR)
+
+static func enemy_figure_metrics(key: String) -> Dictionary:
+	return anim_figure_metrics(key, _ANIM_ENEMY_DIR, "walk_down.png")
 
 # Figure bbox metrics for a standalone (already-trimmed) billboard texture.
 static func image_figure_metrics(img: Image) -> Dictionary:

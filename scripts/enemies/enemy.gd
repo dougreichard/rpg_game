@@ -28,6 +28,8 @@ var _home_position: Vector2 = Vector2.ZERO
 var _patrol_target: Vector2 = Vector2.ZERO
 var _patrol_pause_timer: float = 0.0
 var _facing_dir: Vector2 = Vector2.DOWN
+var _animated: bool = false  # true = 8-way directional strips; false = single-pose/PIL (flip)
+var _dying: bool = false
 var _alert_meter: float = 0.0
 var _investigate_target: Vector2 = Vector2.ZERO
 var _investigate_look_timer: float = 0.0
@@ -100,6 +102,40 @@ func _try_synty_billboard() -> bool:
 	sprite.scale = Vector2.ONE * (target_h / float(tex.get_height()))
 	return true
 
+# Scale + vertically center the 8-way animated billboard so the figure sits at the
+# (centered) hurtbox, matching the static path's on-screen size (38 / 46 stocky /
+# 64 boss px). Frames are padded squares with feet bottom-biased, so offset the
+# figure's centre back onto the node origin.
+func _scale_animated() -> void:
+	var m: Dictionary = SpriteLoader.enemy_figure_metrics(data.enemy_name)
+	var fh: float = float(m.get("h", 0))
+	var side: float = float(m.get("side", 0))
+	var feet: float = float(m.get("feet", 0))
+	var target: float = 38.0
+	if data.is_boss:
+		target = 64.0
+	elif data.is_stocky:
+		target = 46.0
+	if fh > 0.0:
+		sprite.scale = Vector2.ONE * (target / fh)
+		sprite.offset = Vector2(0.0, side / 2.0 - (feet - fh / 2.0))
+
+# Plays base+"_"+facing (8-way animated set, no flip), or falls back to the bare
+# name + horizontal flip for the single-pose / PIL sheets.
+func _play_directional(base: String) -> void:
+	if sprite.sprite_frames == null:
+		return
+	if _animated:
+		var anim: String = base + "_" + SpriteLoader.dir_suffix(_facing_dir)
+		if sprite.sprite_frames.has_animation(anim):
+			sprite.flip_h = false
+			if sprite.animation != anim:
+				sprite.play(anim)
+			return
+	sprite.flip_h = _facing_dir.x < 0.0
+	if sprite.sprite_frames.has_animation(base) and sprite.animation != base:
+		sprite.play(base)
+
 func _ready() -> void:
 	assert(data != null, name + " requires an EnemyData resource")
 	hp = data.max_hp
@@ -107,14 +143,22 @@ func _ready() -> void:
 	hitbox.knockback_force = data.knockback_force
 	hitbox.monitoring = false
 	hurtbox.hit.connect(_on_hurtbox_hit)
-	if sprite.sprite_frames == null and not _try_synty_billboard():
-		var loaded: SpriteFrames = SpriteLoader.try_load_enemy(data.enemy_name)
-		if loaded != null:
-			sprite.sprite_frames = loaded
-			sprite.scale = Vector2.ONE * SpriteLoader.ENEMY_SPRITE_SCALE
-		else:
-			sprite.sprite_frames = PlaceholderArt.make_enemy_frames(data.sprite_color, data.enemy_name, data.is_stocky)
-	sprite.play("walk")
+	if sprite.sprite_frames == null:
+		var aset: SpriteFrames = SpriteLoader.try_load_enemy_anim(data.enemy_name)
+		if aset != null:
+			# 8-way animated billboard (grunt/runner/brute/sentry). Boss has no
+			# animated set (it's the non-biped Mech) and falls through to static.
+			sprite.sprite_frames = aset
+			_animated = true
+			_scale_animated()
+		elif not _try_synty_billboard():
+			var loaded: SpriteFrames = SpriteLoader.try_load_enemy(data.enemy_name)
+			if loaded != null:
+				sprite.sprite_frames = loaded
+				sprite.scale = Vector2.ONE * SpriteLoader.ENEMY_SPRITE_SCALE
+			else:
+				sprite.sprite_frames = PlaceholderArt.make_enemy_frames(data.sprite_color, data.enemy_name, data.is_stocky)
+	_play_directional("walk")
 	GameManager.noise_emitted.connect(_on_noise_emitted)
 	GameManager.enemies_calmed.connect(_on_enemies_calmed)
 	_home_position = global_position
@@ -142,6 +186,8 @@ func _build_slam_hitbox() -> void:
 	add_child(_slam_hitbox)
 
 func _physics_process(delta: float) -> void:
+	if _dying:
+		return
 	_tick_timers(delta)
 	match _state:
 		State.PATROL:        _tick_patrol(delta)
@@ -180,8 +226,7 @@ func _walk_toward(point: Vector2) -> bool:
 	var dir: Vector2 = to_point.normalized()
 	_facing_dir = dir
 	velocity = Vector2(dir.x, dir.y * 0.6) * data.move_speed * PATROL_SPEED_SCALE
-	if sprite.sprite_frames != null:
-		sprite.flip_h = dir.x < 0.0
+	_play_directional("walk")  # follow the wander/investigate heading (8-way)
 	move_and_slide()
 	return false
 
@@ -239,6 +284,8 @@ func _tick_investigate(delta: float) -> void:
 	if seen:
 		_investigate_look_timer = INVESTIGATE_LOOK_DURATION
 	if _walk_toward(_investigate_target):
+		# Arrived at the disturbance — stand and look around (alert pose).
+		_play_directional("alert")
 		_investigate_look_timer = maxf(_investigate_look_timer - delta, 0.0)
 		if _investigate_look_timer <= 0.0:
 			_enter_patrol()
@@ -290,13 +337,16 @@ func _tick_chase() -> void:
 		_enter_windup()
 		return
 	var dir: Vector2 = to_target.normalized()
+	_facing_dir = dir
 	velocity = Vector2(dir.x * data.move_speed, dir.y * data.move_speed * 0.6)
-	if sprite.sprite_frames != null:
-		sprite.flip_h = dir.x < 0.0
+	_play_directional("chase")  # re-aim to the new facing each frame
 	move_and_slide()
 
 func _enter_windup() -> void:
 	velocity = Vector2.ZERO
+	var target := _get_target()
+	if target != null:
+		_facing_dir = (target.global_position - global_position).normalized()
 	_windup_timer = data.windup_duration
 	_set_state(State.WINDUP)
 
@@ -379,15 +429,15 @@ func _tick_hit(delta: float) -> void:
 func _set_state(new_state: State) -> void:
 	_state = new_state
 	match _state:
-		State.PATROL:        sprite.play("walk")
-		State.INVESTIGATE:   sprite.play("walk")
-		State.CHASE:         sprite.play("chase")
-		State.WINDUP:        sprite.play("windup")
-		State.STRIKE:        sprite.play("attack")
-		State.RECOVER:       sprite.play("recover")
-		State.HIT:           sprite.play("hurt")
-		State.AOE_TELEGRAPH: sprite.play("windup")
-		State.AOE_SLAM:      sprite.play("attack")
+		State.PATROL:        _play_directional("walk")
+		State.INVESTIGATE:   _play_directional("walk")
+		State.CHASE:         _play_directional("chase")
+		State.WINDUP:        _play_directional("windup")
+		State.STRIKE:        _play_directional("attack")
+		State.RECOVER:       _play_directional("recover")
+		State.HIT:           _play_directional("hurt")
+		State.AOE_TELEGRAPH: _play_directional("windup")
+		State.AOE_SLAM:      _play_directional("attack")
 
 func _draw() -> void:
 	_draw_awareness()
@@ -427,6 +477,8 @@ func _draw_vision_cone(color: Color) -> void:
 	draw_colored_polygon(points, color)
 
 func _on_hurtbox_hit(damage: float, knockback: Vector2) -> void:
+	if _dying:
+		return
 	if _state == State.HIT:
 		_hit_timer = HIT_DURATION
 		return
@@ -434,9 +486,7 @@ func _on_hurtbox_hit(damage: float, knockback: Vector2) -> void:
 	CombatFX.sparks(global_position, Color(1.0, 0.95, 0.4), 10)
 	CombatFX.shake(0.3)
 	if hp == 0.0:
-		Audio.play("defeat")
-		GameManager.enemy_defeated.emit(data.enemy_name, data.is_boss)
-		queue_free()
+		_die()
 		return
 	Audio.play("hit")
 	_flash_white()
@@ -444,6 +494,23 @@ func _on_hurtbox_hit(damage: float, knockback: Vector2) -> void:
 	_knockback = knockback
 	_hit_timer = HIT_DURATION
 	_set_state(State.HIT)
+
+# Defeat: report immediately (score/wave/achievements unaffected), then play a brief
+# death collapse + fade before freeing. Stops acting so it can't be re-hit or move.
+func _die() -> void:
+	_dying = true
+	Audio.play("defeat")
+	GameManager.enemy_defeated.emit(data.enemy_name, data.is_boss)
+	velocity = Vector2.ZERO
+	hitbox.set_deferred("monitoring", false)
+	hurtbox.set_deferred("monitoring", false)
+	if _slam_hitbox != null:
+		_slam_hitbox.set_deferred("monitoring", false)
+	_play_directional("death")
+	var tw := create_tween()
+	tw.tween_interval(0.35)
+	tw.tween_property(sprite, "modulate:a", 0.0, 0.2)
+	tw.tween_callback(queue_free)
 
 func _flash_white() -> void:
 	sprite.modulate = Color(5.0, 5.0, 5.0, 1.0)
