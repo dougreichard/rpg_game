@@ -17,9 +17,12 @@ puzzle-solving with arcade-style beat-em-up combat across 13 distinct locations.
 > 16-bit/8-bit look. Environments, props, town characters and bosses are Synty
 > billboards (`assets/art/synty/…`, baked from the licensed packs staged in
 > git-ignored `synty_source/`). The five leads now use **frame-animated,
-> true-directional Synty billboards** in combat (`assets/art/synty/characters/anim/<key>/`,
-> from the AnimLocomotion pack — see Phase 7 in `docs/synty_2_5d_art_plan.md`);
-> regular enemies remain single-pose billboards. `PlaceholderArt` (programmatic)
+> 8-way true-directional Synty billboards** in combat (`assets/art/synty/characters/anim/<key>/`).
+> The locomotion gait is **fully procedural** (authored arm-swing + hip/knee leg
+> cycle + torso twist in `render_anim_character.py`) — the AnimLocomotion clip pack
+> was tried and dropped (it didn't transfer cleanly). See Phase 7 in
+> `docs/synty_2_5d_art_plan.md`. Regular enemies remain single-pose billboards.
+> `PlaceholderArt` (programmatic)
 > and the older PIL pixel sheets (`assets/art/sprites/…`) remain as fallbacks, not
 > the target style. Earlier `DESIGN.md` / `artwork/` / `gem/` pixel-art docs are legacy.
 

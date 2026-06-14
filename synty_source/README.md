@@ -27,14 +27,12 @@ synty_source/
                        =Quinn options; binary FBX). Props: LegendaryChest/ (fancy
                        loot-box upgrade candidate, fantasy-gold) -- see plan doc.
                      Interiors (cont): CoffeeShop/ (NEW, cafe/lounge)
-                     Animation: AnimLocomotion/ (walk/idle/run; Sidekick + Polygon
-                       rig sets). CityCharacters v2 = modern *Sidekick* rig (binary
-                       FBX, ASCII issue gone) -> use Animations/Sidekick/* for it;
-                       old POLYGON-rig packs -> Animations/Polygon/*.
-                       -- NOTE: even matched, a bone-name CASE mismatch (UpperArm_L
-                       vs upperarm_l) leaves arms at rest; clean anim needs a
-                       case-normalizing retarget + Blender 5.x slotted-action API.
-                       Feasible but a mini-project; static billboards remain chosen.
+                     Animation: AnimLocomotion/ was REMOVED (2026-06-14). The
+                       Synty locomotion clips never transferred cleanly (bone-name
+                       case/hierarchy mismatch left limbs at rest), so the character
+                       walk/run is now FULLY PROCEDURAL (authored in
+                       blender/scripts/render_anim_character.py). Re-download the
+                       pack from Synty only if a clip-based approach is revisited.
                      Refreshed to current versions: CityCharacters v2, Office v4,
                        Adventure v4, SpyKit v4, Knights v3.
                      2D UI: ApocalypseHUD/ (INTERFACE sprite pack — HUD reskin)
