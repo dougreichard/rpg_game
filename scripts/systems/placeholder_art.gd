@@ -375,8 +375,8 @@ static func make_synty_wall_tile(tex_path: String) -> Texture2D:
 # instead of a flat tile (see docs/synty_2_5d_art_plan.md Phase 6a). Adds the two
 # Sprite2Ds as children of `wall_body`; call once per wall in a level's
 # `_build_walls`. The front face is added first so it sits under the top surface.
-const WALL_FACE_HEIGHT: float = 15.0
-const WALL_FACE_SHADE: Color = Color(0.40, 0.40, 0.45)  # shadowed front face
+const WALL_FACE_HEIGHT: float = 42.0
+const WALL_FACE_SHADE: Color = Color(0.62, 0.54, 0.48)  # shadowed front face (warm, keeps wall hue)
 const WALL_TOP_TINT: Color = Color(1.18, 1.18, 1.20)    # lit top surface
 
 # Soft round drop-shadow texture (radial alpha falloff), cached. Pair with a
