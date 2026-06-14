@@ -187,9 +187,10 @@ func _load_animated_frames(dir_path: String) -> bool:
 	_is_animated_billboard = true
 	return true
 
-# Strips the directional facing suffix: "walk_right" -> "walk", "idle" -> "idle".
+# Strips the directional facing suffix: "walk_down_right" -> "walk", "idle" -> "idle".
 func _anim_base(anim: String) -> String:
-	for suffix: String in ["_down", "_up", "_right", "_left"]:
+	for suffix: String in ["_down_right", "_down_left", "_up_right", "_up_left",
+			"_down", "_up", "_right", "_left"]:
 		if anim.ends_with(suffix):
 			return anim.trim_suffix(suffix)
 	return anim
@@ -261,8 +262,7 @@ func _tick_walk(delta: float) -> void:
 		_set_state(State.IDLE)
 		return
 	facing = move.normalized()
-	sprite.flip_h = facing.x < 0.0
-	_play_directional("walk")
+	_play_directional("walk")  # sets flip_h itself (8-way render, or 3+flip fallback)
 	velocity = Vector2(facing.x * data.move_speed, facing.y * data.move_speed * 0.6)
 	move_and_slide()
 	# Tie the step cadence to actual ground speed so the feet don't slide ("skate").
@@ -281,7 +281,7 @@ func _tick_attack() -> void:
 		var move := _get_move()
 		if is_active and move.length_squared() > 0.0:
 			facing = move.normalized()
-			sprite.flip_h = facing.x < 0.0
+			_play_directional("attack")  # re-aim the strip + flip to the new facing
 			hitbox_pivot.position = facing * data.attack_reach
 		hitbox.monitoring = _attack_timer > data.attack_cooldown * 0.5
 	queue_redraw()
@@ -359,18 +359,22 @@ func _set_state(new_state: State) -> void:
 		State.DOWN:   _play_directional("down")
 		State.SPECIAL: _play_directional("special")
 
-# Picks walk_down / walk_up / walk_right (or run_*) based on facing.
-# Flipping for left-facing is handled by sprite.flip_h in _tick_walk.
-# Falls back to `base` if the directional variant is not in the sheet
-# (e.g. PlaceholderArt fallback which only has "walk" / "run").
+# Picks the 8-way directional strip (walk_down_right, attack_left, …) for the
+# animated Synty billboards — a genuine render per facing, no flipping. Falls back
+# to the 3-facing + flip convention for PIL/static sheets, then to bare `base`.
 func _play_directional(base: String) -> void:
-	var anim: String
-	if abs(facing.y) > abs(facing.x):
-		anim = (base + "_down") if facing.y > 0.0 else (base + "_up")
+	var sf: SpriteFrames = sprite.sprite_frames
+	var anim: String = base + "_" + SpriteLoader.dir_suffix(facing)
+	if sf.has_animation(anim):
+		sprite.flip_h = false
 	else:
-		anim = base + "_right"
-	if not sprite.sprite_frames.has_animation(anim):
-		anim = base
+		var fb: Array = SpriteLoader.cardinal_fallback(facing)
+		anim = base + "_" + String(fb[0])
+		if sf.has_animation(anim):
+			sprite.flip_h = bool(fb[1])
+		else:
+			anim = base
+			sprite.flip_h = facing.x < 0.0
 	if sprite.animation != anim:
 		sprite.play(anim)
 

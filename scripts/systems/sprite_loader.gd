@@ -280,10 +280,34 @@ static func image_figure_metrics(img: Image) -> Dictionary:
 	return {"h": bb.size.y, "feet": bb.position.y + bb.size.y, "total": img.get_height()}
 
 static func _anim_base(anim: String) -> String:
-	for suffix: String in ["_down", "_up", "_right", "_left"]:
+	# Compound diagonal suffixes first, so "walk_down_right" -> "walk" (not "walk_down").
+	for suffix: String in ["_down_right", "_down_left", "_up_right", "_up_left",
+			"_down", "_up", "_right", "_left"]:
 		if anim.ends_with(suffix):
 			return anim.trim_suffix(suffix)
 	return anim
+
+# The 8 screen-direction suffixes, indexed by 45° octant of `facing` (screen space:
+# +x = right, +y = down). Shared by every directional-billboard consumer so they all
+# pick the same genuine render — no horizontal flipping (it looks wrong on these
+# asymmetric Synty billboards). Matches the render azimuth map in render_anim_lead.sh.
+const _DIR_SUFFIXES: Array = ["right", "down_right", "down", "down_left",
+	"left", "up_left", "up", "up_right"]
+
+static func dir_suffix(facing: Vector2) -> String:
+	if facing.length_squared() < 0.0001:
+		return "down"
+	var idx: int = int(round(rad_to_deg(atan2(facing.y, facing.x)) / 45.0)) % 8
+	if idx < 0:
+		idx += 8
+	return _DIR_SUFFIXES[idx]
+
+# Nearest cardinal (down/up/right) for the PIL/static fallback sheets that only have
+# 3 facings + horizontal flip. Returns [suffix, flip_h].
+static func cardinal_fallback(facing: Vector2) -> Array:
+	if absf(facing.y) > absf(facing.x):
+		return ["down" if facing.y > 0.0 else "up", false]
+	return ["right", facing.x < 0.0]
 
 # Returns a SpriteFrames built from assets/art/sprites/<character_name>.png,
 # or null if the file is absent (caller should use PlaceholderArt instead).

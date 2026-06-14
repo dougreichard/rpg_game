@@ -87,13 +87,16 @@ func _process(delta: float) -> void:
 		_pick_new_target()
 		return
 	var dir: Vector2 = to_target.normalized()
-	sprite.flip_h = dir.x < 0.0
-	var anim: String = "walk_right"
-	if abs(dir.y) > abs(dir.x):
-		anim = "walk_down" if dir.y > 0.0 else "walk_up"
-	# Animated Synty strips have a walk_up; PIL/static fallbacks don't.
-	if not sprite.sprite_frames.has_animation(anim):
-		anim = "walk_down"
+	# 8-way genuine render per facing (no flipping); PIL/static fall back to 3+flip.
+	var anim: String = "walk_" + SpriteLoader.dir_suffix(dir)
+	if sprite.sprite_frames.has_animation(anim):
+		sprite.flip_h = false
+	else:
+		var fb: Array = SpriteLoader.cardinal_fallback(dir)
+		anim = "walk_" + String(fb[0])
+		if not sprite.sprite_frames.has_animation(anim):
+			anim = "walk_down"
+		sprite.flip_h = bool(fb[1])
 	sprite.play(anim)
 	global_position += dir * WANDER_SPEED * delta
 

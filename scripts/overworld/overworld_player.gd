@@ -90,9 +90,14 @@ func _tick_follow() -> void:
 	move_and_slide()
 
 
+# 8-way: a genuine render per facing (no flipping). Falls back to 3-facing + flip
+# for static/PIL frames that lack the diagonal/left strips.
 func _play_walk() -> void:
-	sprite.flip_h = facing.x < 0.0
-	var anim: String = "walk_right"
-	if abs(facing.y) > abs(facing.x):
-		anim = "walk_down" if facing.y > 0.0 else "walk_up"
+	var anim: String = "walk_" + SpriteLoader.dir_suffix(facing)
+	if sprite.sprite_frames.has_animation(anim):
+		sprite.flip_h = false
+	else:
+		var fb: Array = SpriteLoader.cardinal_fallback(facing)
+		anim = "walk_" + String(fb[0])
+		sprite.flip_h = bool(fb[1])
 	sprite.play(anim)

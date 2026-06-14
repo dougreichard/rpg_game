@@ -714,8 +714,14 @@ func _update_cl_animation() -> void:
 	var anim: String = "idle"
 	if _cl_walking:
 		var d: Vector2 = _cl_target - _choir_leader.position
-		_cl_sprite.flip_h = d.x < 0.0
-		anim = ("walk_down" if d.y > 0.0 else "walk_up") if abs(d.y) > abs(d.x) else "walk_right"
+		# 8-way genuine render per facing (no flipping); fall back to 3+flip.
+		anim = "walk_" + SpriteLoader.dir_suffix(d)
+		if _cl_sprite.sprite_frames.has_animation(anim):
+			_cl_sprite.flip_h = false
+		else:
+			var fb: Array = SpriteLoader.cardinal_fallback(d)
+			anim = "walk_" + String(fb[0])
+			_cl_sprite.flip_h = bool(fb[1])
 	elif is_instance_valid(_choir_leader_bubble) and _choir_leader_bubble.visible:
 		anim = "conduct"
 	if not _cl_sprite.sprite_frames.has_animation(anim):
