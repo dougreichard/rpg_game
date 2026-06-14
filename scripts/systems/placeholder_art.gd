@@ -411,12 +411,16 @@ const NPC_BILLBOARD_ANIMS: Array = ["idle", "idle_alt", "walk_right", "walk_down
 	"walk_up", "talk", "talk_closeup", "talk_pleased", "talk_amused",
 	"talk_annoyed", "relieved", "hand_over_item", "refuse", "step_aside", "wave"]
 
+# `target_h` is ignored — all NPCs render at SpriteLoader.HUMAN_FIGURE_H (a uniform
+# on-screen figure height) so they don't come out different sizes. Kept for the
+# existing call signatures.
 static func apply_npc_billboard(spr: AnimatedSprite2D, key: String, target_h: float = 54.0) -> bool:
 	# Prefer the animated set (idle breathe / walk / conduct). It's authoritative —
 	# any expected NPC anim without its own strip (e.g. talk_*) is aliased to idle so
 	# playback never fails — because mixing animated + static frame sizes in one
 	# SpriteFrames would resize the figure between anims. Falls back to the single
-	# static billboard, else returns false.
+	# static billboard, else returns false. Scaled/feet-anchored by the figure's bbox
+	# (not the padded square) so animated + static NPCs match.
 	var anim: SpriteFrames = SpriteLoader.try_load_anim_billboard(key)
 	if anim != null:
 		if anim.has_animation("idle"):
@@ -427,10 +431,11 @@ static func apply_npc_billboard(spr: AnimatedSprite2D, key: String, target_h: fl
 					for i: int in anim.get_frame_count("idle"):
 						anim.add_frame(a, anim.get_frame_texture("idle", i))
 		spr.sprite_frames = anim
-		var side: int = SpriteLoader.anim_frame_side(key)
-		if side > 0:
-			spr.scale = Vector2.ONE * (target_h / float(side))
-			spr.offset = Vector2(0.0, -float(side) * 0.5)
+		var m: Dictionary = SpriteLoader.anim_figure_metrics(key)
+		var fh: float = float(m.get("h", 0))
+		if fh > 0.0:
+			spr.scale = Vector2.ONE * (SpriteLoader.HUMAN_FIGURE_H / fh)
+			spr.offset = Vector2(0.0, float(m["side"]) * 0.5 - float(m["feet"]))
 		return true
 	var path: String = "res://assets/art/synty/characters/" + key + ".png"
 	if not ResourceLoader.exists(path):
@@ -443,8 +448,11 @@ static func apply_npc_billboard(spr: AnimatedSprite2D, key: String, target_h: fl
 		sf.set_animation_loop(a, true)
 		sf.add_frame(a, tex)
 	spr.sprite_frames = sf
-	spr.offset = Vector2(0.0, -tex.get_height() / 2.0)
-	spr.scale = Vector2.ONE * (target_h / float(tex.get_height()))
+	var fm: Dictionary = SpriteLoader.image_figure_metrics(tex.get_image())
+	var fh2: float = float(fm.get("h", 0))
+	if fh2 > 0.0:
+		spr.scale = Vector2.ONE * (SpriteLoader.HUMAN_FIGURE_H / fh2)
+		spr.offset = Vector2(0.0, float(fm["total"]) * 0.5 - float(fm["feet"]))
 	return true
 
 static func add_mood_light(parent: Node, location_id: String) -> void:

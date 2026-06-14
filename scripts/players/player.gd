@@ -178,7 +178,11 @@ func _load_animated_frames(dir_path: String) -> bool:
 	if not any:
 		return false
 	sprite.sprite_frames = sf
-	sprite.scale = Vector2.ONE * (PLAYER_BILLBOARD_H / scale_h)
+	# Scale by the figure's bbox height (not the padded square side) so the player
+	# matches the NPCs' on-screen height. Stays centered (hurtbox alignment).
+	var m: Dictionary = SpriteLoader.anim_figure_metrics(data.character_name)
+	var fig_h: float = float(m.get("h", 0))
+	sprite.scale = Vector2.ONE * (SpriteLoader.HUMAN_FIGURE_H / fig_h if fig_h > 0.0 else PLAYER_BILLBOARD_H / scale_h)
 	_is_billboard = true
 	_is_animated_billboard = true
 	return true
