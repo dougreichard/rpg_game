@@ -546,6 +546,23 @@ Applies `Engine.time_scale = 0.4` for a brief window. Governs cooldown/charge. E
 Per-character health, active duo display, Bies Mode charge, boss health bar.
 Driven by signals from GameManager / players — never polls node internals.
 
+### UI skin — UITheme + Nunito font (cozy-warm Synty)
+`scripts/ui/ui_theme.gd` (`class_name UITheme`) is the global UI look: a code-built warm
+palette (gold/cream on dark-brown panels) skinned from Synty ApocalypseHUD sprites
+(`assets/art/ui/`, copied by `synty_source/blender/scripts/copy_ui_sprites.sh`). The
+global font is **Nunito SemiBold** (`assets/fonts/Nunito-SemiBold.ttf`, OFL), set via
+`project.godot` `gui/theme/custom_font` — **not** the old PressStart2P pixel font.
+Use these instead of re-deriving styles:
+- Control-based UI: `theme = UITheme.get_theme()` on a root → Buttons/Labels/Panels/
+  ProgressBars restyle. Per-character health bar: `bar.add_theme_stylebox_override("fill", UITheme.bar_fill_box(color))`.
+- `_draw` overlays: `UITheme.panel_box().draw(get_canvas_item(), rect)` for the warm box,
+  `UITheme.draw_frame(self, rect, UITheme.GOLD, "simple"|"med")` for the decorative border.
+- Hand-drawn text: `UITheme.font()` (not `ThemeDB.fallback_font`) so it matches themed Controls.
+- Input prompts: `UITheme.draw_glyph(ci, rect, action, ...)` in `_draw`, or
+  `UITheme.make_glyph_control(action, px)` in the Control tree (key sprite + letter;
+  letter keys F/G/V/B/WASD composite on the blank key, Tab/Enter/arrows are dedicated sprites).
+Palette consts (`GOLD`, `CREAM`, `TEXT`, `ACCENT`, `PANEL_BG`, …) are the single source of UI colour.
+
 ### Co-op revive
 A downed player is revived when their teammate stands within `REVIVE_RADIUS` (48px) for
 `REVIVE_HOLD_DURATION` (1.5s). Revival restores HP to 50% and grants i-frames.

@@ -7,11 +7,11 @@ extends CanvasLayer
 signal closed
 
 const HELP_RECT    := Rect2(40.0, 30.0, 1200.0, 660.0)
-const BORDER_COLOR  : Color = Color(0.55, 0.45, 0.75)
-const TITLE_COLOR   : Color = Color(0.95, 0.85, 0.2)
-const KEY_COLOR     : Color = Color(0.75, 0.70, 1.0)
-const NORMAL_COLOR  : Color = Color(0.72, 0.72, 0.82)
-const HINT_COLOR    : Color = Color(0.45, 0.45, 0.55)
+const BORDER_COLOR  : Color = UITheme.GOLD_DIM
+const TITLE_COLOR   : Color = UITheme.GOLD
+const KEY_COLOR     : Color = UITheme.GOLD
+const NORMAL_COLOR  : Color = UITheme.TEXT
+const HINT_COLOR    : Color = UITheme.TEXT_DIM
 const PAGE_COUNT    : int   = 3
 const ROW_H         : float = 56.0
 const CONTENT_START_Y: float = 130.0
@@ -46,7 +46,7 @@ func _build_ui() -> void:
 	add_child(bg)
 
 	var panel := ColorRect.new()
-	panel.color = Color(0.08, 0.07, 0.14, 0.97)
+	panel.color = UITheme.PANEL_BG
 	panel.position = HELP_RECT.position
 	panel.size = HELP_RECT.size
 	add_child(panel)
@@ -107,35 +107,57 @@ func _add_label(page: int, text: String, x: float, y: float, w: float,
 	_page_nodes[page].append(lbl)
 	return lbl
 
+func _add_glyph(action: String, x: float, y: float, px: float) -> void:
+	var g: Control = UITheme.make_glyph_control(action, px)
+	g.position = Vector2(x, y)
+	g.visible = false
+	add_child(g)
+	_page_nodes[0].append(g)
+
 func _build_page_controls() -> void:
 	var lx: float = HELP_RECT.position.x + 44.0
 	var cw: float = HELP_RECT.size.x - 88.0
-	var key_w: float = 114.0
-	var desc_x: float = lx + key_w + 14.0
-	var desc_w: float = cw - key_w - 14.0
 	var sy: float = HELP_RECT.position.y + SECTION_Y
+	var px: float = 38.0
+	# Right-align the key column so every description starts at the same x, snug
+	# against its glyph(s) — no wide pixel-font-era gap.
+	var key_right: float = lx + 200.0
+	var desc_x: float = key_right + 26.0
+	var desc_w: float = (lx + cw) - desc_x
 
 	_add_label(0, "CONTROLS", lx, sy, cw, 18, TITLE_COLOR)
 
+	# Movement row: a WASD glyph cluster, right-aligned to key_right.
+	var move_y: float = _content_y(0) + (ROW_H - px) * 0.5
+	var ka: Array = ["move_up", "move_left", "move_down", "move_right"]
+	var cluster_w: float = ka.size() * px + (ka.size() - 1) * 6.0
+	var cluster_x: float = key_right - cluster_w
+	for j in ka.size():
+		_add_glyph(ka[j], cluster_x + float(j) * (px + 6.0), move_y, px)
+	_add_label(0, "Move", desc_x, _content_y(0), desc_w, 18, NORMAL_COLOR)
+
+	# Single-key actions: glyph (right-aligned) + description.
 	var rows: Array = [
-		["WASD", "Move"],
-		["F", "Attack"],
-		["V", "Dash  —  brief invincibility frames"],
-		["G", "Special ability  (character-specific)"],
-		["Tab", "Swap the active character"],
-		["B", "Bies Mode  —  bullet-time slowdown"],
-		["", "Stand near a downed teammate to revive them"],
+		["attack", "Attack"],
+		["dash", "Dash  —  brief invincibility frames"],
+		["special", "Special ability  (character-specific)"],
+		["swap", "Swap the active character"],
+		["bies_mode", "Bies Mode  —  bullet-time slowdown"],
 	]
 	for i in rows.size():
-		var y: float = _content_y(i)
-		_add_label(0, rows[i][0], lx, y, key_w, 17, KEY_COLOR)
-		_add_label(0, rows[i][1], desc_x, y, desc_w, 17, NORMAL_COLOR)
+		var row: int = i + 1
+		var y: float = _content_y(row)
+		_add_glyph(rows[i][0], key_right - px, y + (ROW_H - px) * 0.5, px)
+		_add_label(0, rows[i][1], desc_x, y, desc_w, 18, NORMAL_COLOR)
+
+	_add_label(0, "Stand near a downed teammate to revive them",
+		lx, _content_y(rows.size() + 1), cw, 18, NORMAL_COLOR)
 
 func _build_page_characters() -> void:
 	var lx:     float = HELP_RECT.position.x + 44.0
 	var cw:     float = HELP_RECT.size.x - 88.0
-	var name_w: float = 100.0
-	var gap:    float = 28.0
+	var name_w: float = 96.0
+	var gap:    float = 22.0
 	var desc_x: float = lx + name_w + gap
 	var desc_w: float = cw - name_w - gap
 
@@ -150,8 +172,8 @@ func _build_page_characters() -> void:
 	]
 	for i in rows.size():
 		var y: float = _content_y(i)
-		_add_label(1, rows[i][0], lx,     y, name_w, 17, KEY_COLOR)
-		_add_label(1, rows[i][1], desc_x, y, desc_w, 17, NORMAL_COLOR)
+		_add_label(1, rows[i][0], lx,     y, name_w, 18, KEY_COLOR)
+		_add_label(1, rows[i][1], desc_x, y, desc_w, 18, NORMAL_COLOR)
 
 func _build_page_tips() -> void:
 	var lx: float = HELP_RECT.position.x + 44.0
@@ -168,7 +190,7 @@ func _build_page_tips() -> void:
 		"·  You need all five movie tickets to enter the Grand Marquee Cinema.",
 	]
 	for i in tips.size():
-		_add_label(2, tips[i], lx, _content_y(i), cw, 17, NORMAL_COLOR)
+		_add_label(2, tips[i], lx, _content_y(i), cw, 18, NORMAL_COLOR)
 
 # ---------------------------------------------------------------------------
 # Page navigation

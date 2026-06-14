@@ -39,7 +39,7 @@ enabled=PackedStringArray("res://addons/gut/plugin.cfg")
 
 [gui]
 
-theme/custom_font="res://assets/fonts/PressStart2P-Regular.ttf"
+theme/custom_font="res://assets/fonts/Nunito-SemiBold.ttf"
 theme/default_font_size=16
 
 [input]

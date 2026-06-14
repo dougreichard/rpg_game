@@ -16,9 +16,12 @@ const PAD           := Vector2(10.0, 5.0)  # inner horizontal / vertical padding
 const TAIL_H        : float = 8.0           # downward tail height
 const TAIL_W        : float = 10.0          # tail base width
 const FADE_TIME     : float = 0.4           # fade-out window before auto-hide
-const FONT_SIZE     : int   = 13
-const LINE_HEIGHT   : float = 18.0          # px between line baselines
-const MAX_TEXT_WIDTH: float = 160.0         # caps the inner text area width
+const FONT_SIZE     : int   = 14
+const LINE_HEIGHT   : float = 20.0          # px between line baselines
+const MAX_TEXT_WIDTH: float = 240.0         # caps the inner text area width (widened
+                                            # for the proportional Nunito font — 160
+                                            # was tuned for the wide pixel font and
+                                            # forced chatter into tall, narrow strips)
 const BG_COLOR     := Color(0.96, 0.94, 0.88, 0.95)
 const BORDER_COLOR := Color(0.25, 0.20, 0.15, 1.0)
 const TEXT_COLOR   := Color(0.08, 0.05, 0.05, 1.0)
@@ -29,7 +32,7 @@ var _duration: float  = 0.0
 var _elapsed : float  = 0.0
 
 func _ready() -> void:
-	_font   = ThemeDB.fallback_font
+	_font   = UITheme.font()
 	z_index = 5
 	visible = false
 

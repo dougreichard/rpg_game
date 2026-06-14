@@ -25,20 +25,24 @@ signal closed(effects: Array)
 
 const DialogTreeScript: Script = preload("res://scripts/systems/dialog_tree.gd")
 
-const PANEL_RECT := Rect2(160.0, 420.0, 960.0, 180.0)
+# Panel grown + fonts bumped for the proportional Nunito font (the old sizes were
+# tuned for the wide PressStart2P pixel font and read small now). Widened to 1040
+# so the larger body text still gets a generous line length before wrapping.
+const PANEL_RECT := Rect2(120.0, 410.0, 1040.0, 210.0)
 const PANEL_COLOR := Color(0.05, 0.05, 0.09, 0.92)
 const BORDER_COLOR := Color(0.85, 0.78, 0.35, 1.0)
 const NAME_COLOR := Color(1.0, 0.92, 0.4, 1.0)
 const TEXT_COLOR := Color(0.92, 0.92, 0.95, 1.0)
 const PROMPT_COLOR := Color(0.55, 0.55, 0.6, 1.0)
-const PORTRAIT_RADIUS: float = 18.0
-const LINE_HEIGHT: float = 20.0
-const FONT_SIZE: int = 14
-const PROMPT_FONT_SIZE: int = 12
-const TEXT_LEFT_INSET: float = 70.0
-const TEXT_RIGHT_INSET: float = 20.0
-const TEXT_TOP: float = 56.0
-const PROMPT_BOTTOM_MARGIN: float = 16.0
+const PORTRAIT_RADIUS: float = 20.0
+const LINE_HEIGHT: float = 26.0
+const FONT_SIZE: int = 18
+const NAME_FONT_SIZE: int = 22
+const PROMPT_FONT_SIZE: int = 14
+const TEXT_LEFT_INSET: float = 74.0
+const TEXT_RIGHT_INSET: float = 24.0
+const TEXT_TOP: float = 64.0
+const PROMPT_BOTTOM_MARGIN: float = 18.0
 
 # Max wrapped lines shown per "screen" before advance() moves on -- chosen so
 # TEXT_TOP + (MAX_LINES_PER_SCREEN - 1) * LINE_HEIGHT plus a line of text
@@ -66,7 +70,7 @@ var _choice_index: int = 0
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_font = ThemeDB.fallback_font
+	_font = UITheme.font()
 	visible = false
 
 func is_open() -> bool:
@@ -188,15 +192,16 @@ func select_choice() -> void:
 func _draw() -> void:
 	if not visible:
 		return
-	draw_rect(PANEL_RECT, PANEL_COLOR)
-	draw_rect(PANEL_RECT, BORDER_COLOR, false, 2.0)
+	# Cozy-warm Synty skin: filled panel box + decorative gold frame.
+	UITheme.panel_box().draw(get_canvas_item(), PANEL_RECT)
+	UITheme.draw_frame(self, PANEL_RECT, UITheme.GOLD, "simple")
 
 	var portrait_center: Vector2 = PANEL_RECT.position + Vector2(36.0, 36.0)
 	draw_circle(portrait_center, PORTRAIT_RADIUS, _portrait_color)
 	draw_arc(portrait_center, PORTRAIT_RADIUS, 0.0, TAU, 24, BORDER_COLOR, 1.5, true)
 
-	draw_string(_font, PANEL_RECT.position + Vector2(70.0, 28.0), _npc_name,
-			HORIZONTAL_ALIGNMENT_LEFT, -1, 18, NAME_COLOR)
+	draw_string(_font, PANEL_RECT.position + Vector2(74.0, 32.0), _npc_name,
+			HORIZONTAL_ALIGNMENT_LEFT, -1, NAME_FONT_SIZE, NAME_COLOR)
 
 	if _choice_mode:
 		_draw_choices()

@@ -3,14 +3,14 @@ extends Node2D
 const GEAR_COUNT: int = 4
 const MOTE_COUNT: int = 28
 
-const BORDER_COLOR: Color = Color(0.55, 0.45, 0.75)
-const TITLE_COLOR: Color = Color(0.95, 0.85, 0.2)
-const SELECTED_COLOR: Color = Color(0.95, 0.85, 0.2)
-const NORMAL_COLOR: Color = Color(0.72, 0.72, 0.82)
-const DIMMED_COLOR: Color = Color(0.32, 0.32, 0.40)
-const HINT_COLOR: Color = Color(0.45, 0.45, 0.55)
-const SLIDER_COLOR: Color = Color(0.55, 0.45, 0.75)
-const SLIDER_BG_COLOR: Color = Color(0.18, 0.16, 0.28)
+const BORDER_COLOR: Color = UITheme.GOLD_DIM
+const TITLE_COLOR: Color = UITheme.GOLD
+const SELECTED_COLOR: Color = UITheme.ACCENT
+const NORMAL_COLOR: Color = UITheme.TEXT
+const DIMMED_COLOR: Color = Color(0.42, 0.38, 0.32)
+const HINT_COLOR: Color = UITheme.TEXT_DIM
+const SLIDER_COLOR: Color = UITheme.GOLD
+const SLIDER_BG_COLOR: Color = Color(0.18, 0.14, 0.11)
 const OPT_RECT := Rect2(380.0, 180.0, 520.0, 360.0)
 const CONFIRM_RECT := Rect2(440.0, 220.0, 400.0, 280.0)
 const SLOT_RECT := Rect2(390.0, 110.0, 500.0, 500.0)
@@ -126,7 +126,7 @@ func _build_main_ui() -> void:
 	title.size = Vector2(1280.0, 110.0)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_font_size_override("font_size", 80)
-	title.add_theme_color_override("font_color", Color(0.95, 0.85, 0.2))
+	title.add_theme_color_override("font_color", UITheme.GOLD)
 	_menu_canvas.add_child(title)
 
 	var sub := Label.new()
@@ -135,7 +135,7 @@ func _build_main_ui() -> void:
 	sub.size = Vector2(1280.0, 40.0)
 	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	sub.add_theme_font_size_override("font_size", 24)
-	sub.add_theme_color_override("font_color", Color(0.65, 0.6, 0.9))
+	sub.add_theme_color_override("font_color", UITheme.TEXT_DIM)
 	_menu_canvas.add_child(sub)
 
 	# Menu items — left-aligned in a 360px column centered at x=640
@@ -156,7 +156,7 @@ func _build_main_ui() -> void:
 	controls.size = Vector2(1280.0, 28.0)
 	controls.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	controls.add_theme_font_size_override("font_size", 14)
-	controls.add_theme_color_override("font_color", Color(0.30, 0.30, 0.36))
+	controls.add_theme_color_override("font_color", UITheme.TEXT_DIM)
 	_menu_canvas.add_child(controls)
 
 # ---------------------------------------------------------------------------
@@ -175,7 +175,7 @@ func _build_slot_overlay() -> void:
 	_slot_canvas.add_child(bg)
 
 	var panel := ColorRect.new()
-	panel.color = Color(0.08, 0.07, 0.14, 0.97)
+	panel.color = UITheme.PANEL_BG
 	panel.position = SLOT_RECT.position
 	panel.size = SLOT_RECT.size
 	_slot_canvas.add_child(panel)
@@ -248,7 +248,7 @@ func _build_confirm_overlay() -> void:
 	_confirm_canvas.add_child(bg)
 
 	var panel := ColorRect.new()
-	panel.color = Color(0.08, 0.07, 0.14, 0.97)
+	panel.color = UITheme.PANEL_BG
 	panel.position = CONFIRM_RECT.position
 	panel.size = CONFIRM_RECT.size
 	_confirm_canvas.add_child(panel)
@@ -315,7 +315,7 @@ func _build_options_overlay() -> void:
 	_opt_canvas.add_child(bg)
 
 	var panel := ColorRect.new()
-	panel.color = Color(0.08, 0.07, 0.14, 0.97)
+	panel.color = UITheme.PANEL_BG
 	panel.position = OPT_RECT.position
 	panel.size = OPT_RECT.size
 	_opt_canvas.add_child(panel)
@@ -401,14 +401,14 @@ func _process(delta: float) -> void:
 	queue_redraw()
 
 func _draw() -> void:
-	draw_rect(Rect2(0.0, 0.0, 1280.0, 720.0), Color(0.05, 0.04, 0.13))
+	draw_rect(Rect2(0.0, 0.0, 1280.0, 720.0), Color(0.09, 0.07, 0.05))
 	for gear: Dictionary in _gears:
 		_draw_gear(gear["pos"], gear["radius"], gear["teeth"], gear["angle"])
 	for mote: Dictionary in _motes:
-		draw_circle(mote["pos"], mote["size"], Color(0.5, 0.45, 0.75, 0.35))
+		draw_circle(mote["pos"], mote["size"], Color(0.92, 0.78, 0.45, 0.30))
 
 func _draw_gear(center: Vector2, radius: float, teeth: int, angle: float) -> void:
-	var rim_col := Color(0.18, 0.16, 0.3, 0.55)
+	var rim_col := Color(0.32, 0.25, 0.15, 0.55)
 	draw_arc(center, radius, 0.0, TAU, 48, rim_col, 6.0, true)
 	draw_circle(center, radius * 0.22, rim_col)
 	var tooth_len: float = radius * 0.18

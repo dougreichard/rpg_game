@@ -8,13 +8,15 @@ extends CanvasLayer
 const OPTIONS_LEVEL: Array[String] = ["Resume", "Inventory", "Quests", "Achievements", "Options", "How to Play", "Quit to Map", "Quit to Title"]
 const OPTIONS_OVERWORLD: Array[String] = ["Resume", "Inventory", "Quests", "Achievements", "Options", "How to Play", "Quit to Title"]
 const PANEL_RECT := Rect2(440.0, 90.0, 400.0, 540.0)
-const BORDER_COLOR: Color = Color(0.55, 0.45, 0.75)
-const TITLE_COLOR: Color = Color(0.95, 0.85, 0.2)
-const SELECTED_COLOR: Color = Color(0.95, 0.85, 0.2)
-const NORMAL_COLOR: Color = Color(0.72, 0.72, 0.82)
-const HINT_COLOR: Color = Color(0.45, 0.45, 0.55)
-const SLIDER_COLOR: Color = Color(0.55, 0.45, 0.75)
-const SLIDER_BG_COLOR: Color = Color(0.18, 0.16, 0.28)
+# Cozy-warm palette (UITheme) replaces the old cool purple/grey scheme.
+const BORDER_COLOR: Color = UITheme.GOLD_DIM
+const TITLE_COLOR: Color = UITheme.GOLD
+const SELECTED_COLOR: Color = UITheme.ACCENT
+const NORMAL_COLOR: Color = UITheme.TEXT_DIM
+const HINT_COLOR: Color = UITheme.TEXT_DIM
+const SLIDER_COLOR: Color = UITheme.GOLD
+const SLIDER_BG_COLOR: Color = Color(0.18, 0.14, 0.11)
+const PANEL_COLOR: Color = UITheme.PANEL_BG
 
 # Options panel — wider to accommodate sliders
 const OPT_RECT := Rect2(380.0, 180.0, 520.0, 360.0)
@@ -93,7 +95,7 @@ func _build_main_panel() -> void:
 	_main_panel_nodes.append(bg)
 
 	var panel := ColorRect.new()
-	panel.color = Color(0.08, 0.07, 0.14, 0.97)
+	panel.color = PANEL_COLOR
 	panel.position = PANEL_RECT.position
 	panel.size = PANEL_RECT.size
 	add_child(panel)
@@ -153,7 +155,7 @@ func _build_options_panel() -> void:
 	_opt_panel_nodes.append(bg2)
 
 	var panel := ColorRect.new()
-	panel.color = Color(0.08, 0.07, 0.14, 0.97)
+	panel.color = PANEL_COLOR
 	panel.position = OPT_RECT.position
 	panel.size = OPT_RECT.size
 	panel.visible = false

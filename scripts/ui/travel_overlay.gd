@@ -14,7 +14,7 @@ signal location_chosen(loc_id: String)
 signal closed
 
 const PANEL_RECT := Rect2(340.0, 24.0, 600.0, 672.0)
-const BORDER_COLOR: Color = Color(0.55, 0.45, 0.75)
+const BORDER_COLOR: Color = UITheme.GOLD_DIM
 const TITLE_COLOR: Color = Color(0.95, 0.85, 0.2)
 const SELECTED_COLOR: Color = Color(0.95, 0.85, 0.2)
 const NORMAL_COLOR: Color = Color(0.72, 0.72, 0.82)
@@ -58,7 +58,7 @@ func _build_ui() -> void:
 	add_child(bg)
 
 	var panel := ColorRect.new()
-	panel.color = Color(0.08, 0.07, 0.14, 0.97)
+	panel.color = UITheme.PANEL_BG
 	panel.position = PANEL_RECT.position
 	panel.size = PANEL_RECT.size
 	add_child(panel)
