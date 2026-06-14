@@ -15,14 +15,11 @@ const TOWN_ID: String = "town"
 const BUBBLE_DURATION: float = 3.5
 const BUBBLE_OFFSET := Vector2(0.0, -52.0)
 
-# Billboard juice — matches overworld_player: a walk bob + soft ground shadow.
-const BOB_AMPLITUDE: float = 2.4
-const BOB_SPEED: float = 12.0
+# Billboard juice — matches overworld_player: a soft ground shadow. (The walk is
+# frame-animated now, so the old programmatic sine bob was dropped.)
 const SHADOW_OFFSET: Vector2 = Vector2(0.0, 2.0)
 const SHADOW_RADIUS: float = 8.0
 const SHADOW_COLOR: Color = Color(0.0, 0.0, 0.0, 0.24)
-
-var _bob_phase: float = 0.0
 
 var sprite: AnimatedSprite2D
 var npc_name: String = ""
@@ -82,12 +79,10 @@ func _pick_new_target() -> void:
 func _process(delta: float) -> void:
 	if _pause_timer > 0.0:
 		_pause_timer -= delta
-		_ease_bob(delta)
 		return
 	var to_target: Vector2 = _target - global_position
 	if to_target.length() <= ARRIVE_DISTANCE:
 		sprite.play("idle")
-		_ease_bob(delta)
 		_pause_timer = _rng.randf_range(PAUSE_MIN, PAUSE_MAX)
 		_pick_new_target()
 		return
@@ -101,14 +96,6 @@ func _process(delta: float) -> void:
 		anim = "walk_down"
 	sprite.play(anim)
 	global_position += dir * WANDER_SPEED * delta
-	_bob_phase += delta * BOB_SPEED
-	if sprite != null:
-		sprite.position.y = -absf(sin(_bob_phase)) * BOB_AMPLITUDE
-
-
-func _ease_bob(delta: float) -> void:
-	if sprite != null:
-		sprite.position.y = move_toward(sprite.position.y, 0.0, delta * 28.0)
 
 
 func _draw() -> void:
