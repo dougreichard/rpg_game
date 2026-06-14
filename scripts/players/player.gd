@@ -28,10 +28,11 @@ var action_prefix: String = ""
 # Mirrors overworld_player.gd's input_locked guard.
 var input_locked: bool = false
 
-enum State { IDLE, WALK, ATTACK, DASH, HURT, DOWN }
+enum State { IDLE, WALK, ATTACK, DASH, HURT, DOWN, SPECIAL }
 var _state: State = State.IDLE
 
 var _attack_timer: float = 0.0
+var _special_timer: float = 0.0
 var _dash_timer: float = 0.0
 var _hurt_timer: float = 0.0
 var _iframe_timer: float = 0.0
@@ -41,6 +42,7 @@ var _dash_vel: Vector2 = Vector2.ZERO
 var _buffered_action: String = ""
 
 const DASH_DURATION: float = 0.2
+const SPECIAL_DURATION: float = 0.55
 const HURT_DURATION: float = 0.18
 const FLASH_DURATION: float = 0.1
 const KNOCKBACK_FRICTION: float = 800.0
@@ -108,9 +110,11 @@ const PLAYER_SHADOW_COLOR: Color = Color(0.0, 0.0, 0.0, 0.24)
 
 # Per-animation playback speed (fps) and which animations loop. Keyed by the base
 # name (the _down/_up/_right facing suffix is stripped before lookup).
+# fps tuned for the (now richer) frame counts — walk/run are 14-frame cycles, so
+# they need a higher fps to keep the stride brisk rather than slow-motion.
 const ANIM_FPS: Dictionary = {
-	"idle": 6.0, "walk": 10.0, "run": 12.0, "attack": 14.0, "special": 10.0,
-	"hurt": 12.0, "down": 8.0, "dash": 16.0, "revive": 10.0,
+	"idle": 7.0, "walk": 18.0, "run": 24.0, "attack": 16.0, "special": 9.0,
+	"hurt": 13.0, "down": 9.0, "dash": 18.0, "revive": 10.0,
 }
 const ANIM_LOOPING: Array = ["idle", "walk", "run"]
 
@@ -187,13 +191,14 @@ func _anim_base(anim: String) -> String:
 	return anim
 
 func _update_bob(delta: float) -> void:
-	# Real walk frames already convey stride; the synthetic bob is only for the
-	# static single-frame billboard.
-	if _is_animated_billboard:
-		return
+	# A small vertical bounce sells the walk's weight (the in-place clip has little
+	# of its own). Subtler for animated billboards (the legs already stride) than
+	# for the static single-frame fallback. Scales with playback speed so a faster
+	# stride bounces faster.
 	if _state == State.WALK:
-		_bob_phase += delta * PLAYER_BOB_SPEED
-		sprite.position.y = -absf(sin(_bob_phase)) * PLAYER_BOB_AMPLITUDE
+		var amp: float = PLAYER_BOB_AMPLITUDE * (0.55 if _is_animated_billboard else 1.0)
+		_bob_phase += delta * PLAYER_BOB_SPEED * (sprite.speed_scale if _is_animated_billboard else 1.0)
+		sprite.position.y = -absf(sin(_bob_phase)) * amp
 	else:
 		sprite.position.y = move_toward(sprite.position.y, 0.0, delta * 30.0)
 
@@ -217,12 +222,14 @@ func _physics_process(delta: float) -> void:
 		State.DASH:   _tick_dash()
 		State.HURT:   _tick_hurt(delta)
 		State.DOWN:   _tick_down()
+		State.SPECIAL: _tick_special()
 	if _is_billboard:
 		_update_bob(delta)
 
 func _tick_timers(delta: float) -> void:
 	_attack_timer = maxf(_attack_timer - delta, 0.0)
 	_dash_timer   = maxf(_dash_timer   - delta, 0.0)
+	_special_timer = maxf(_special_timer - delta, 0.0)
 	_hurt_timer   = maxf(_hurt_timer   - delta, 0.0)
 	_iframe_timer = maxf(_iframe_timer - delta, 0.0)
 	_flash_timer  = maxf(_flash_timer  - delta, 0.0)
@@ -254,6 +261,9 @@ func _tick_walk(delta: float) -> void:
 	_play_directional("walk")
 	velocity = Vector2(facing.x * data.move_speed, facing.y * data.move_speed * 0.6)
 	move_and_slide()
+	# Tie the step cadence to actual ground speed so the feet don't slide ("skate").
+	if _is_animated_billboard:
+		sprite.speed_scale = clampf(velocity.length() / data.move_speed, 0.7, 1.5)
 	if Input.is_action_just_pressed(action_prefix + "attack"):
 		_enter_attack()
 	elif Input.is_action_just_pressed(action_prefix + "dash"):
@@ -294,6 +304,11 @@ func _tick_down() -> void:
 	velocity = Vector2.ZERO
 	queue_redraw()
 
+func _tick_special() -> void:
+	velocity = Vector2.ZERO
+	if _special_timer == 0.0:
+		_set_state(State.IDLE)
+
 func _enter_attack() -> void:
 	_attack_timer = data.attack_cooldown
 	Audio.play("attack")
@@ -327,6 +342,7 @@ func _enter_dash() -> void:
 
 func _set_state(new_state: State) -> void:
 	_state = new_state
+	sprite.speed_scale = 1.0  # walk re-derives this from velocity each frame
 	# Combat/reaction states use directional strips too when the animated
 	# billboard provides them; _play_directional falls back to the bare name
 	# (single static billboard / PIL sheet) when a facing variant is absent.
@@ -337,6 +353,7 @@ func _set_state(new_state: State) -> void:
 		State.DASH:   _play_directional("dash")
 		State.HURT:   _play_directional("hurt")
 		State.DOWN:   _play_directional("down")
+		State.SPECIAL: _play_directional("special")
 
 # Picks walk_down / walk_up / walk_right (or run_*) based on facing.
 # Flipping for left-facing is handled by sprite.flip_h in _tick_walk.
@@ -358,6 +375,9 @@ func _use_special() -> void:
 	if data.character_name == "Erin":
 		GameManager.calm_enemies(global_position, FAST_TALK_CALM_RADIUS)
 	special_used.emit(data.character_name)
+	# Play the special animation (HA laugh, etc.) so the ability reads on-screen.
+	_special_timer = SPECIAL_DURATION
+	_set_state(State.SPECIAL)
 
 func _get_move() -> Vector2:
 	if not is_active:
