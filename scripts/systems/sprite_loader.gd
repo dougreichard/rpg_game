@@ -387,20 +387,54 @@ static func _npc_anims(key: String) -> Array:
 		"usher":          return NPC_LEVEL_BIPED_ANIMS
 		_:                return NPC_TOWN_ANIMS
 
-# Returns a SpriteFrames for an animal companion, or null if the PNG is absent.
+# Returns a SpriteFrames for an animal companion. Prefers the flat-shaded 2.5D
+# billboard set (assets/art/pets/<key>/down|up|right.png) — a non-retro stopgap;
+# falls back to the legacy PIL pixel sheet. Either way every anim name the companion
+# plays resolves, so the companion scripts need no changes.
+const _PET_BILLBOARD_DIR: String = "res://assets/art/pets/"
+
 static func try_load_companion(companion_name: String) -> SpriteFrames:
 	var key: String = companion_name.to_lower()
 	if key in _companion_cache:
 		return _companion_cache[key]
-	var path: String = "res://assets/art/sprites/%s.png" % key
-	if not ResourceLoader.exists(path):
-		return null
-	var tex: Texture2D = load(path)
-	if tex == null:
-		return null
-	var result: SpriteFrames = _build(tex.get_image(), _companion_anims(key), COMPANION_TILE_SIZE, COMPANION_TILE_SIZE)
+	var result: SpriteFrames = _build_pet_billboard(key)
+	if result == null:
+		var path: String = "res://assets/art/sprites/%s.png" % key
+		if not ResourceLoader.exists(path):
+			return null
+		var tex: Texture2D = load(path)
+		if tex == null:
+			return null
+		result = _build(tex.get_image(), _companion_anims(key), COMPANION_TILE_SIZE, COMPANION_TILE_SIZE)
 	_companion_cache[key] = result
 	return result
+
+# Builds a directional static SpriteFrames from the 3 billboard facings: every anim
+# name in the companion's registry maps to down/up/right by its name (companions
+# already pick down-vs-side by movement and flip_h for left). Null if no billboards.
+static func _build_pet_billboard(key: String) -> SpriteFrames:
+	var base: String = _PET_BILLBOARD_DIR + key + "/"
+	if not ResourceLoader.exists(base + "down.png"):
+		return null
+	var tex_down: Texture2D = load(base + "down.png")
+	var tex_up: Texture2D = load(base + "up.png")
+	var tex_right: Texture2D = load(base + "right.png")
+	if tex_down == null or tex_up == null or tex_right == null:
+		return null
+	var sf := SpriteFrames.new()
+	sf.remove_animation("default")
+	for anim in _companion_anims(key):
+		var nm: String = anim["name"]
+		var tex: Texture2D = tex_right
+		if "down" in nm:
+			tex = tex_down
+		elif "up" in nm:
+			tex = tex_up
+		sf.add_animation(nm)
+		sf.set_animation_loop(nm, anim["loop"])
+		sf.set_animation_speed(nm, anim["fps"])
+		sf.add_frame(nm, tex)
+	return sf
 
 static func _companion_anims(key: String) -> Array:
 	match key:
