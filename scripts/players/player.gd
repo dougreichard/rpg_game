@@ -350,7 +350,7 @@ func _enter_dash() -> void:
 	_iframe_timer = data.dash_iframe_duration
 	Audio.play("dash")
 	GameManager.emit_noise(global_position, DASH_NOISE_RADIUS)
-	CombatFX.dust(global_position + PLAYER_SHADOW_OFFSET, 9, Color(0.82, 0.78, 0.68, 0.5), 1.7)
+	CombatFX.dust(global_position + PLAYER_SHADOW_OFFSET, 9, Color(0.82, 0.78, 0.68, 0.4), 1.7)
 	_set_state(State.DASH)
 
 func _set_state(new_state: State) -> void:

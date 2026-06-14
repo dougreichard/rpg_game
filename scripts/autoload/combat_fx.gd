@@ -40,7 +40,7 @@ func sparks(pos: Vector2, color: Color, count: int = 8) -> void:
 
 # Soft ground puff — footsteps, dash kick-off, landings, death. Low + outward,
 # settles quickly. Warm dust colour by default to match the Synty palette.
-func dust(pos: Vector2, count: int = 5, color: Color = Color(0.82, 0.78, 0.68, 0.42),
+func dust(pos: Vector2, count: int = 5, color: Color = Color(0.82, 0.78, 0.68, 0.3),
 		power: float = 1.0) -> void:
 	var scene := get_tree().current_scene
 	if not is_instance_valid(scene):
