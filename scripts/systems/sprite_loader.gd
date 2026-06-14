@@ -250,6 +250,35 @@ static func try_load_anim_billboard(key: String) -> SpriteFrames:
 static func anim_frame_side(key: String) -> int:
 	return _anim_side_cache.get(key.to_lower(), 0)
 
+# Consistent on-screen figure height (px) for in-level humanoids. Billboards must
+# scale by the FIGURE height (the non-transparent bbox), not the padded square frame
+# side — otherwise animated chars (padded square) and static chars (trimmed) render
+# at different sizes for the same target.
+const HUMAN_FIGURE_H: float = 42.0
+static var _fig_metrics: Dictionary = {}  # key -> {h, feet, side}
+
+# Measures the idle frame's figure bbox for `key`: {h: figure px height, feet: y of
+# the bbox bottom in the frame, side: square frame side}. Lazily cached.
+static func anim_figure_metrics(key: String) -> Dictionary:
+	var k: String = key.to_lower()
+	if _fig_metrics.has(k):
+		return _fig_metrics[k]
+	var m: Dictionary = {"h": 0, "feet": 0, "side": 0}
+	var path: String = _ANIM_BILLBOARD_DIR + k + "/idle.png"
+	if ResourceLoader.exists(path):
+		var img: Image = (load(path) as Texture2D).get_image()
+		var side: int = img.get_height()
+		var frame: Image = img.get_region(Rect2i(0, 0, side, side))
+		var bb: Rect2i = frame.get_used_rect()
+		m = {"h": bb.size.y, "feet": bb.position.y + bb.size.y, "side": side}
+	_fig_metrics[k] = m
+	return m
+
+# Figure bbox metrics for a standalone (already-trimmed) billboard texture.
+static func image_figure_metrics(img: Image) -> Dictionary:
+	var bb: Rect2i = img.get_used_rect()
+	return {"h": bb.size.y, "feet": bb.position.y + bb.size.y, "total": img.get_height()}
+
 static func _anim_base(anim: String) -> String:
 	for suffix: String in ["_down", "_up", "_right", "_left"]:
 		if anim.ends_with(suffix):
