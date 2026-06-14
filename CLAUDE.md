@@ -21,8 +21,10 @@ puzzle-solving with arcade-style beat-em-up combat across 13 distinct locations.
 > The locomotion gait is **fully procedural** (authored arm-swing + hip/knee leg
 > cycle + torso twist in `render_anim_character.py`) — the AnimLocomotion clip pack
 > was tried and dropped (it didn't transfer cleanly). See Phase 7 in
-> `docs/synty_2_5d_art_plan.md`. Regular enemies remain single-pose billboards.
-> `PlaceholderArt` (programmatic)
+> `docs/synty_2_5d_art_plan.md`. Regular enemies (grunt/runner/brute/sentry) are
+> now **8-way animated too** (same procedural pipeline, `assets/art/synty/enemies/anim/<key>/`,
+> Heist + WF meshes); the **boss** stays a single-pose billboard (it's the non-biped
+> Mech vehicle) with its code-driven AOE/windup telegraph. `PlaceholderArt` (programmatic)
 > and the older PIL pixel sheets (`assets/art/sprites/…`) remain as fallbacks, not
 > the target style. Earlier `DESIGN.md` / `artwork/` / `gem/` pixel-art docs are legacy.
 
