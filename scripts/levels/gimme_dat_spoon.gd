@@ -71,6 +71,10 @@ const RECIPIENT_RING_COLOR := Color(0.35, 0.9, 0.85, 1.0)
 const CIRCLE_CENTER := Vector2(420.0, 360.0)
 const CIRCLE_RADIUS := 200.0
 const TOKEN_RADIUS := 50.0
+# Poker-table billboard placement: felt centre as a UV of the 700x900 art, and the
+# on-screen draw width (felt ~ inside the seat ring so players sit at its edge).
+const TABLE_FELT_UV := Vector2(0.503, 0.424)
+const TABLE_DRAW_WIDTH := 600.0
 
 const MIDDLE_PILE_ICON_COLS := 4
 const MIDDLE_PILE_ICON_SPACING := 20.0
@@ -122,7 +126,8 @@ var _font: Font
 var _phase: int = Phase.SELECT_CHARACTER
 var _roster: Array = []  # [{name: String, color: Color}]
 var _portraits: Dictionary = {}  # character name -> SpriteFrames (talk_closeup)
-var _seated: Dictionary = {}  # character name -> {idle/grab/out: Texture2D} seated billboard
+var _seated: Dictionary = {}  # character name -> {idle/grab/out(/_up): Texture2D} seated billboard
+var _table_tex: Texture2D = null  # Casino poker table billboard drawn at the centre
 var _select_cursor: int = 0
 
 var _game = null
@@ -162,6 +167,9 @@ func _ready() -> void:
 		var seated: Dictionary = _load_seated(entry["name"])
 		if not seated.is_empty():
 			_seated[entry["name"]] = seated
+	var table_path: String = "res://assets/art/synty/props/spoon_table.png"
+	if ResourceLoader.exists(table_path):
+		_table_tex = load(table_path)
 	GameManager.spoon_arcade_entered.emit()
 	Audio.play_music("combat")
 	queue_redraw()
@@ -276,8 +284,14 @@ func _load_seated(name: String) -> Dictionary:
 	var key: String = name.to_lower().replace(" ", "_")
 	var base: String = "res://assets/art/synty/characters/anim/" + key + "/"
 	var out: Dictionary = {}
-	for state in {"idle": "spoon_idle", "grab": "spoon_grab", "out": "spoon_out"}:
-		var path: String = base + {"idle": "spoon_idle", "grab": "spoon_grab", "out": "spoon_out"}[state] + ".png"
+	# Front (az225, faces down) + back (az45, faces up) seated billboards, so seats
+	# on the far side of the table can face inward. Keyed idle/grab/out (+ _up).
+	var files: Dictionary = {
+		"idle": "spoon_idle", "grab": "spoon_grab", "out": "spoon_out",
+		"idle_up": "spoon_idle_up", "grab_up": "spoon_grab_up", "out_up": "spoon_out_up",
+	}
+	for state: String in files:
+		var path: String = base + files[state] + ".png"
 		if ResourceLoader.exists(path):
 			out[state] = load(path)
 	return out
@@ -288,21 +302,31 @@ func _load_seated(name: String) -> Dictionary:
 # is a row of square frames; only the first frame is drawn (static seat pose).
 func _draw_seated(token_pos: Vector2, name: String, is_active: bool, alive: bool, modulate: Color) -> void:
 	var seated: Dictionary = _seated[name]
-	var tex: Texture2D = seated.get("idle")
-	if not alive and seated.has("out"):
-		tex = seated["out"]
-	elif is_active and seated.has("grab"):
-		tex = seated["grab"]
+	# Seats below the table centre face up/away (back render); above face down (front).
+	# Flip horizontally on the right side so diagonal seats angle inward.
+	var suffix: String = "_up" if token_pos.y > CIRCLE_CENTER.y else ""
+	var flip: bool = token_pos.x > CIRCLE_CENTER.x
+	var state: String = "out" if not alive else ("grab" if is_active else "idle")
+	var tex: Texture2D = seated.get(state + suffix)
+	if tex == null:
+		tex = seated.get(state)
+	if tex == null:
+		tex = seated.get("idle")
 	if tex == null:
 		return
 	var side: float = float(tex.get_height())
 	var target_h: float = TOKEN_RADIUS * 2.7
-	var scale: float = target_h / side
-	var draw_w: float = side * scale
+	var draw_w: float = target_h  # square frame
+	var src := Rect2(0.0, 0.0, side, side)
 	# Centered horizontally; lifted so the lap/hands sit near the seat center.
-	var top_left: Vector2 = token_pos + Vector2(-draw_w * 0.5, -target_h * 0.62)
-	draw_texture_rect_region(tex, Rect2(top_left, Vector2(draw_w, target_h)),
-		Rect2(0.0, 0.0, side, side), modulate)
+	var rel := Rect2(-draw_w * 0.5, -target_h * 0.62, draw_w, target_h)
+	if flip:
+		# Mirror horizontally around the seat so diagonal seats angle inward.
+		draw_set_transform(token_pos, 0.0, Vector2(-1.0, 1.0))
+		draw_texture_rect_region(tex, rel, src, modulate)
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	else:
+		draw_texture_rect_region(tex, Rect2(token_pos + rel.position, rel.size), src, modulate)
 
 
 func _enqueue_event(event: Dictionary) -> void:
@@ -578,6 +602,14 @@ func _draw_header_panel() -> void:
 
 
 func _draw_player_circle() -> void:
+	# Poker table under the seats; the spoon pile sits on its felt. Anchored by the
+	# felt centre (the table art has the felt high-left and legs sprawling below),
+	# sized so the felt fits inside the seat ring with players around its edge.
+	if _table_tex != null:
+		var tw: float = TABLE_DRAW_WIDTH
+		var th: float = tw * float(_table_tex.get_height()) / float(_table_tex.get_width())
+		var top_left: Vector2 = CIRCLE_CENTER - Vector2(tw * TABLE_FELT_UV.x, th * TABLE_FELT_UV.y)
+		draw_texture_rect(_table_tex, Rect2(top_left, Vector2(tw, th)), false)
 	_draw_middle_pile()
 	for i in _game.players.size():
 		var player: Dictionary = _game.players[i]
