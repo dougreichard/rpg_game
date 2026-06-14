@@ -303,9 +303,13 @@ func _load_seated(name: String) -> Dictionary:
 func _draw_seated(token_pos: Vector2, name: String, is_active: bool, alive: bool, modulate: Color) -> void:
 	var seated: Dictionary = _seated[name]
 	# Seats below the table centre face up/away (back render); above face down (front).
-	# Flip horizontally on the right side so diagonal seats angle inward.
-	var suffix: String = "_up" if token_pos.y > CIRCLE_CENTER.y else ""
+	# Flip horizontally so every seat angles inward toward the table. The back (az45)
+	# render mirrors left/right relative to the front, so the flip is inverted for it.
+	var back: bool = token_pos.y > CIRCLE_CENTER.y
+	var suffix: String = "_up" if back else ""
 	var flip: bool = token_pos.x > CIRCLE_CENTER.x
+	if back:
+		flip = not flip
 	var state: String = "out" if not alive else ("grab" if is_active else "idle")
 	var tex: Texture2D = seated.get(state + suffix)
 	if tex == null:
