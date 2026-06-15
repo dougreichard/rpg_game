@@ -270,6 +270,14 @@ Two diversify this:
 
 Keep the baseline proximity gate as the default; use timing or multi-step only when the location's spec calls for that flavor.
 
+**Lobby convention:** every level's **first room is "the lobby"** — it holds the level's
+dialog NPC and the overworld exit portal, may contain puzzle parts / loot / props, but is
+**combat-free**: spawn **no enemies** there. Combat belongs in the *later* rooms/floors, so
+the player lands in a calm, talk-first space rather than getting jumped on entry. (Already
+applied to the multi-floor levels: Clocktower lobby = Hieronymus only, enemies on floors 2–3;
+Pipe Organ Works lobby = the Workshop with Bellows + the organ, enemies in the Storeroom / Pipe
+Loft. Still-single-room levels inherit this as they're converted to multi-room.)
+
 ---
 
 ### 1. Bellows & Sons Pipe Organ Works — `PipeOrganWorks.tscn`

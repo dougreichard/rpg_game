@@ -134,8 +134,9 @@ func _links() -> void:
 		WOOD.lightened(0.1))
 
 func _spawn_enemies() -> void:
-	spawn_enemy(GRUNT, F1 + Vector3(-2.0, 0.1, -1.0), "res://assets/models/enemies/grunt.glb"); _spawned += 1
-	spawn_enemy(GRUNT, F1 + Vector3(11.0, 0.1, 0.0), "res://assets/models/enemies/grunt.glb"); _spawned += 1
+	# Lobby (the Workshop) is combat-free — all enemies are in the Storeroom / Pipe Loft.
+	spawn_enemy(GRUNT, F1 + Vector3(9.5, 0.1, -2.0), "res://assets/models/enemies/grunt.glb"); _spawned += 1
+	spawn_enemy(GRUNT, F1 + Vector3(12.5, 0.1, 2.0), "res://assets/models/enemies/grunt.glb"); _spawned += 1
 	spawn_enemy(RUNNER, F2 + Vector3(-2.0, 0.1, -10.0), "res://assets/models/enemies/runner.glb"); _spawned += 1
 	spawn_enemy(RUNNER, F2 + Vector3(3.0, 0.1, -13.0), "res://assets/models/enemies/runner.glb"); _spawned += 1
 
