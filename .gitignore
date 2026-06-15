@@ -19,3 +19,4 @@ build/
 synty_source/*
 !synty_source/README.md
 !synty_source/.gdignore
+_arena3d_shot.png
