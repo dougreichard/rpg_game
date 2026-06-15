@@ -444,6 +444,29 @@ func add_exit_portal(pos: Vector3, size: Vector3) -> void:
 	add_child(p)
 	p.call("setup", size)
 
+# A stairwell between floor regions: stepping on it carries the duo to `dest`
+# (the next floor's landing) and reframes the camera. Returns the portal so the
+# level can lock/unlock it (e.g. gate the climb behind a solved puzzle).
+func add_stairwell(pos: Vector3, size: Vector3, dest: Vector3, dist: float, elev: float, locked: bool = false) -> Object:
+	var p: Area3D = Portal3DScript.new()
+	p.set("kind", 2)  # STAIR
+	p.set("dest", dest); p.set("cam_dist", dist); p.set("cam_elev", elev)
+	p.set("locked", locked); p.set("level", self)
+	p.position = pos
+	add_child(p)
+	p.call("setup", size)
+	return p
+
+func teleport_duo(dest: Vector3) -> void:
+	if player != null and player.has_method("teleport_to"):
+		player.teleport_to(dest)
+
+# A short flight of steps (visual cue for a stairwell). Climbs +Z, rising `rise`.
+func stairs_mesh(base: Vector3, col: Color, steps: int = 5, width: float = 3.0, rise: float = 1.2) -> void:
+	for i in steps:
+		var h: float = rise * float(i + 1) / float(steps)
+		add_child(box_mesh(Vector3(width, h, 0.4), col, base + Vector3(0, h * 0.5, -0.4 * float(i))))
+
 func _update_bies_bar(d: float) -> void:
 	if _bies_fill == null or player == null or not player.has_method("bies_charge"):
 		return

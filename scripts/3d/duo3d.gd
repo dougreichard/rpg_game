@@ -150,6 +150,15 @@ func _tick_bies(d: float) -> void:
 func bies_charge() -> float:
 	return bodies[active].bies_charge if not bodies.is_empty() else 0.0
 
+# Carry the whole duo to a new spot (stairwell between floor regions).
+func teleport_to(pos: Vector3) -> void:
+	for i in bodies.size():
+		bodies[i].global_position = pos + Vector3(float(i) * 1.1, 0.0, 0.0)
+	if not bodies.is_empty():
+		global_position = bodies[active].global_position
+		if camera != null:
+			camera.set("global_position", bodies[active].global_position + camera.get("_offset"))
+
 func _p2_pressed() -> bool:
 	for a: String in P2_ACTIONS:
 		if InputMap.has_action(a) and Input.is_action_pressed(a):
