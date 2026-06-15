@@ -12,8 +12,7 @@ const RUNNER := preload("res://data/enemies/runner.tres")
 const BrassPipeItem: ItemData = preload("res://data/items/brass_organ_pipe.tres")
 const TuningKeyItem: ItemData = preload("res://data/items/tuning_key.tres")
 const SpareGearItem: ItemData = preload("res://data/items/spare_clockwork_gear.tres")
-const DialogBoxScript: Script = preload("res://scripts/ui/dialog_box.gd")
-const DialogTreeScript: Script = preload("res://scripts/systems/dialog_tree.gd")
+# DialogBox is provided by Level3D (make_dialog/open_dialog/dialog_input).
 
 const FLOOR_COL := Color(0.30, 0.27, 0.24)
 const WALL_COL := Color(0.40, 0.37, 0.34)
@@ -32,7 +31,6 @@ var _organ_repaired := false
 var _secret_revealed := false
 var _cleared := false
 var _spawned := 0
-var _dialog = null
 var _loot: Array = []          # {pos, item, owner, flag, opened, node, hidden}
 var _secret_wall: Node3D = null
 var _hud_goal: Label = null
@@ -40,6 +38,7 @@ var _hud_hint: Label = null
 var _hud_banner: Label = null
 
 func _build_level() -> void:
+	location_id = LOCATION_ID
 	build_env(Color(0.10, 0.10, 0.12), Color(0.55, 0.50, 0.44), 0.5, 1.0)
 	point_light(Vector3(0, 3.0, -3.0), Color(1.0, 0.85, 0.6), 3.0, 12.0)
 	point_light(Vector3(-6.5, 2.6, 4.0), Color(0.9, 0.85, 0.7), 1.6, 7.0)
@@ -51,8 +50,7 @@ func _build_level() -> void:
 	_loot_crate(SECRET_LOOT_POS, SpareGearItem, "gear_loot_open", true)  # behind the secret wall
 	_lever()
 	_bellows()
-	_dialog = DialogBoxScript.new()
-	var cl := CanvasLayer.new(); cl.add_child(_dialog); add_child(cl)
+	make_dialog()
 	_build_hud()
 	var p := spawn_duo([QUINN, ERIN], Vector3(0.0, 0.1, HALL_D - 1.5))
 	p.special_used.connect(_on_special)
@@ -141,7 +139,7 @@ func _find_anim_in(n: Node) -> AnimationPlayer:
 
 # --- interaction (mirrors the 2D _on_special_used ladder) --------------------
 func _on_special(char_name: String) -> void:
-	if _dialog.is_open():
+	if dialog.is_open():
 		return
 	var pp: Vector3 = player.global_position
 	for crate in _loot:
@@ -215,20 +213,7 @@ func _talk_bellows(char_name: String) -> void:
 			"need_erin": {"lines": ["\"Hmph. I don't hand that key to just anyone. Maybe your sharp-tongued friend can change my mind.\""]},
 		}
 	GameManager.set_level_flag(LOCATION_ID, "manager_met", true)
-	player.set_input_locked(true)
-	if not _dialog.closed.is_connected(_on_dialog_closed):
-		_dialog.closed.connect(_on_dialog_closed)
-	_dialog.open("Mr. Bellows", Color(0.35, 0.4, 0.32), tree, "start", char_name)
-
-func _on_dialog_closed(effects: Array) -> void:
-	player.set_input_locked(false)
-	for e in effects:
-		if e is Dictionary:
-			if e.has("grant_items"):
-				for id in e["grant_items"]:
-					GameManager.grant_item("Quinn", id)
-			if e.has("set_flag"):
-				GameManager.set_level_flag(LOCATION_ID, e["set_flag"], e.get("flag_value", true))
+	open_dialog("Mr. Bellows", Color(0.35, 0.4, 0.32), tree, char_name)
 
 # --- HUD + win ---------------------------------------------------------------
 func _build_hud() -> void:
@@ -252,16 +237,7 @@ func _label(cl: CanvasLayer, y: float, align: int, size: int) -> Label:
 	return l
 
 func _unhandled_input(_e: InputEvent) -> void:
-	if _dialog != null and _dialog.is_open():
-		if Input.is_action_just_pressed("ui_accept"):
-			if _dialog.is_choice_mode():
-				_dialog.select_choice()
-			else:
-				_dialog.advance()
-		elif Input.is_action_just_pressed("ui_up"):
-			_dialog.move_choice_cursor(-1)
-		elif Input.is_action_just_pressed("ui_down"):
-			_dialog.move_choice_cursor(1)
+	dialog_input()
 
 func _process(_d: float) -> void:
 	super._process(_d)

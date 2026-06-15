@@ -7,7 +7,7 @@ extends Level3D
 const LOCATION_ID := "old_parish_church"
 const QUINN := preload("res://data/characters/quinn.tres")
 const ERIN := preload("res://data/characters/erin.tres")
-const DialogBoxScript: Script = preload("res://scripts/ui/dialog_box.gd")
+# DialogBox is provided by Level3D (make_dialog/open_dialog/dialog_input).
 
 const STONE := Color(0.52, 0.50, 0.47)
 const FLOOR_COL := Color(0.40, 0.35, 0.30)
@@ -70,7 +70,6 @@ const CL_QUIPS := ["Hands. Pockets. OUT. Am I clear?", "I can see you from here.
 	"Eyes forward! This is a house of worship!", "I said OUT of your pockets, not into mine.",
 	"Hands out of your pockets!"]
 
-var _dialog = null
 var _secret_revealed := false
 var _cleared := false
 var _secret_wall: Node3D = null
@@ -87,6 +86,7 @@ var _cl_yell: float = 6.0
 var _cl_bubble_t: float = 0.0
 
 func _build_level() -> void:
+	location_id = LOCATION_ID
 	build_env(Color(0.06, 0.06, 0.09), Color(0.5, 0.46, 0.42), 0.55, 0.8)
 	point_light(Vector3(0, 3.0, -6.0), Color(1.0, 0.85, 0.55), 2.5, 9.0)        # altar
 	point_light(Vector3(-HALF_W + 0.5, 2.6, -2.0), Color(0.5, 0.6, 1.0), 1.6, 6.0)  # stained glass
@@ -94,8 +94,7 @@ func _build_level() -> void:
 	floor_box(HALF_W * 2.0 + 1.0, HALF_D * 2.0 + 1.0, FLOOR_COL)
 	_walls()
 	_furnish()
-	_dialog = DialogBoxScript.new()
-	var cl := CanvasLayer.new(); cl.add_child(_dialog); add_child(cl)
+	make_dialog()
 	_build_hud()
 	_aldric()
 	for id: String in CONGREGATION:
@@ -217,7 +216,7 @@ func _congregant(id: String) -> void:
 
 # --- interaction -------------------------------------------------------------
 func _on_special(char_name: String) -> void:
-	if _dialog.is_open():
+	if dialog.is_open():
 		return
 	var pp: Vector3 = player.global_position
 	if char_name == "Quinn" and not _secret_revealed and _near(pp, LEVER_POS):
@@ -231,7 +230,7 @@ func _on_special(char_name: String) -> void:
 	for id: String in RED_HERRINGS:
 		var r: Dictionary = RED_HERRINGS[id]
 		if _near(pp, r["pos"]):
-			_open_dialog(r["name"], Color(0.5, 0.5, 0.55), {"start": {"lines": r["lines"]}}, char_name); return
+			open_dialog(r["name"], Color(0.5, 0.5, 0.55), {"start": {"lines": r["lines"]}}, char_name); return
 
 func _near(a: Vector3, b: Vector3) -> bool:
 	return Vector2(a.x - b.x, a.z - b.z).length() < REACH
@@ -247,7 +246,7 @@ func _talk_congregant(id: String, char_name: String) -> void:
 		GameManager.set_level_flag(LOCATION_ID, d["flag"], true)
 	else:
 		lines = d["hint"]   # wrong character — breadcrumb toward another NPC
-	_open_dialog(d["name"], Color(0.5, 0.5, 0.55), {"start": {"lines": lines}}, char_name)
+	open_dialog(d["name"], Color(0.5, 0.5, 0.55), {"start": {"lines": lines}}, char_name)
 
 func _talk_aldric(char_name: String) -> void:
 	var tree := {
@@ -263,19 +262,7 @@ func _talk_aldric(char_name: String) -> void:
 			"effects": {"set_flag": "father_aldric_impression", "flag_value": "cool"}},
 	}
 	GameManager.set_level_flag(LOCATION_ID, "manager_met", true)
-	_open_dialog("Father Aldric", Color(0.55, 0.5, 0.42), tree, char_name)
-
-func _open_dialog(npc: String, col: Color, tree: Dictionary, char_name: String) -> void:
-	player.set_input_locked(true)
-	if not _dialog.closed.is_connected(_on_dialog_closed):
-		_dialog.closed.connect(_on_dialog_closed)
-	_dialog.open(npc, col, tree, "start", char_name)
-
-func _on_dialog_closed(effects: Array) -> void:
-	player.set_input_locked(false)
-	for e in effects:
-		if e is Dictionary and e.has("set_flag"):
-			GameManager.set_level_flag(LOCATION_ID, e["set_flag"], e.get("flag_value", true))
+	open_dialog("Father Aldric", Color(0.55, 0.5, 0.42), tree, char_name)
 
 func _reveal_secret() -> void:
 	_secret_revealed = true
@@ -330,13 +317,4 @@ func _process(_d: float) -> void:
 		Audio.play("puzzle_complete")
 
 func _unhandled_input(_e: InputEvent) -> void:
-	if _dialog != null and _dialog.is_open():
-		if Input.is_action_just_pressed("ui_accept"):
-			if _dialog.is_choice_mode():
-				_dialog.select_choice()
-			else:
-				_dialog.advance()
-		elif Input.is_action_just_pressed("ui_up"):
-			_dialog.move_choice_cursor(-1)
-		elif Input.is_action_just_pressed("ui_down"):
-			_dialog.move_choice_cursor(1)
+	dialog_input()
