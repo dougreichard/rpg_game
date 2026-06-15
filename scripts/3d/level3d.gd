@@ -236,6 +236,14 @@ func spawn_npc(key: String, pos: Vector3, yaw: float = PI, quips: Array = [], wa
 	add_child(n)
 	return n
 
+# A stealth concealment volume — players inside it can't be seen by enemies.
+func add_hiding_spot(pos: Vector3) -> Node3D:
+	var h := Area3D.new()
+	h.set_script(load("res://scripts/3d/hiding_spot3d.gd"))
+	h.position = pos
+	add_child(h)
+	return h
+
 func enemies_alive() -> int:
 	var n := 0
 	for c in get_children():

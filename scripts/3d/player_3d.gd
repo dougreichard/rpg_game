@@ -152,27 +152,30 @@ func _physics_process(delta: float) -> void:
 func _summon_companion() -> void:
 	if _companion_cd > 0.0:
 		return
-	var enemy := _nearest_enemy()
-	if enemy == null:
+	var targets := _nearest_enemies(2)
+	if targets.is_empty():
 		return
 	_companion_cd = COMPANION_CD * GameManager.companion_cooldown_scale()
-	var comp: Node3D = CompanionScript.new()
-	comp.position = global_position
-	get_parent().add_child(comp)
-	comp.call("setup", self, enemy, Color(0.96, 0.96, 0.96))
+	# One dog per nearby threat, up to two — reads as Frosty alone, or the
+	# Calvin & Coolidge pair when there are two enemies to charge.
+	var offs := [Vector3(-0.4, 0, 0), Vector3(0.4, 0, 0)]
+	for i in targets.size():
+		var comp: Node3D = CompanionScript.new()
+		comp.position = global_position + offs[i]
+		get_parent().add_child(comp)
+		comp.call("setup", self, targets[i], Color(0.96, 0.96, 0.96))
 	GameManager.companion_summoned.emit("frosty")
+	if targets.size() > 1:
+		GameManager.companion_summoned.emit("calvin_coolidge")
 	Audio.play("special")
 
-func _nearest_enemy() -> Node3D:
-	var best: Node3D = null
-	var best_d := COMPANION_RANGE
+func _nearest_enemies(n: int) -> Array:
+	var es: Array = []
 	for e in get_tree().get_nodes_in_group("enemy3d"):
-		if not is_instance_valid(e):
-			continue
-		var dist: float = global_position.distance_to((e as Node3D).global_position)
-		if dist < best_d:
-			best_d = dist; best = e
-	return best
+		if is_instance_valid(e) and global_position.distance_to((e as Node3D).global_position) < COMPANION_RANGE:
+			es.append(e)
+	es.sort_custom(func(a, b): return global_position.distance_to(a.global_position) < global_position.distance_to(b.global_position))
+	return es.slice(0, n)
 
 func _attack() -> void:
 	_attack_cd = data.attack_cooldown if data != null else 0.5

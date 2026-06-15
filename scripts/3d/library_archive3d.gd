@@ -43,6 +43,7 @@ func _build_level() -> void:
 	_checkpoint_desk()
 	_stacks()
 	_terminal()
+	add_hiding_spot(Vector3(-5.0, 0, -3.0))   # between the stacks
 	make_dialog()
 	_build_hud()
 	_priswick = spawn_npc("congregant_f", PRISWICK_POS, PI)

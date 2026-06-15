@@ -50,6 +50,7 @@ func _build_level() -> void:
 	_glitch()
 	_console()
 	_aria()
+	add_hiding_spot(Vector3(-6.5, 0, 3.0))   # unlit boot-chamber corner
 	make_dialog()
 	_build_hud()
 	var p := spawn_duo([QUINN, ETHAN], Vector3(0.0, 0.1, HALF_D - 1.5))

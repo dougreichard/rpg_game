@@ -45,6 +45,7 @@ func _build_level() -> void:
 	_rubble_pile()
 	_hatch()
 	_lantern_pickup()
+	add_hiding_spot(Vector3(-6.5, 0, 4.5))   # dark alcove to slip the patrol
 	make_dialog()
 	_build_hud()
 	_cyrus = spawn_npc("bellows", CYRUS_POS, PI)
