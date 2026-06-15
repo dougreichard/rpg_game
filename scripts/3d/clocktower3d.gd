@@ -1,25 +1,42 @@
 extends Level3D
-## The Clocktower (3D) — Quinn + Ben enter the tower interior. A clockwork-guardian
-## Boss and grunts guard the works. Quinn repairs the great gear escapement (it
-## starts turning); Ben plays the correct belfry bell sequence (the bells glow and
-## ring). Clear all three to unlock the tower. Hieronymus theorises from the landing.
-## Boss = a large, dark clockwork grunt (AOE telegraph TODO; uses windup red flash).
+## The Clocktower (3D) — first MULTI-PHASE level (dungeon-crawl prototype).
+## Rooms laid out north along -Z, connected by corridors, with room-aware camera
+## framing on portals and a lobby exit portal:
+##   Lobby (Hieronymus — dialog) → Gear Hall (Quinn repairs the gear + grunts —
+##   puzzle + combat) → [gate opens once the gear turns] → Belfry (Ben rings the
+##   bells + the clockwork Boss — puzzle + combat). Optional Crawlspace off the
+##   Gear Hall (loot). Win = all enemies down + gear repaired + bells played.
 
 const QUINN := preload("res://data/characters/quinn.tres")
 const BEN := preload("res://data/characters/ben.tres")
 const GRUNT := preload("res://data/enemies/grunt.tres")
 const BOSS := preload("res://data/enemies/boss.tres")
+const SpareGearItem: ItemData = preload("res://data/items/spare_clockwork_gear.tres")
 
 const FLOOR_COL := Color(0.24, 0.20, 0.16)
 const WALL_COL := Color(0.33, 0.28, 0.22)
+const COR_COL := Color(0.20, 0.17, 0.14)
 const BRASS := Color(0.72, 0.6, 0.32)
-const HALF_W := 7.5
-const HALF_D := 8.5
-const WALL_H := 4.0
-const GEAR_POS := Vector3(-3.0, 0.0, -2.0)
-const BELLS_POS := Vector3(3.6, 0.0, -HALF_D + 1.4)
-const HIERO_POS := Vector3(-HALF_W + 1.6, 0.0, 4.5)
+
+# Room centres (climbing north along -Z)
+const LOBBY := Vector3(0, 0, 0)
+const COR1 := Vector3(0, 0, -9.5)
+const GEAR := Vector3(0, 0, -20.0)
+const CRAWL := Vector3(10.0, 0, -20.0)
+const COR2 := Vector3(0, 0, -31.5)
+const BELFRY := Vector3(0, 0, -45.0)
+
+const HIERO_POS := Vector3(-2.5, 0, -1.5)
+const GEAR_POS := Vector3(-3.0, 0, -20.0)
+const LOOT_POS := Vector3(10.0, 0, -20.0)
+const BELLS_POS := Vector3(3.0, 0, -50.0)
+const GATE_POS := Vector3(0, 0, -31.0)
 const REACH := 2.2
+
+# camera framing per room (dist, elev)
+const F_LOBBY := Vector2(7.5, 50.0)
+const F_GEAR := Vector2(9.5, 52.0)
+const F_BELFRY := Vector2(13.0, 55.0)
 
 var _cleared := false
 var _enemies_cleared := false
@@ -29,50 +46,66 @@ var _spawned := 0
 var _hiero = null
 var _gear: Node3D = null
 var _bells: Array = []
+var _gate: Node3D = null
+var _loot_open := false
+var _loot_box: Node3D = null
 var _hud_goal: Label = null
 var _hud_hint: Label = null
 var _hud_banner: Label = null
 
 func _build_level() -> void:
 	location_id = "clocktower"
-	build_env(Color(0.06, 0.05, 0.05), Color(0.5, 0.42, 0.32), 0.5, 0.95)
-	point_light(Vector3(0, 3.6, 0), Color(1.0, 0.8, 0.5), 2.6, 16.0)
-	point_light(BELLS_POS + Vector3(0, 3.0, 0), Color(1.0, 0.9, 0.6), 1.6, 6.0)
-	floor_box(HALF_W * 2.0 + 1.0, HALF_D * 2.0 + 1.0, FLOOR_COL)
-	_walls()
+	multi_room = true
+	build_env(Color(0.05, 0.04, 0.04), Color(0.5, 0.42, 0.32), 0.5, 0.9)
+	_build_rooms()
+	_lights()
 	_gear_mechanism()
 	_bell_rack()
-	_pendulum()
+	_loot_crate()
+	_gate_door()
 	make_dialog()
 	_build_hud()
-	_hiero = spawn_npc("aldric", HIERO_POS, deg_to_rad(80))   # robed theorist mesh
-	var p := spawn_duo([QUINN, BEN], Vector3(0.0, 0.1, HALF_D - 1.5))
+	_hiero = spawn_npc("aldric", HIERO_POS, deg_to_rad(180))
+	var p := spawn_duo([QUINN, BEN], LOBBY + Vector3(0, 0.1, 3.0))
 	p.special_used.connect(_on_special)
+	reframe_camera(F_LOBBY.x, F_LOBBY.y)
 	_spawn_enemies()
 	_restore()
 
-func _walls() -> void:
-	wall(Vector3(0, WALL_H * 0.5, -HALF_D), Vector3(HALF_W * 2.0, WALL_H, 0.4), WALL_COL)
-	wall(Vector3(-HALF_W, WALL_H * 0.5, 0), Vector3(0.4, WALL_H, HALF_D * 2.0), WALL_COL)
-	wall(Vector3(HALF_W, WALL_H * 0.5, 0), Vector3(0.4, WALL_H, HALF_D * 2.0), WALL_COL)
-	wall(Vector3(-HALF_W + 2.5, WALL_H * 0.5, HALF_D), Vector3(5.0, WALL_H, 0.4), WALL_COL)
-	wall(Vector3(HALF_W - 2.5, WALL_H * 0.5, HALF_D), Vector3(5.0, WALL_H, 0.4), WALL_COL)
-	# a giant clock-face disc on the back wall
+func _build_rooms() -> void:
+	room(LOBBY, 12, 10, FLOOR_COL, WALL_COL, 3.4, ["n", "s"])
+	room(COR1, 4, 9, COR_COL, WALL_COL, 3.0, ["n", "s"])
+	room(GEAR, 14, 12, FLOOR_COL, WALL_COL, 3.6, ["s", "n", "e"])
+	room(CRAWL, 6, 6, COR_COL, WALL_COL, 2.6, ["w"])
+	room(COR2, 4, 11, COR_COL, WALL_COL, 3.0, ["n", "s"])
+	room(BELFRY, 16, 16, FLOOR_COL, WALL_COL, 4.2, ["s"])
+	# clock-face disc on the belfry back wall
 	var face := MeshInstance3D.new()
-	var cm := CylinderMesh.new(); cm.top_radius = 2.4; cm.bottom_radius = 2.4; cm.height = 0.2
-	var mat := StandardMaterial3D.new(); mat.albedo_color = Color(0.85, 0.8, 0.65); mat.emission_enabled = true; mat.emission = Color(0.4, 0.35, 0.2); mat.emission_energy_multiplier = 0.4
+	var cm := CylinderMesh.new(); cm.top_radius = 2.6; cm.bottom_radius = 2.6; cm.height = 0.2
+	var mat := StandardMaterial3D.new(); mat.albedo_color = Color(0.85, 0.8, 0.65)
+	mat.emission_enabled = true; mat.emission = Color(0.4, 0.35, 0.2); mat.emission_energy_multiplier = 0.4
 	cm.material = mat; face.mesh = cm
-	face.rotation.x = deg_to_rad(90); face.position = Vector3(-3.0, 2.6, -HALF_D + 0.3)
+	face.rotation.x = deg_to_rad(90); face.position = BELFRY + Vector3(0, 2.8, -7.6)
 	add_child(face)
+	# portals: exit at the lobby door, reframe on entering each main room
+	add_exit_portal(LOBBY + Vector3(0, 0, 5.0), Vector3(3, 3, 1.4))
+	add_room_portal(LOBBY + Vector3(0, 0, -4.5), Vector3(4, 3, 1.0), F_LOBBY.x, F_LOBBY.y)
+	add_room_portal(GEAR + Vector3(0, 0, 5.5), Vector3(4, 3, 1.0), F_GEAR.x, F_GEAR.y)
+	add_room_portal(BELFRY + Vector3(0, 0, 7.5), Vector3(4, 3, 1.0), F_BELFRY.x, F_BELFRY.y)
+
+func _lights() -> void:
+	point_light(LOBBY + Vector3(0, 3.0, 0), Color(1.0, 0.85, 0.6), 2.2, 9.0)
+	point_light(GEAR + Vector3(0, 3.2, 0), Color(1.0, 0.8, 0.5), 2.6, 11.0)
+	point_light(BELFRY + Vector3(0, 3.8, 0), Color(1.0, 0.8, 0.5), 2.8, 16.0)
+	point_light(BELLS_POS + Vector3(0, 2.5, 0), Color(1.0, 0.9, 0.6), 1.6, 6.0)
+	point_light(CRAWL + Vector3(0, 2.0, 0), Color(0.7, 0.8, 1.0), 1.2, 5.0)
 
 func _gear_mechanism() -> void:
 	_gear = _make_gear(0.9, 16, BRASS)
-	_gear.position = GEAR_POS + Vector3(0, 0.6, 0)
-	_gear.rotation.x = deg_to_rad(90)
+	_gear.position = GEAR_POS + Vector3(0, 0.6, 0); _gear.rotation.x = deg_to_rad(90)
 	add_child(_gear)
 	var g2 := _make_gear(0.55, 12, Color(0.55, 0.45, 0.28))
-	g2.position = GEAR_POS + Vector3(1.3, 0.4, 0.2)
-	g2.rotation.x = deg_to_rad(90)
+	g2.position = GEAR_POS + Vector3(1.3, 0.4, 0.2); g2.rotation.x = deg_to_rad(90)
 	add_child(g2)
 
 func _make_gear(radius: float, teeth: int, col: Color) -> Node3D:
@@ -80,47 +113,52 @@ func _make_gear(radius: float, teeth: int, col: Color) -> Node3D:
 	var disc := MeshInstance3D.new()
 	var cm := CylinderMesh.new(); cm.top_radius = radius; cm.bottom_radius = radius; cm.height = 0.2
 	var mat := StandardMaterial3D.new(); mat.albedo_color = col; mat.metallic = 0.6; mat.roughness = 0.4
-	cm.material = mat; disc.mesh = cm
-	root.add_child(disc)
+	cm.material = mat; disc.mesh = cm; root.add_child(disc)
 	for i: int in range(teeth):
 		var a: float = TAU * float(i) / float(teeth)
-		var tooth := box_mesh(Vector3(0.16, 0.22, 0.2), col, Vector3(cos(a) * radius, 0, sin(a) * radius))
-		root.add_child(tooth)
+		root.add_child(box_mesh(Vector3(0.16, 0.22, 0.2), col, Vector3(cos(a) * radius, 0, sin(a) * radius)))
 	return root
 
 func _bell_rack() -> void:
-	# support beam
 	add_child(box_mesh(Vector3(3.2, 0.18, 0.18), Color(0.3, 0.22, 0.14), BELLS_POS + Vector3(0, 2.8, 0)))
 	for i: int in range(4):
 		var x: float = -1.1 + float(i) * 0.75
 		var bell := MeshInstance3D.new()
 		var cm := CylinderMesh.new(); cm.top_radius = 0.05; cm.bottom_radius = 0.32; cm.height = 0.6
 		var mat := StandardMaterial3D.new(); mat.albedo_color = BRASS.darkened(0.15); mat.metallic = 0.7; mat.roughness = 0.35
-		cm.material = mat; bell.mesh = cm
-		bell.position = BELLS_POS + Vector3(x, 2.2, 0)
-		add_child(bell)
-		_bells.append(bell)
+		cm.material = mat; bell.mesh = cm; bell.position = BELLS_POS + Vector3(x, 2.2, 0)
+		add_child(bell); _bells.append(bell)
 
-func _pendulum() -> void:
-	add_child(box_mesh(Vector3(0.08, 3.0, 0.08), Color(0.3, 0.25, 0.16), Vector3(3.0, 1.8, -2.0)))
-	var bob := MeshInstance3D.new()
-	var cm := CylinderMesh.new(); cm.top_radius = 0.4; cm.bottom_radius = 0.4; cm.height = 0.1
-	var mat := StandardMaterial3D.new(); mat.albedo_color = BRASS; mat.metallic = 0.7
-	cm.material = mat; bob.mesh = cm; bob.rotation.x = deg_to_rad(90); bob.position = Vector3(3.0, 0.5, -2.0)
-	add_child(bob)
+func _loot_crate() -> void:
+	_loot_box = box_mesh(Vector3(0.7, 0.7, 0.7), Color(0.45, 0.32, 0.18), LOOT_POS + Vector3(0, 0.35, 0))
+	add_child(_loot_box)
+
+func _gate_door() -> void:
+	_gate = StaticBody3D.new()
+	(_gate as StaticBody3D).collision_layer = Combat3D.L_WORLD
+	var cs := CollisionShape3D.new(); var bs := BoxShape3D.new()
+	bs.size = Vector3(4.0, 3.0, 0.4); cs.shape = bs; cs.position = Vector3(0, 1.5, 0)
+	_gate.add_child(cs)
+	_gate.add_child(box_mesh(Vector3(4.0, 3.0, 0.4), Color(0.5, 0.3, 0.15), Vector3(0, 1.5, 0)))
+	# brass bars on the gate
+	for i: int in range(5):
+		_gate.add_child(box_mesh(Vector3(0.1, 2.6, 0.1), BRASS, Vector3(-1.5 + float(i) * 0.75, 1.4, 0.1)))
+	_gate.position = GATE_POS
+	add_child(_gate)
 
 func _spawn_enemies() -> void:
-	for spot: Vector3 in [Vector3(-1.5, 0.1, 2.0), Vector3(2.5, 0.1, 1.5)]:
+	for spot: Vector3 in [GEAR + Vector3(-2.0, 0.1, 2.0), GEAR + Vector3(3.0, 0.1, -1.5)]:
 		spawn_enemy(GRUNT, spot, "res://assets/models/enemies/grunt.glb"); _spawned += 1
-	# clockwork-guardian Boss — large + dark brass tint
-	spawn_enemy(BOSS, Vector3(0.0, 0.1, -1.0), "res://assets/models/enemies/grunt.glb", 1.9, Color(0.55, 0.45, 0.3)); _spawned += 1
+	spawn_enemy(BOSS, BELFRY + Vector3(0, 0.1, -1.0), "res://assets/models/enemies/grunt.glb", 1.9, Color(0.55, 0.45, 0.3)); _spawned += 1
 
 func _restore() -> void:
 	_enemies_cleared = GameManager.get_level_flag(location_id, "enemies_cleared", false)
 	_gear_repaired = GameManager.get_level_flag(location_id, "gear_repaired", false)
 	_bells_played = GameManager.get_level_flag(location_id, "bells_played", false)
-	if _bells_played:
-		_light_bells()
+	if _gear_repaired: _open_gate(false)
+	if _bells_played: _light_bells()
+	if GameManager.get_level_flag(location_id, "gear_loot_open", false):
+		_loot_open = true; ((_loot_box.mesh as BoxMesh).material as StandardMaterial3D).albedo_color = Color(0.3, 0.24, 0.16)
 	if _enemies_cleared and _gear_repaired and _bells_played:
 		_win(false)
 
@@ -131,10 +169,18 @@ func _on_special(char_name: String) -> void:
 	var pp: Vector3 = player.global_position
 	if near3(pp, HIERO_POS, REACH + 0.6):
 		_talk_hiero(char_name); return
+	if not _loot_open and near3(pp, LOOT_POS, REACH):
+		_loot_open = true
+		GameManager.grant_item(char_name, SpareGearItem.id)
+		GameManager.set_level_flag(location_id, "gear_loot_open", true)
+		((_loot_box.mesh as BoxMesh).material as StandardMaterial3D).albedo_color = Color(0.3, 0.24, 0.16)
+		_hud_hint.text = "Found a spare clockwork gear."
+		Audio.play("special"); return
 	if char_name == "Quinn" and not _gear_repaired and near3(pp, GEAR_POS, REACH):
 		_gear_repaired = true
 		GameManager.set_level_flag(location_id, "gear_repaired", true)
-		_hud_hint.text = "Quinn re-seats the escapement — the great gear turns again."
+		_open_gate(true)
+		_hud_hint.text = "Quinn re-seats the escapement — the great gear turns and the belfry gate grinds open."
 		Audio.play("special"); return
 	if char_name == "Ben" and not _bells_played and near3(pp, BELLS_POS, REACH + 0.6):
 		_bells_played = true
@@ -147,6 +193,13 @@ func _on_special(char_name: String) -> void:
 	elif char_name != "Ben" and not _bells_played and near3(pp, BELLS_POS, REACH + 0.6):
 		_hud_hint.text = "The bells need Ben's ear for pitch."
 
+func _open_gate(animate: bool) -> void:
+	if animate:
+		create_tween().tween_property(_gate, "position:y", -3.2, 0.7)
+	else:
+		_gate.position.y = -3.2
+	(_gate as StaticBody3D).collision_layer = 0
+
 func _light_bells() -> void:
 	for bell in _bells:
 		var m := (bell as MeshInstance3D).mesh as CylinderMesh
@@ -158,11 +211,11 @@ func _talk_hiero(char_name: String) -> void:
 	if _enemies_cleared and _gear_repaired and _bells_played:
 		tree = {"start": {"lines": ["\"Remarkable. Thirty years I couldn't silence that guardian. You've done it in one visit.\""]}}
 	elif _gear_repaired or _bells_played:
-		tree = {"start": {"lines": ["\"The gear mechanism and the belfry bells both need attention before the tower unlocks.\""]}}
+		tree = {"start": {"lines": ["\"The gear floor above, then the belfry at the top — both need attention before the tower unlocks.\""]}}
 	else:
 		tree = {"start": {"lines": [
 			"\"The guardian woke when I tried to fix the gear floor myself. I'm afraid I'm more theorist than fighter.\"",
-			"\"Quinn -- the escapement needs your tools. Ben, the belfry bells want a pitch sequence; check my notes or the tuning fork up there.\""]}}
+			"\"Up the stairs: Quinn, the escapement on the gear floor needs your tools and it'll open the belfry. Ben, the bells up top want a pitch sequence.\""]}}
 	open_dialog("Hieronymus", Color(0.5, 0.45, 0.55), tree, char_name)
 
 func _unhandled_input(_e: InputEvent) -> void:
@@ -179,19 +232,16 @@ func _build_hud() -> void:
 func _process(d: float) -> void:
 	super._process(d)
 	if _gear_repaired and _gear != null:
-		_gear.rotation.z += d * 0.8   # the escapement turns once repaired
+		_gear.rotation.z += d * 0.8
 	if not _enemies_cleared and _spawned > 0 and enemies_alive() == 0:
 		_enemies_cleared = true
 		GameManager.set_level_flag(location_id, "enemies_cleared", true)
-		if _hiero != null:
-			_hiero.call("say", "The guardian's down! Now the works!")
-	var g := "Clear the guardian; Quinn repairs the gear, Ben rings the bells. (G interact, Tab swap)"
 	if not _cleared:
 		var bits := []
-		bits.append("guardian " + ("OK" if _enemies_cleared else "..."))
 		bits.append("gear " + ("OK" if _gear_repaired else "..."))
 		bits.append("bells " + ("OK" if _bells_played else "..."))
-		_hud_goal.text = g + "\n[" + "  ".join(bits) + "]"
+		bits.append("guardian " + ("OK" if _enemies_cleared else "..."))
+		_hud_goal.text = "Climb the tower: Quinn fixes the gear (opens the belfry), Ben rings the bells, beat the guardian. (G interact, Tab swap)\n[" + "  ".join(bits) + "]"
 	if not _cleared and _enemies_cleared and _gear_repaired and _bells_played:
 		_win(true)
 

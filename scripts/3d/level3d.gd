@@ -29,6 +29,7 @@ var _floor_hw: float = 0.0         # floor half-extents (for walk-out detection)
 var _floor_hd: float = 0.0
 var _floor_center: Vector3 = Vector3.ZERO
 var _returning: bool = false       # guard so the walk-out exit fires once
+var multi_room: bool = false       # multi-phase levels exit via a portal, not floor-edge
 
 func _ready() -> void:
 	_build_level()
@@ -364,13 +365,84 @@ func _check_walk_out() -> void:
 	if location_id == "" or _returning or player == null or not is_instance_valid(player):
 		return
 	var p: Vector3 = player.global_position
-	var off := p.y < FALL_Y \
-		or absf(p.x - _floor_center.x) > _floor_hw + EXIT_MARGIN \
-		or absf(p.z - _floor_center.z) > _floor_hd + EXIT_MARGIN
-	if off and _floor_hw > 0.0:
-		_returning = true
-		GameManager.last_location_id = location_id
-		get_tree().change_scene_to_file(OVERWORLD_3D)
+	# Multi-room levels exit through their lobby portal, not the floor edge (their
+	# rooms span many floor boxes) — only the fall-into-void safety net applies.
+	var off := p.y < FALL_Y
+	if not multi_room and _floor_hw > 0.0:
+		off = off \
+			or absf(p.x - _floor_center.x) > _floor_hw + EXIT_MARGIN \
+			or absf(p.z - _floor_center.z) > _floor_hd + EXIT_MARGIN
+	if off:
+		return_to_overworld()
+
+func return_to_overworld() -> void:
+	if _returning:
+		return
+	_returning = true
+	GameManager.last_location_id = location_id
+	get_tree().change_scene_to_file(OVERWORLD_3D)
+
+# --- multi-phase rooms + portals ---------------------------------------------
+const Portal3DScript: Script = preload("res://scripts/3d/portal3d.gd")
+
+# Re-aim the follow camera (room-aware framing on a portal transition).
+func reframe_camera(dist: float, elev: float) -> void:
+	for c in get_children():
+		if c is Camera3D and c.has_method("reframe"):
+			c.call("reframe", dist, elev)
+
+# Build a room: floor + perimeter walls with gaps on the named sides
+# ("n"=-Z, "s"=+Z, "e"=+X, "w"=-X) for doorways. Dress it afterwards relative to
+# `center`. Does NOT set the walk-out bounds (multi-room levels use a portal).
+func room(center: Vector3, w: float, d: float, floor_col: Color, wall_col: Color, h: float = 3.2, openings: Array = [], gap: float = 3.0) -> void:
+	# floor
+	var sb := StaticBody3D.new()
+	sb.collision_layer = Combat3D.L_WORLD
+	var cs := CollisionShape3D.new(); var bs := BoxShape3D.new()
+	bs.size = Vector3(w, 1.0, d); cs.shape = bs; cs.position = Vector3(0, -0.5, 0)
+	sb.add_child(cs); sb.add_child(box_mesh(Vector3(w, 1.0, d), floor_col, Vector3(0, -0.5, 0)))
+	sb.position = center; add_child(sb)
+	# walls (split each side around a centred gap if that side is an opening)
+	_room_wall_side(center, "n", w, d, h, wall_col, "n" in openings, gap)
+	_room_wall_side(center, "s", w, d, h, wall_col, "s" in openings, gap)
+	_room_wall_side(center, "e", w, d, h, wall_col, "e" in openings, gap)
+	_room_wall_side(center, "w", w, d, h, wall_col, "w" in openings, gap)
+
+func _room_wall_side(center: Vector3, side: String, w: float, d: float, h: float, col: Color, open: bool, gap: float) -> void:
+	var horiz: bool = side == "n" or side == "s"
+	var span: float = w if horiz else d
+	var nz: float = -d * 0.5 if side == "n" else (d * 0.5 if side == "s" else 0.0)
+	var nx: float = -w * 0.5 if side == "w" else (w * 0.5 if side == "e" else 0.0)
+	if not open:
+		var size := Vector3(w + 0.4, h, 0.4) if horiz else Vector3(0.4, h, d + 0.4)
+		wall(center + Vector3(nx, h * 0.5, nz), size, col)
+		return
+	# leave a gap in the middle → two wall segments
+	var seg: float = (span - gap) * 0.5
+	if seg <= 0.1:
+		return
+	for s: float in [-1.0, 1.0]:
+		var off: float = (gap * 0.5 + seg * 0.5) * s
+		if horiz:
+			wall(center + Vector3(off, h * 0.5, nz), Vector3(seg, h, 0.4), col)
+		else:
+			wall(center + Vector3(nx, h * 0.5, off), Vector3(0.4, h, seg), col)
+
+func add_room_portal(pos: Vector3, size: Vector3, dist: float, elev: float) -> void:
+	var p: Area3D = Portal3DScript.new()
+	p.set("kind", 0)  # REFRAME
+	p.set("cam_dist", dist); p.set("cam_elev", elev); p.set("level", self)
+	p.position = pos
+	add_child(p)
+	p.call("setup", size)
+
+func add_exit_portal(pos: Vector3, size: Vector3) -> void:
+	var p: Area3D = Portal3DScript.new()
+	p.set("kind", 1)  # EXIT
+	p.set("level", self)
+	p.position = pos
+	add_child(p)
+	p.call("setup", size)
 
 func _update_bies_bar(d: float) -> void:
 	if _bies_fill == null or player == null or not player.has_method("bies_charge"):
