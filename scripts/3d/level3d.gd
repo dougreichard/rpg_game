@@ -9,8 +9,9 @@ extends Node3D
 const PlayerScript: Script = preload("res://scripts/3d/player_3d.gd")
 const EnemyScript: Script = preload("res://scripts/3d/enemy_3d.gd")
 const CameraRigScript: Script = preload("res://scripts/3d/camera_rig_3d.gd")
+const Duo3DScript: Script = preload("res://scripts/3d/duo3d.gd")
 
-var player: CharacterBody3D = null
+var player: Node3D = null  # a Player3D (single) or a Duo3D controller
 var _shot_frames: int = -1
 
 func _ready() -> void:
@@ -118,23 +119,22 @@ func spawn_player(data: Resource, pos: Vector3, with_camera: bool = true) -> Cha
 		add_child(cam)
 	return p
 
-func spawn_duo(datas: Array, pos: Vector3, with_camera: bool = true) -> CharacterBody3D:
-	var p := CharacterBody3D.new()
-	p.set_script(PlayerScript)
-	var typed: Array[CharacterData] = []
-	for d in datas:
-		typed.append(d)
-	p.set("duo", typed)
-	p.position = pos
-	add_child(p)
-	player = p
+# Spawns the active duo (both bodies on screen) + follow camera. Returns the Duo3D
+# controller, which levels treat like the "player" (global_position / special_used /
+# active_name / set_input_locked all reflect the active body).
+func spawn_duo(datas: Array, pos: Vector3, with_camera: bool = true) -> Node3D:
+	var duo := Node3D.new()
+	duo.set_script(Duo3DScript)
+	add_child(duo)
+	var cam: Camera3D = null
 	if with_camera:
-		var cam := Camera3D.new()
+		cam = Camera3D.new()
 		cam.set_script(CameraRigScript)
-		cam.set("target", p)
 		cam.current = true
 		add_child(cam)
-	return p
+	duo.call("setup", datas, pos, cam, self)
+	player = duo
+	return duo
 
 func spawn_enemy(data: Resource, pos: Vector3, mesh_path: String = "") -> CharacterBody3D:
 	var e := CharacterBody3D.new()
