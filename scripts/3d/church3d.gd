@@ -1,139 +1,235 @@
-extends Node3D
-## 3D Old Parish Church — the first real level of the migration. A walkable, open-top
-## nave (3/4 camera sees in) built from a floor + stone wall boxes + Synty church props
-## (pews / altar stand / candles), ported from the 2D church's nave/side-chapel layout.
-## Player spawns at the entrance; a couple of grunts in the nave. Camera follows.
+extends Level3D
+## The Old Parish Church (3D) — dialogue-heavy, NO combat. A nave with Father Aldric
+## and four congregation members: two open up to QUINN, two to ERIN, so you must SWAP
+## the duo to talk to each. Talk to all four to win (unlocks Evan). Plus Aldric's
+## choice dialog and a secret passage. Reuses GameManager flags + DialogBox/DialogTree.
 
-const PlayerScript: Script = preload("res://scripts/3d/player_3d.gd")
-const EnemyScript: Script = preload("res://scripts/3d/enemy_3d.gd")
-const CameraRigScript: Script = preload("res://scripts/3d/camera_rig_3d.gd")
-const QUINN: Resource = preload("res://data/characters/quinn.tres")
-const GRUNT: Resource = preload("res://data/enemies/grunt.tres")
+const LOCATION_ID := "old_parish_church"
+const QUINN := preload("res://data/characters/quinn.tres")
+const ERIN := preload("res://data/characters/erin.tres")
+const DialogBoxScript: Script = preload("res://scripts/ui/dialog_box.gd")
 
 const STONE := Color(0.52, 0.50, 0.47)
-const FLOOR_COL := Color(0.42, 0.36, 0.30)
-const WALL_H := 3.0
-const HALF_W := 6.0   # nave half-width (X)
-const HALF_D := 8.5   # nave half-depth (Z); north = -Z (altar), south = +Z (entry)
+const FLOOR_COL := Color(0.40, 0.35, 0.30)
+const HALF_W := 6.5
+const HALF_D := 8.5
+const WALL_H := 3.4
+const ALDRIC_POS := Vector3(0.0, 0.0, -HALF_D + 1.8)
+const LEVER_POS := Vector3(HALF_W - 0.6, 0.0, -HALF_D + 1.6)
+const REACH := 2.0
 
-var _shot_frames: int = -1
+# id -> {pos, mesh, who, flag, ok, no}
+const CONGREGATION := {
+	"elder":     {"pos": Vector3(-3.2, 0, -3.0), "mesh": "uncle_doug",    "who": "Quinn",
+		"flag": "quinn_npc1_done", "name": "Elder",
+		"ok": ["Elder: \"You've a steady way about you, lad. ...The stranger asked after the old parish records. Made my skin crawl.\""],
+		"no": ["The elder studies you warily and says nothing."]},
+	"deacon":    {"pos": Vector3(3.2, 0, -3.0), "mesh": "bellows",        "who": "Quinn",
+		"flag": "quinn_npc2_done", "name": "Deacon",
+		"ok": ["Deacon: \"A respectful sort -- good. He left a name in the registry that wasn't his own. I'd swear to it.\""],
+		"no": ["The deacon purses his lips. \"...Perhaps another time.\""]},
+	"choir":     {"pos": Vector3(-3.2, 0, 1.5), "mesh": "congregant_f",   "who": "Erin",
+		"flag": "erin_npc1_done", "name": "Choir Member",
+		"ok": ["Choir Member: \"You don't buy the act either, do you? Good. He was asking which families kept to the old ways.\""],
+		"no": ["She glances away. \"I'd rather not, thank you.\""]},
+	"caretaker": {"pos": Vector3(3.2, 0, 1.5), "mesh": "congregant_m",    "who": "Erin",
+		"flag": "erin_npc2_done", "name": "Caretaker",
+		"ok": ["Caretaker: \"Sharp one, aren't you. He spent an hour at the loft door. Sealed for years, that.\""],
+		"no": ["The caretaker shrugs and keeps sweeping."]},
+}
 
-func _ready() -> void:
-	_build_env()
-	_floor(HALF_W * 2.0 + 1.0, HALF_D * 2.0 + 1.0)
+var _dialog = null
+var _secret_revealed := false
+var _cleared := false
+var _secret_wall: Node3D = null
+var _hud_goal: Label = null
+var _hud_hint: Label = null
+var _hud_banner: Label = null
+
+func _build_level() -> void:
+	build_env(Color(0.06, 0.06, 0.09), Color(0.5, 0.46, 0.42), 0.55, 0.8)
+	point_light(Vector3(0, 3.0, -6.0), Color(1.0, 0.85, 0.55), 2.5, 9.0)        # altar
+	point_light(Vector3(-HALF_W + 0.5, 2.6, -2.0), Color(0.5, 0.6, 1.0), 1.6, 6.0)  # stained glass
+	point_light(Vector3(HALF_W - 0.5, 2.6, 1.0), Color(1.0, 0.5, 0.5), 1.6, 6.0)
+	floor_box(HALF_W * 2.0 + 1.0, HALF_D * 2.0 + 1.0, FLOOR_COL)
 	_walls()
 	_furnish()
-	var player := _spawn(PlayerScript, QUINN, Vector3(0.0, 0.1, HALF_D - 2.0))
-	_camera(player)
-	_spawn(EnemyScript, GRUNT, Vector3(-2.0, 0.1, 0.0))
-	_spawn(EnemyScript, GRUNT, Vector3(2.5, 0.1, -2.0))
-	if "--capture" in OS.get_cmdline_user_args() or "--capture" in OS.get_cmdline_args():
-		_shot_frames = 18
-
-func _build_env() -> void:
-	var sun := DirectionalLight3D.new()
-	sun.rotation = Vector3(deg_to_rad(-55.0), deg_to_rad(40.0), 0.0)
-	sun.light_energy = 1.15
-	sun.shadow_enabled = true
-	add_child(sun)
-	var we := WorldEnvironment.new()
-	var env := Environment.new()
-	env.background_mode = Environment.BG_COLOR
-	env.background_color = Color(0.14, 0.13, 0.16)
-	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	env.ambient_light_color = Color(0.62, 0.58, 0.55)
-	env.ambient_light_energy = 0.55
-	we.environment = env
-	add_child(we)
-
-func _floor(w: float, d: float) -> void:
-	var sb := StaticBody3D.new()
-	sb.collision_layer = Combat3D.L_WORLD
-	sb.collision_mask = 0
-	var cs := CollisionShape3D.new()
-	var bs := BoxShape3D.new()
-	bs.size = Vector3(w, 1.0, d)
-	cs.shape = bs
-	cs.position = Vector3(0, -0.5, 0)
-	sb.add_child(cs)
-	sb.add_child(_box_mesh(Vector3(w, 1.0, d), FLOOR_COL, Vector3(0, -0.5, 0)))
-	add_child(sb)
+	_dialog = DialogBoxScript.new()
+	var cl := CanvasLayer.new(); cl.add_child(_dialog); add_child(cl)
+	_build_hud()
+	_aldric()
+	for id: String in CONGREGATION:
+		_congregant(id)
+	var p := spawn_duo([QUINN, ERIN], Vector3(0.0, 0.1, HALF_D - 2.0))
+	p.special_used.connect(_on_special)
 
 func _walls() -> void:
-	# Perimeter (north/east/west solid; south split for an entrance gap).
-	_wall(Vector3(0, WALL_H * 0.5, -HALF_D), Vector3(HALF_W * 2.0, WALL_H, 0.4))      # north (behind altar)
-	_wall(Vector3(-HALF_W, WALL_H * 0.5, 0), Vector3(0.4, WALL_H, HALF_D * 2.0))      # west
-	_wall(Vector3(HALF_W, WALL_H * 0.5, 0), Vector3(0.4, WALL_H, HALF_D * 2.0))       # east
-	_wall(Vector3(-HALF_W + 2.0, WALL_H * 0.5, HALF_D), Vector3(4.0, WALL_H, 0.4))    # south-left
-	_wall(Vector3(HALF_W - 2.0, WALL_H * 0.5, HALF_D), Vector3(4.0, WALL_H, 0.4))     # south-right
-	# Side-chapel divider (west alcove) — a short wall creating a second room feel.
-	_wall(Vector3(-HALF_W + 2.2, WALL_H * 0.5, -2.0), Vector3(0.4, WALL_H, 5.0))
-
-func _wall(center: Vector3, size: Vector3) -> void:
-	var sb := StaticBody3D.new()
-	sb.collision_layer = Combat3D.L_WORLD
-	sb.collision_mask = 0
-	var cs := CollisionShape3D.new()
-	var bs := BoxShape3D.new()
-	bs.size = size
-	cs.shape = bs
-	sb.add_child(cs)
-	sb.add_child(_box_mesh(size, STONE, Vector3.ZERO))
-	sb.position = center
-	add_child(sb)
-
-func _box_mesh(size: Vector3, col: Color, ofs: Vector3) -> MeshInstance3D:
-	var mi := MeshInstance3D.new()
-	var bm := BoxMesh.new()
-	bm.size = size
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = col
-	mat.roughness = 1.0
-	bm.material = mat
-	mi.mesh = bm
-	mi.position = ofs
-	return mi
+	wall(Vector3(0, WALL_H * 0.5, -HALF_D), Vector3(HALF_W * 2.0, WALL_H, 0.4), STONE)
+	wall(Vector3(-HALF_W, WALL_H * 0.5, 0), Vector3(0.4, WALL_H, HALF_D * 2.0), STONE)
+	wall(Vector3(HALF_W, WALL_H * 0.5, 0), Vector3(0.4, WALL_H, HALF_D * 2.0), STONE)
+	wall(Vector3(-HALF_W + 2.0, WALL_H * 0.5, HALF_D), Vector3(4.0, WALL_H, 0.4), STONE)
+	wall(Vector3(HALF_W - 2.0, WALL_H * 0.5, HALF_D), Vector3(4.0, WALL_H, 0.4), STONE)
+	_secret_wall = StaticBody3D.new()
+	(_secret_wall as StaticBody3D).collision_layer = Combat3D.L_WORLD
+	var cs := CollisionShape3D.new(); var bs := BoxShape3D.new()
+	bs.size = Vector3(2.4, WALL_H, 0.4); cs.shape = bs
+	_secret_wall.add_child(cs)
+	_secret_wall.add_child(box_mesh(Vector3(2.4, WALL_H, 0.4), STONE, Vector3.ZERO))
+	_secret_wall.position = Vector3(HALF_W - 1.2, WALL_H * 0.5, -HALF_D + 0.2)
+	add_child(_secret_wall)
 
 func _furnish() -> void:
-	# Altar + flanking candles at the north end.
-	_prop("res://assets/models/props/altar.glb", Vector3(0, 0, -HALF_D + 1.6), 0.0)
-	_prop("res://assets/models/props/candles.glb", Vector3(-1.6, 0, -HALF_D + 1.6), 0.0)
-	_prop("res://assets/models/props/candles.glb", Vector3(1.6, 0, -HALF_D + 1.6), 0.0)
-	# Two columns of pews facing the altar.
+	prop("res://assets/models/props/altar.glb", Vector3(0, 0, -HALF_D + 1.0))
+	prop("res://assets/models/props/candles.glb", Vector3(-1.5, 0, -HALF_D + 1.0))
+	prop("res://assets/models/props/candles.glb", Vector3(1.5, 0, -HALF_D + 1.0))
 	for row: int in range(4):
-		var z: float = -2.0 + float(row) * 2.4
-		_prop("res://assets/models/props/pew.glb", Vector3(-2.4, 0, z), 0.0)
-		_prop("res://assets/models/props/pew.glb", Vector3(2.4, 0, z), 0.0)
+		var z: float = -1.0 + float(row) * 2.2
+		prop("res://assets/models/props/pew.glb", Vector3(-2.4, 0, z))
+		prop("res://assets/models/props/pew.glb", Vector3(2.4, 0, z))
+	# lever behind the altar
+	add_child(box_mesh(Vector3(0.1, 0.4, 0.1), Color(0.8, 0.2, 0.2), LEVER_POS + Vector3(0, 1.3, 0)))
 
-func _prop(path: String, pos: Vector3, yaw: float) -> void:
-	var ps: PackedScene = load(path)
+func _npc_mesh(key: String, pos: Vector3, yaw: float) -> void:
+	var ps: PackedScene = load("res://assets/models/characters/%s.glb" % key)
 	if ps == null:
 		return
-	var n := ps.instantiate()
-	n.position = pos
-	n.rotation.y = yaw
-	add_child(n)
+	var m := ps.instantiate()
+	m.position = pos
+	m.rotation.y = yaw
+	var ap := _find_in(m)
+	if ap != null and ap.has_animation("idle"):
+		ap.get_animation("idle").loop_mode = Animation.LOOP_LINEAR
+		ap.play("idle")
+	add_child(m)
 
-func _spawn(scr: Script, res: Resource, pos: Vector3) -> CharacterBody3D:
-	var b := CharacterBody3D.new()
-	b.set_script(scr)
-	b.set("data", res)
-	b.position = pos
-	add_child(b)
-	return b
+func _find_in(n: Node) -> AnimationPlayer:
+	if n is AnimationPlayer: return n
+	for c in n.get_children():
+		var r := _find_in(c)
+		if r != null: return r
+	return null
 
-func _camera(target: Node3D) -> void:
-	var cam := Camera3D.new()
-	cam.set_script(CameraRigScript)
-	cam.set("target", target)
-	cam.current = true
-	add_child(cam)
+func _aldric() -> void:
+	_npc_mesh("aldric", ALDRIC_POS, deg_to_rad(180))
 
-func _process(_delta: float) -> void:
-	if _shot_frames < 0:
+func _congregant(id: String) -> void:
+	var d: Dictionary = CONGREGATION[id]
+	_npc_mesh(d["mesh"], d["pos"], deg_to_rad(180))
+
+# --- interaction -------------------------------------------------------------
+func _on_special(char_name: String) -> void:
+	if _dialog.is_open():
 		return
-	_shot_frames -= 1
-	if _shot_frames == 0:
-		get_viewport().get_texture().get_image().save_png("res://_arena3d_shot.png")
-		print("SHOT_SAVED")
-		get_tree().quit()
+	var pp: Vector3 = player.global_position
+	if char_name == "Quinn" and not _secret_revealed and _near(pp, LEVER_POS):
+		_reveal_secret(); return
+	if _near(pp, ALDRIC_POS):
+		_talk_aldric(char_name); return
+	for id: String in CONGREGATION:
+		var d: Dictionary = CONGREGATION[id]
+		if _near(pp, d["pos"]):
+			_talk_congregant(id, char_name); return
+
+func _near(a: Vector3, b: Vector3) -> bool:
+	return Vector2(a.x - b.x, a.z - b.z).length() < REACH
+
+func _talk_congregant(id: String, char_name: String) -> void:
+	var d: Dictionary = CONGREGATION[id]
+	var done: bool = GameManager.get_level_flag(LOCATION_ID, d["flag"], false)
+	var lines: Array = d["ok"] if (char_name == d["who"] and not done) else d["no"]
+	if char_name == d["who"] and not done:
+		GameManager.set_level_flag(LOCATION_ID, d["flag"], true)
+	elif char_name != d["who"] and not done:
+		lines = ["They don't seem to warm to %s. Maybe %s should try." % [char_name, d["who"]]]
+	_open_dialog(d["name"], Color(0.5, 0.5, 0.55), {"start": {"lines": lines}}, char_name)
+
+func _talk_aldric(char_name: String) -> void:
+	var tree := {
+		"start": {"lines": [
+			"An older priest looks up from the altar candles.",
+			"Father Aldric: \"A stranger came through and left my congregation unsettled. Would you speak with them?\""],
+			"choices": [
+				{"text": "Of course, Father. A kind word costs nothing.", "best_with": "Quinn", "next": "good", "next_alt": "good"},
+				{"text": "What aren't you telling us about him?", "best_with": "Erin", "next": "cool", "next_alt": "cool"}]},
+		"good": {"lines": ["\"A polite sort -- refreshing. They're scattered about the nave; I hope they'll open up.\""],
+			"effects": {"set_flag": "father_aldric_impression", "flag_value": "good"}},
+		"cool": {"lines": ["Aldric stiffens. \"...He asked after old parish records. My congregation saw more than I did. Ask them.\""],
+			"effects": {"set_flag": "father_aldric_impression", "flag_value": "cool"}},
+	}
+	GameManager.set_level_flag(LOCATION_ID, "manager_met", true)
+	_open_dialog("Father Aldric", Color(0.55, 0.5, 0.42), tree, char_name)
+
+func _open_dialog(npc: String, col: Color, tree: Dictionary, char_name: String) -> void:
+	player.set_input_locked(true)
+	if not _dialog.closed.is_connected(_on_dialog_closed):
+		_dialog.closed.connect(_on_dialog_closed)
+	_dialog.open(npc, col, tree, "start", char_name)
+
+func _on_dialog_closed(effects: Array) -> void:
+	player.set_input_locked(false)
+	for e in effects:
+		if e is Dictionary and e.has("set_flag"):
+			GameManager.set_level_flag(LOCATION_ID, e["set_flag"], e.get("flag_value", true))
+
+func _reveal_secret() -> void:
+	_secret_revealed = true
+	GameManager.set_level_flag(LOCATION_ID, "secret_revealed", true)
+	create_tween().tween_property(_secret_wall, "position:y", -WALL_H, 0.6)
+	_hud_hint.text = "Behind the altar, the sealed loft grinds open."
+	Audio.play("special")
+
+# --- HUD + win ---------------------------------------------------------------
+func _build_hud() -> void:
+	var cl := CanvasLayer.new(); add_child(cl)
+	_hud_goal = _label(cl, 24, 22)
+	_hud_hint = _label(cl, -60, 22); _hud_hint.anchor_top = 1.0; _hud_hint.anchor_bottom = 1.0
+	_hud_banner = _label(cl, 0, 40); _hud_banner.anchor_top = 0.5; _hud_banner.anchor_bottom = 0.5
+	_hud_banner.visible = false
+
+func _label(cl: CanvasLayer, y: float, size: int) -> Label:
+	var l := Label.new()
+	l.anchor_left = 0.0; l.anchor_right = 1.0; l.offset_top = y; l.offset_bottom = y + 60
+	l.offset_left = 40; l.offset_right = -40
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	l.add_theme_font_override("font", UITheme.font())
+	l.add_theme_font_size_override("font_size", size)
+	l.add_theme_color_override("font_color", UITheme.CREAM)
+	l.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
+	l.add_theme_constant_override("outline_size", 5)
+	cl.add_child(l)
+	return l
+
+func _done_count() -> int:
+	var n := 0
+	for id: String in CONGREGATION:
+		if GameManager.get_level_flag(LOCATION_ID, CONGREGATION[id]["flag"], false):
+			n += 1
+	return n
+
+func _process(_d: float) -> void:
+	super._process(_d)
+	var n := _done_count()
+	if not _cleared:
+		_hud_goal.text = "Win the congregation over  (%d/4)\nSome open up to Quinn, some to Erin — Tab to swap, G to talk." % n
+	if not _cleared and n >= 4:
+		_cleared = true
+		GameManager.set_level_flag(LOCATION_ID, "quinn_done", true)
+		GameManager.set_level_flag(LOCATION_ID, "erin_done", true)
+		GameManager.complete_location(LOCATION_ID)
+		_hud_goal.text = ""
+		_hud_banner.text = "The congregation opens up.\nEvan joins the search!"
+		_hud_banner.visible = true
+		Audio.play("puzzle_complete")
+
+func _unhandled_input(_e: InputEvent) -> void:
+	if _dialog != null and _dialog.is_open():
+		if Input.is_action_just_pressed("ui_accept"):
+			if _dialog.is_choice_mode():
+				_dialog.select_choice()
+			else:
+				_dialog.advance()
+		elif Input.is_action_just_pressed("ui_up"):
+			_dialog.move_choice_cursor(-1)
+		elif Input.is_action_just_pressed("ui_down"):
+			_dialog.move_choice_cursor(1)
