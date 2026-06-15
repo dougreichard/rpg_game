@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="ItemData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/systems/item_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "rough_organ_pipe"
+display_name = "Out-of-Tune Long Pipe"
+description = "Too long and flat to fit the organ. Cut it to length on the table saw, then tune it on the bench."
+icon_color = Color(0.55, 0.45, 0.28, 1)
+owner_character = ""
+is_junk = false

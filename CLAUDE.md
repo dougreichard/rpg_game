@@ -129,7 +129,8 @@ so they must all be created as direct children of the level root — done centra
 |------|-----|
 | Character movie ticket (×5 — one per character) | All five required to enter The Grand Marquee Cinema |
 | Rusty key | Opens a shortcut door in the Underground Tunnels |
-| Brass organ pipe | First of two parts (with the tuning key) Quinn needs to finish the Pipe Organ Works repair |
+| Brass organ pipe | A finished Pipe Organ Works part — the **tuned** result of milling `rough_organ_pipe` (table saw → `cut_organ_pipe` → tuning bench). One of three parts fitted to the organ |
+| Pipe Organ crafting parts | `rough_plank`→`windchest_board` (table saw); `rough_organ_pipe`→`cut_organ_pipe` (saw)→`brass_organ_pipe` (tuning bench); `gear_blank`→`trued_gear` (tuning bench). Raw + intermediate parts of the Pipe Organ Works gather→mill→assemble chain (`WorkStation3D`); each raw item's description hints its tool |
 | Sheet music page | Gives Ben the correct Clocktower bell sequence instantly |
 | Security badge | Auto-fills one pip of Ethan's Underground Tunnels hatch hack |
 | Crowbar | Lets Evan force a stuck Harbor & Docks crate without summoning Calvin & Coolidge |
@@ -280,13 +281,15 @@ Loft. Still-single-room levels inherit this as they're converted to multi-room.)
 
 ---
 
-### 1. Bellows & Sons Pipe Organ Works — `PipeOrganWorks.tscn`
+### 1. Bellows & Sons Pipe Organ Works — `PipeOrganWorks.tscn` (opening level)
 - **Unlock condition:** Available from the start
-- **Key puzzle(s):** Quinn repairs the pipe organ; requires `brass_organ_pipe` + `tuning_key` (Erin fast-talks the key from Mr. Bellows)
-- **Enemy types:** Grunts + Runners
-- **Level progress flags:** `enemies_cleared` / `organ_repaired` / `secret_revealed` / `manager_met` / `tuning_key_given`
-- **NPCs:** Mr. Bellows (dialog-choice, at his desk in Manager's Office)
-- **Notes:** Erin is "on loan" at the start; officially recruited on completion. Secret passage reveals `spare_clockwork_gear`.
+- **Entering duo:** **Quinn ALONE.** Erin is *found* here, not pre-paired (see Notes).
+- **Floor 1:** Lobby (Bellows + organ console; combat-free) · Storeroom (grunts + hidden Erin + the warped plank) · **Workshop** (the table saw + tuning bench) · stair alcove. **Floor 2:** Pipe Loft (out-of-tune pipe + gear blank; runners) + secret spare-gear nook.
+- **Key puzzle(s):** A **gather → mill → assemble** crafting chain (uses the reusable `WorkStation3D` kit). Quinn collects three raw materials across both floors — `rough_plank` (Storeroom), `rough_organ_pipe` + `gear_blank` (Pipe Loft) — and processes them at the Workshop tools: **table saw** (`rough_plank`→`windchest_board`, `rough_organ_pipe`→`cut_organ_pipe`), **tuning bench** (`cut_organ_pipe`→`brass_organ_pipe`, `gear_blank`→`trued_gear`). The pipe needs **both** tools (saw *then* tune); each raw item's description hints which tool. Erin then fast-talks the `tuning_key` out of Bellows, which **unlocks the organ console** (ASSEMBLY) so Quinn can fit the three finished parts (`windchest_board` + `brass_organ_pipe` + `trued_gear`).
+- **Enemy types:** Grunts (Storeroom) + Runners (Pipe Loft)
+- **Level progress flags:** `enemies_cleared` / `organ_repaired` / `secret_revealed` / `manager_met` / `tuning_key_given` / `erin_recruited` / `plank_taken` / `pipe_taken` / `gear_taken` / `organ_part_<id>` / `gear_bonus_open`
+- **NPCs:** Mr. Bellows (dialog-choice, at his desk in the Lobby) — his opening line sends Quinn after Erin ("punks chased her into the back storeroom"); the tuning-key fast-talk choice only appears after Erin is recruited.
+- **Notes:** **Erin recruit beat** — Quinn starts solo; clearing the Storeroom grunts makes Erin step out from behind the crates and *join the party* mid-level (`Duo3D.add_member` — Tab swap "wakes up" once there are two bodies). She explains she was tracking a lead on Uncle Doug. Secret lever in the loft reveals the bonus `spare_clockwork_gear`. Win = enemies cleared (Storeroom + Loft) + organ repaired.
 
 ---
 
@@ -511,6 +514,33 @@ scale, tint)` (no wave system — small fixed encounters per room) and poll
 (`set_level_flag`/`get_level_flag`), keyed by ability via the `_on_special(char_name)`
 ladder (e.g. only Quinn repairs, only Ethan hacks), so the win check ANDs "enemies cleared"
 with the level's puzzle flags.
+
+### Crafting / interaction stations (`WorkStation3D`)
+`scripts/3d/work_station3d.gd` (`WorkStation3D`, no `class_name` — `preload()`) is a
+reusable `Area3D` interaction node for **gather → process → assemble** puzzles (debut:
+Pipe Organ Works). Three `Kind`s configured via `setup(kind, pos, label, best_with)`:
+- **SOURCE** — a raw-material crate: grants `produces` once, then dims.
+- **TOOL** — a workbench: each `recipes` entry `{"in": id, "out": id}` consumes a carried
+  input → grants the output. Multiple recipes per tool (the table saw cuts both plank and
+  pipe); chains form when one tool's output is another tool's input.
+- **ASSEMBLY** — a fixture: consumes the finished `parts` set as they're brought; emits
+  `completed` when all are in.
+Built via `Level3D.add_station(kind, pos, label, best_with)` (mirrors `add_hiding_spot`).
+Input stays on the level's existing Special hook: the level keeps a `_stations` array and
+in `_on_special` calls `st.try_use(char_name, player.global_position)` — the station does
+the range + `best_with` + item checks (via `GameManager.has_item/grant_item/consume_item`)
+and owns its marker mesh + floating `Label3D` prompt. Signals: `produced(id)`, `completed`,
+`message(text)` (wire to the level's HUD hint). Persist with level flags + `restore_taken()`
+/ `restore_part(id)` in `_restore`. Gate a station behind a flag by skipping its `try_use`
+in `_on_special` (e.g. the organ stays locked until `tuning_key_given`).
+
+### Mid-level party recruit (`Duo3D.add_member`)
+`Duo3D` tolerates a **single-body** party (swap is guarded by `bodies.size() > 1`; a lone
+body down → game over), so a level can `spawn_duo([QUINN], …)` and grow the party later.
+`Duo3D.add_member(data, at)` builds a `Player3D` body, wires its `special_used`, appends it,
+and re-applies roles (newcomer = standby AI-follow); **Tab swap "wakes up" automatically**
+once there are two bodies. Used for the Erin "found in the Storeroom" beat in Pipe Organ
+Works — persist with an `erin_recruited` flag and re-recruit silently in `_restore`.
 
 ### Building level geometry (3D)
 Levels subclass `Level3D` and build their space in `_build_level()` from helpers:

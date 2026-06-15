@@ -255,6 +255,17 @@ func add_hiding_spot(pos: Vector3) -> Node3D:
 	add_child(h)
 	return h
 
+# A crafting/interaction station (gather → process → assemble). Builds a
+# WorkStation3D, parents it, and returns it so the level can configure recipes/
+# parts and connect its signals. Drive it from the level's _on_special by calling
+# station.try_use(char_name, player.global_position).
+func add_station(p_kind: int, pos: Vector3, label: String, best_with: String = "") -> Node3D:
+	var s := Area3D.new()
+	s.set_script(load("res://scripts/3d/work_station3d.gd"))
+	s.call("setup", p_kind, pos, label, best_with)   # set vars before _ready builds visuals
+	add_child(s)
+	return s
+
 func enemies_alive() -> int:
 	var n := 0
 	for c in get_children():

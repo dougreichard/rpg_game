@@ -42,6 +42,21 @@ func setup(datas: Array, pos: Vector3, cam, parent: Node) -> void:
 	if camera != null and not bodies.is_empty():
 		camera.set("target", bodies[active])
 
+# Recruit a new lead into the party mid-level (e.g. finding Erin in the Pipe Organ
+# Works). Builds a Player3D body exactly like setup()'s loop, wires its special
+# signal, and reapplies roles so the newcomer becomes the standby (AI-follow).
+# Swap (Tab) starts working automatically once bodies.size() > 1.
+func add_member(data: Resource, at: Vector3) -> CharacterBody3D:
+	var body := CharacterBody3D.new()
+	body.set_script(PlayerScript)
+	body.set("data", data)
+	get_parent().add_child(body)
+	body.global_position = at
+	body.special_used.connect(_forward)
+	bodies.append(body)
+	_apply_roles()
+	return body
+
 func _apply_roles() -> void:
 	for i in bodies.size():
 		if i == active:

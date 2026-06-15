@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="ItemData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/systems/item_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "rough_plank"
+display_name = "Warped Plank"
+description = "A rough, warped board. Square it up on the table saw to make a wind-chest panel."
+icon_color = Color(0.34, 0.22, 0.14, 1)
+owner_character = ""
+is_junk = false
