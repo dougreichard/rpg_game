@@ -17,6 +17,7 @@ var _anim: AnimationPlayer = null
 var _facing: Vector3 = Vector3.FORWARD
 var hp: float = 100.0
 var _attack_cd: float = 0.0
+var _attack_anim_t: float = 0.0
 
 func _ready() -> void:
 	if data != null:
@@ -74,12 +75,17 @@ func _physics_process(delta: float) -> void:
 	if _mesh_root != null and moving:
 		var want_yaw := atan2(dir.x, dir.z)
 		_mesh_root.rotation.y = lerp_angle(_mesh_root.rotation.y, want_yaw, clampf(TURN_LERP * delta, 0.0, 1.0))
-	# Locomotion animation.
+	# Animation: attack clip owns the body briefly, else locomotion.
+	_attack_anim_t = maxf(_attack_anim_t - delta, 0.0)
 	if _anim != null:
-		var want := "walk" if moving else "idle"
-		if _anim.current_animation != want:
-			_anim.play(want)
-	# Attack (no 3D attack clip yet — spawns the damage volume; visuals later).
+		if _attack_anim_t > 0.0:
+			if _anim.current_animation != "attack":
+				_anim.play("attack")
+		else:
+			var want := "walk" if moving else "idle"
+			if _anim.current_animation != want:
+				_anim.play(want)
+	# Attack.
 	_attack_cd = maxf(_attack_cd - delta, 0.0)
 	if _attack_cd == 0.0 and Input.is_action_just_pressed("attack"):
 		_attack()
@@ -88,6 +94,7 @@ func _attack() -> void:
 	var dmg: float = data.attack_damage if data != null else 20.0
 	var reach: float = 1.3
 	_attack_cd = data.attack_cooldown if data != null else 0.5
+	_attack_anim_t = 0.35
 	var pos := global_position + _facing * reach + Vector3(0.0, 0.9, 0.0)
 	Audio.play("attack")
 	Combat3D.strike(self, pos, 0.8, Combat3D.L_ENEMY, func(b: Node) -> void:

@@ -44,7 +44,7 @@ func _ready() -> void:
 		add_child(_mesh_root)
 		_anim = _find_anim(_mesh_root)
 		if _anim != null:
-			for a: String in ["idle", "walk", "run"]:
+			for a: String in ["idle", "walk", "chase"]:
 				var an: Animation = _anim.get_animation(a)
 				if an != null:
 					an.loop_mode = Animation.LOOP_LINEAR
@@ -73,7 +73,7 @@ func _physics_process(delta: float) -> void:
 		State.CHASE:    _tick_chase(delta)
 		State.WINDUP:   _tick_windup()
 		State.STRIKE:   _tick_strike()
-		State.RECOVER:  _tick_idle_wait(State.CHASE)
+		State.RECOVER:  _tick_recover()
 		State.HIT:      _tick_hit(delta)
 	move_and_slide()
 
@@ -92,13 +92,13 @@ func _tick_chase(delta: float) -> void:
 	velocity.x = dir.x * _speed
 	velocity.z = dir.z * _speed
 	_face(dir, delta)
-	_play("walk")
+	_play("chase")
 
 func _enter_windup() -> void:
 	_t = data.windup_duration if data != null else 0.6
 	_state = State.WINDUP
-	_play("idle")
-	_set_tint(Color(1.0, 0.45, 0.45))  # telegraph (no 3D windup clip yet)
+	_play("windup")
+	_set_tint(Color(1.0, 0.45, 0.45))  # telegraph: clip + red flash
 
 func _tick_windup() -> void:
 	velocity.x = 0.0; velocity.z = 0.0
@@ -107,6 +107,7 @@ func _tick_windup() -> void:
 
 func _tick_strike() -> void:
 	_clear_tint()
+	_play("attack")
 	var dmg: float = data.attack_damage if data != null else 12.0
 	var aim := Vector3.FORWARD
 	if _target != null:
@@ -118,11 +119,11 @@ func _tick_strike() -> void:
 	_t = RECOVER_TIME
 	_state = State.RECOVER
 
-func _tick_idle_wait(next: State) -> void:
+func _tick_recover() -> void:
 	velocity.x = 0.0; velocity.z = 0.0
-	_play("idle")
+	_play("recover")
 	if _t == 0.0:
-		_state = next
+		_state = State.CHASE
 
 func _tick_hit(delta: float) -> void:
 	_knockback = _knockback.move_toward(Vector3.ZERO, KNOCKBACK_FRICTION * delta)
@@ -142,6 +143,7 @@ func take_damage(amount: float, from_dir: Vector3) -> void:
 		_die()
 		return
 	Audio.play("hit")
+	_play("hurt")
 	var kbf: float = (data.knockback_force / PX_PER_M) if data != null else 4.0
 	_knockback = from_dir.normalized() * kbf
 	_t = HIT_TIME
@@ -149,6 +151,7 @@ func take_damage(amount: float, from_dir: Vector3) -> void:
 
 func _die() -> void:
 	_state = State.DEAD
+	_play("death")
 	Audio.play("defeat")
 	if data != null:
 		GameManager.enemy_defeated.emit(data.enemy_name, data.is_boss)
