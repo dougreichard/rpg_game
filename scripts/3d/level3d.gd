@@ -12,6 +12,9 @@ const CameraRigScript: Script = preload("res://scripts/3d/camera_rig_3d.gd")
 const Duo3DScript: Script = preload("res://scripts/3d/duo3d.gd")
 const Npc3DScript: Script = preload("res://scripts/3d/npc3d.gd")
 const DialogBoxScript: Script = preload("res://scripts/ui/dialog_box.gd")
+# UI-stack scripts are loaded at runtime (not preloaded as consts) so they stay
+# out of Level3D's parse-time class graph.
+const TITLE_3D := "res://scenes/3d/Title3D.tscn"
 
 var player: Node3D = null  # a Player3D (single) or a Duo3D controller
 const OVERWORLD_3D := "res://scenes/3d/Overworld3D.tscn"
@@ -23,7 +26,10 @@ var _shot_frames: int = -1
 
 func _ready() -> void:
 	_build_level()
-	if allow_overworld_exit and location_id != "":
+	# Levels get the shared pause/menu stack automatically; the overworld builds
+	# its own (with in_overworld=true) inside _build_level.
+	if location_id != "":
+		build_ui_stack(false)
 		_add_exit_hint()
 	if "--capture" in OS.get_cmdline_user_args() or "--capture" in OS.get_cmdline_args():
 		_shot_frames = 18
@@ -36,7 +42,7 @@ func _add_exit_hint() -> void:
 	l.anchor_left = 1.0; l.anchor_right = 1.0; l.anchor_top = 1.0; l.anchor_bottom = 1.0
 	l.offset_left = -200; l.offset_right = -12; l.offset_top = -40; l.offset_bottom = -10
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	l.text = "Esc — Town Map"
+	l.text = "Esc — Menu"
 	l.add_theme_font_override("font", UITheme.font())
 	l.add_theme_font_size_override("font_size", 16)
 	l.add_theme_color_override("font_color", UITheme.CREAM)
@@ -44,11 +50,23 @@ func _add_exit_hint() -> void:
 	l.add_theme_constant_override("outline_size", 4)
 	cl.add_child(l)
 
-func _input(e: InputEvent) -> void:
-	if allow_overworld_exit and e.is_action_pressed("ui_cancel"):
-		if dialog != null and dialog.has_method("is_open") and dialog.is_open():
-			return
-		get_tree().change_scene_to_file(OVERWORLD_3D)
+# Build the shared pause menu + its sibling overlays (Achievements / Inventory /
+# Quest Log / toast). PauseMenu looks these up by sibling name, so they must all
+# be direct children of this level root. GameManager toggles the menu on Esc.
+func build_ui_stack(in_overworld: bool) -> void:
+	var ach: Node = load("res://scripts/ui/achievements_overlay.gd").new(); ach.name = "AchievementsOverlay"; add_child(ach)
+	var inv: Node = load("res://scripts/ui/inventory_overlay.gd").new(); inv.name = "InventoryOverlay"; add_child(inv)
+	if player != null and player.has_method("duo_names"):
+		var names: Array = player.duo_names()
+		inv.call("setup", names[0], names[1])
+	var ql: Node = load("res://scripts/ui/quest_log_overlay.gd").new(); ql.name = "QuestLogOverlay"; add_child(ql)
+	var toast: Node = load("res://scripts/ui/achievement_toast.gd").new(); toast.name = "AchievementToast"; add_child(toast)
+	var pm: Node = load("res://scripts/ui/pause_menu.gd").new(); pm.name = "PauseMenu"
+	pm.set("in_overworld", in_overworld)
+	pm.set("map_scene", OVERWORLD_3D)
+	pm.set("title_scene", TITLE_3D)
+	pm.set("spoon_scene", "res://scenes/3d/Spoon3D.tscn")
+	add_child(pm)
 
 # Override in subclasses: build env, floor, walls, props, spawns.
 func _build_level() -> void:

@@ -253,3 +253,7 @@ func _win(fanfare: bool) -> void:
 	_hud_banner.visible = true
 	if fanfare:
 		Audio.play("puzzle_complete")
+		# roll to the endgame/result screen after a celebratory beat
+		get_tree().create_timer(4.5).timeout.connect(func() -> void:
+			if is_inside_tree():
+				get_tree().change_scene_to_file("res://scenes/3d/Result3D.tscn"))

@@ -69,6 +69,14 @@ func _forward(character_name: String) -> void:
 func active_name() -> String:
 	return bodies[active].active_name() if not bodies.is_empty() else "Quinn"
 
+func duo_names() -> Array:
+	var names: Array = []
+	for b in bodies:
+		names.append(b.active_name())
+	while names.size() < 2:
+		names.append("Quinn")
+	return names
+
 func set_input_locked(v: bool) -> void:
 	for b in bodies:
 		b.set_input_locked(v)

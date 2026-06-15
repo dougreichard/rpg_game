@@ -53,6 +53,7 @@ func _build_level() -> void:
 	for c in get_children():
 		if c is Camera3D and c.has_method("reframe"):
 			c.call("reframe", 16.0, 46.0)
+	build_ui_stack(true)   # pause menu + overlays (Esc opens it)
 
 func _num_cols() -> int:
 	return (LOCS.size() + 1) / 2

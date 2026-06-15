@@ -28,6 +28,10 @@ const SLIDER_STEPS: int = 10
 # placed in the overworld rather than a level — drops "Quit to Map" since
 # there's no level to quit out of.
 @export var in_overworld: bool = false
+# Quit targets — overridable so the 3D build points them at its own scenes.
+@export var map_scene: String = "res://scenes/overworld/OverworldMap.tscn"
+@export var title_scene: String = "res://scenes/ui/TitleScreen.tscn"
+@export var spoon_scene: String = "res://scenes/levels/GimmeDatSpoon.tscn"
 
 const HowToPlayOverlayScript: Script = preload("res://scripts/ui/how_to_play_overlay.gd")
 
@@ -46,7 +50,7 @@ var _opt_cursor: int = 0
 @onready var _achievements_overlay: Node = get_node("../AchievementsOverlay")
 @onready var _inventory_overlay: Node = get_node("../InventoryOverlay")
 @onready var _quest_log_overlay: Node = get_node("../QuestLogOverlay")
-@onready var _travel_overlay: Node = get_node("../TravelOverlay") if in_overworld else null
+@onready var _travel_overlay: Node = get_node_or_null("../TravelOverlay") if in_overworld else null
 
 # Options panel nodes
 var _main_panel_nodes: Array = []
@@ -62,7 +66,7 @@ func _ready() -> void:
 	_options = (OPTIONS_OVERWORLD if in_overworld else OPTIONS_LEVEL).duplicate()
 	# Fast travel + the arcade shortcut only make sense once Doug is found
 	# (all 13 main locations are then unlocked) and only from the overworld.
-	if in_overworld and GameManager.completed_locations.has("grand_marquee"):
+	if in_overworld and GameManager.completed_locations.has("grand_marquee") and get_node_or_null("../TravelOverlay") != null:
 		var insert_idx: int = _options.find("Quit to Title")
 		_options.insert(insert_idx, "Travel")
 		_options.insert(insert_idx + 1, "Gimme Dat Spoon")
@@ -412,13 +416,13 @@ func _select_main() -> void:
 			Audio.play("ui_select")
 		"Gimme Dat Spoon":
 			GameManager.toggle_pause()
-			TransitionManager.change_scene("res://scenes/levels/GimmeDatSpoon.tscn")
+			TransitionManager.change_scene(spoon_scene)
 		"Quit to Map":
 			GameManager.toggle_pause()
-			TransitionManager.change_scene("res://scenes/overworld/OverworldMap.tscn")
+			TransitionManager.change_scene(map_scene)
 		"Quit to Title":
 			GameManager.toggle_pause()
-			TransitionManager.change_scene("res://scenes/ui/TitleScreen.tscn")
+			TransitionManager.change_scene(title_scene)
 
 func _refresh_options() -> void:
 	for i in _option_labels.size():
