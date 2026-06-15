@@ -29,9 +29,9 @@ const SLIDER_STEPS: int = 10
 # there's no level to quit out of.
 @export var in_overworld: bool = false
 # Quit targets — overridable so the 3D build points them at its own scenes.
-@export var map_scene: String = "res://scenes/overworld/OverworldMap.tscn"
-@export var title_scene: String = "res://scenes/ui/TitleScreen.tscn"
-@export var spoon_scene: String = "res://scenes/levels/GimmeDatSpoon.tscn"
+@export var map_scene: String = "res://scenes/3d/Overworld3D.tscn"
+@export var title_scene: String = "res://scenes/3d/Title3D.tscn"
+@export var spoon_scene: String = "res://scenes/3d/Spoon3D.tscn"
 
 const HowToPlayOverlayScript: Script = preload("res://scripts/ui/how_to_play_overlay.gd")
 

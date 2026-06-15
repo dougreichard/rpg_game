@@ -221,8 +221,19 @@ func _load_item(id: String) -> ItemData:
 
 func _get_icon(item: ItemData) -> ImageTexture:
 	if item.id not in _icon_cache:
-		_icon_cache[item.id] = PlaceholderArt.make_item_icon(item.icon_color, item.is_junk)
+		_icon_cache[item.id] = _make_item_icon(item.icon_color, item.is_junk)
 	return _icon_cache[item.id]
+
+# A simple item icon: a coloured tile framed gold (functional) or grey (junk).
+func _make_item_icon(col: Color, is_junk: bool) -> ImageTexture:
+	var s := 24
+	var img := Image.create(s, s, false, Image.FORMAT_RGBA8)
+	var border: Color = Color(0.45, 0.45, 0.5) if is_junk else UITheme.GOLD
+	img.fill(border)
+	for y in range(2, s - 2):
+		for x in range(2, s - 2):
+			img.set_pixel(x, y, col)
+	return ImageTexture.create_from_image(img)
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not visible:

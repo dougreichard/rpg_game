@@ -25,8 +25,12 @@ const UNLOCKS_CHARACTER: Dictionary = {
 	"recording_studio": "ethan",
 }
 
-var active_player: Player = null
-var standby_player: Player = null
+# Legacy 2D combat refs — untyped so GameManager compiles without the retired 2D
+# Player class. Always null in the 3D build (Duo3D owns the active/standby duo),
+# so the dependent _process block + register/swap/bies helpers below are dead.
+var active_player = null
+var standby_player = null
+const REVIVE_HOLD_DURATION: float = 1.5
 var completed_locations: Array = []
 var unlocked_characters: Array = ["quinn"]
 
@@ -215,8 +219,8 @@ func _tick_revive(delta: float) -> void:
 		standby_player.revive_progress = maxf(standby_player.revive_progress - delta * REVIVE_DECAY_RATE, 0.0)
 		return
 	if active_player.global_position.distance_to(standby_player.global_position) <= REVIVE_RADIUS:
-		standby_player.revive_progress = minf(standby_player.revive_progress + delta, Player.REVIVE_HOLD_DURATION)
-		if standby_player.revive_progress >= Player.REVIVE_HOLD_DURATION:
+		standby_player.revive_progress = minf(standby_player.revive_progress + delta, REVIVE_HOLD_DURATION)
+		if standby_player.revive_progress >= REVIVE_HOLD_DURATION:
 			standby_player.revive()
 			player_revived.emit()
 	else:
@@ -297,7 +301,7 @@ func emit_noise(position: Vector2, radius: float) -> void:
 func calm_enemies(position: Vector2, radius: float) -> void:
 	enemies_calmed.emit(position, radius)
 
-func register_players(p1: Player, p2: Player) -> void:
+func register_players(p1, p2) -> void:
 	_reloading = false
 	active_player = p1
 	standby_player = p2
@@ -311,7 +315,7 @@ func register_players(p1: Player, p2: Player) -> void:
 # Respects the Character Select preference, then clears it.
 # Pass the level's default p1/p2; if preferred_active matches p2's name,
 # the order is swapped before registering.
-func register_players_with_preference(p1: Player, p2: Player) -> void:
+func register_players_with_preference(p1, p2) -> void:
 	if preferred_active != "" and preferred_active == p2.data.character_name:
 		register_players(p2, p1)
 	else:
@@ -326,7 +330,7 @@ func register_players_with_preference(p1: Player, p2: Player) -> void:
 func swap_characters() -> void:
 	if not is_instance_valid(active_player) or not is_instance_valid(standby_player):
 		return
-	var prev: Player = active_player
+	var prev = active_player
 	active_player = standby_player
 	standby_player = prev
 	active_player.is_active = true
@@ -339,7 +343,7 @@ func swap_characters() -> void:
 	Audio.play("swap")
 	characters_swapped.emit()
 
-func _activate_bies_for(player: Player) -> void:
+func _activate_bies_for(player) -> void:
 	if _bies_active:
 		return
 	player.bies_charge = 0.0

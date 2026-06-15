@@ -8,25 +8,37 @@ the project evolves.
 ## Project overview
 
 **Hunkle Bunkle** is a top-down adventure brawler built in **Godot 4.x with
-GDScript**, with a **Synty low-poly 2.5D** art style — Synty 3D assets rendered
-to 2D sprites/billboards at a fixed 3/4 angle and composited into a top-down 2D
-scene (see `docs/synty_2_5d_art_plan.md`). It combines environmental
-puzzle-solving with arcade-style beat-em-up combat across 13 distinct locations.
+GDScript**, now a **native 3D game** using Synty low-poly meshes directly
+(`assets/models/…`, baked from the licensed packs in git-ignored `synty_source/`).
+It combines environmental puzzle-solving with arcade-style beat-em-up combat
+across 13 distinct locations + a walkable 3D Synty-city overworld.
 
-> **Art direction:** the game is **not** retro/pixel-art. Do not assume a
-> 16-bit/8-bit look. Environments, props, town characters and bosses are Synty
-> billboards (`assets/art/synty/…`, baked from the licensed packs staged in
-> git-ignored `synty_source/`). The five leads now use **frame-animated,
-> 8-way true-directional Synty billboards** in combat (`assets/art/synty/characters/anim/<key>/`).
-> The locomotion gait is **fully procedural** (authored arm-swing + hip/knee leg
-> cycle + torso twist in `render_anim_character.py`) — the AnimLocomotion clip pack
-> was tried and dropped (it didn't transfer cleanly). See Phase 7 in
-> `docs/synty_2_5d_art_plan.md`. Regular enemies (grunt/runner/brute/sentry) are
-> now **8-way animated too** (same procedural pipeline, `assets/art/synty/enemies/anim/<key>/`,
-> Heist + WF meshes); the **boss** stays a single-pose billboard (it's the non-biped
-> Mech vehicle) with its code-driven AOE/windup telegraph. `PlaceholderArt` (programmatic)
-> and the older PIL pixel sheets (`assets/art/sprites/…`) remain as fallbacks, not
-> the target style. Earlier `DESIGN.md` / `artwork/` / `gem/` pixel-art docs are legacy.
+> **⚠ NATIVE 3D — the 2D/2.5D pipeline is RETIRED (commit ~`b…`, "go all in on 3D").**
+> The entire game now lives under `scripts/3d/` + `scenes/3d/` (`Camera3D`,
+> `CharacterBody3D`, `Area3D`, glTF meshes). The old 2D scenes/scripts, the PIL
+> pixel-sprite generators, the Synty *billboard* render pipeline, `PlaceholderArt`,
+> and `assets/art/sprites/` were **deleted**. Do **not** recreate 2D level/player/
+> enemy code. See `docs/3d_full_port_plan.md`.
+>
+> **Reusable 3D kit** (build new content from these): `Level3D` (env/floor/wall/
+> box_mesh/prop/spawn_duo/spawn_enemy/spawn_npc/dialog/HUD/pause-stack/hiding-spot
+> helpers), `Npc3D` (mesh + idle/walk + wander + speech bubble), `Duo3D` (both
+> leads + swap + P2 co-op + Bies + revive + game-over), `Player3D`, `Enemy3D`
+> (full stealth + combat FSM, boss AOE, ranged Sentry), `Combat3D`, `Projectile3D`,
+> `AnimalCompanion3D`, `HidingSpot3D`, `camera_rig_3d`. Levels are built mostly
+> from primitives (`box_mesh`) + a few committed prop GLBs; the overworld uses the
+> City-pack town kit in `assets/models/town/` (baked via
+> `synty_source/blender/scripts/export_prop.py`). Title/Result/Pause/overlays are
+> shared `Control` UI on `CanvasLayer`s. `UITheme` (`scripts/ui/ui_theme.gd`,
+> warm Synty skin from `assets/art/ui/`) + Nunito font remain the UI look.
+>
+> **Kept as the shared, render-agnostic core** (do not delete): autoloads
+> (GameManager/SaveManager/AchievementManager/Audio/CombatFX/TransitionManager),
+> Resource scripts (`CharacterData`, `EnemyData`, `ItemData`, `QuestData`,
+> `DialogTree`, `AchievementData`, `SpoonGame`) + their `data/*.tres`, and the
+> shared UI overlays (pause_menu, inventory/quest/achievement overlays, dialog_box).
+> NOTE: GameManager still holds dead 2D `active_player`/revive/swap/bies code,
+> kept compiling but untyped/null — the 3D build never runs it (Duo3D owns it).
 
 **Goal:** Find and rescue "Uncle Doug". Players navigate an overworld map,
 unlock new locations and characters by solving puzzles and defeating enemies.
@@ -407,11 +419,11 @@ Location template:
 ## Tech stack & targets
 
 - **Engine:** Godot 4.x (confirm with `godot --version`; prefer 4.3+ APIs). Use GDScript 2.0 idioms.
-- **Rendering:** 2D, **2.5D presentation** — top-down gameplay with Synty 3D
-  assets pre-rendered to 2D billboards (fixed 3/4 angle) for buildings, props,
-  town characters and bosses. `Node2D` + Y-sort for depth (screen-Y = depth;
-  small `z` for jump height); the overworld root is Y-sorted so the duo
-  interleaves with buildings/props.
+- **Rendering:** **native 3D** — `Node3D`/`CharacterBody3D`/`Area3D`, Synty glTF
+  meshes, a fixed 3/4 follow `Camera3D` (`camera_rig_3d`, re-framable; pulled back
+  for the overworld). Top-down brawler readability is preserved by the fixed angle
+  + ground-plane (XZ) movement. Boot flow: `Title3D` → `Overworld3D` (walkable
+  Synty city) → `*3D` level → back; endgame → `Result3D`.
 - **Platforms:** Desktop — Windows, macOS, Linux.
 
 ---
