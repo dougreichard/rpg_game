@@ -185,7 +185,8 @@ Agnes by Old Parish Church `secret_revealed`.
   `assets/models/town/`.
 - **Viewport:** 1280×720
 
-### Character stats *(starting values — tune via exported vars)*
+### Character stats *(starting values in the `CharacterData` `.tres`; tune there)*
+*(Distances/speeds are stored in the original px units; the 3D code divides by `PX_PER_M = 32` → metres/(m/s) at runtime.)*
 
 | Stat | Quinn | Erin | Evan |
 |------|-------|------|------|
@@ -224,15 +225,14 @@ often; Evan is the slowest but hits hardest and has the most HP.
 - **Effect:** `Engine.time_scale = 0.4` for 5 seconds, then snaps back to 1.0
 - **HUD:** charge bar always visible; pulses when full
 
-### Standby character
-- Holds position when not active — no AI, no auto-attack
-- Teleports to the active character's side if the active character moves more than 300 px away
-- Swap has no cooldown; add one later if it feels exploitable
+### Standby character (`Player3D` STANDBY_AI)
+- Single-player: follows the active teammate (keeps a small gap), teleporting to their side past `LEASH` (~9 m). Co-op (any `p2_*` input seen): becomes player-2 controlled.
+- Swap (Tab) is instant, no cooldown; `Duo3D` handles it and hands the camera to the new active body.
 
 ### Game flow & UI systems
 - **Flow:** `Title3D` → `Overworld3D` → `*3D` level → (Esc/clear) → `Overworld3D`; endgame → `Result3D`.
 - **Overworld** (`scenes/3d/Overworld3D.tscn`, `scripts/3d/overworld3d.gd`) — a walkable Synty city (City-pack road/building/prop GLBs in `assets/models/town/`). Duo walks the avenue; proximity to a building shows its name billboard + status and `G` enters that location's 3D scene (unlock-gated). 12 town NPC quest-givers are placed here too.
-- **Combat polish** (`CombatFX` autoload): screen shake, hit sparks (`CPUParticles2D`), hit flash (overbright tween), hit-stop (`set_physics_process` pause).
+- **Combat polish** (`CombatFX` autoload): screen shake + hit-stop; enemies flash an overbright tint on hit and a red tint on windup. (The old 2D hit-spark particles don't render in 3D — a 3D `GPUParticles3D` spark is a candidate add.)
 
 ---
 
@@ -265,8 +265,8 @@ per-location subsections below.
 
 **Puzzle-gate variety:** Most locations use a **proximity gate** (in-range + press Special = instant success).
 Two diversify this:
-- **Zip Line Park** — **timing gate**: pulsing `_draw()` ring; press Special inside `PULSE_GOOD_WINDOW`.
-- **Underground Tunnels** — **multi-step gate**: `HATCH_PRESSES_REQUIRED` (3) progress pips; each press fills one.
+- **Zip Line Park** — **timing gate**: a pulsing HUD bar (`_update_pulse_hud`); press Special (Ben) while it reads OPEN (`abs(sin(_pulse)) > PULSE_OPEN`).
+- **Underground Tunnels** — **multi-step gate**: `HATCH_PRESSES_REQUIRED` (3) glowing pips (Ethan); each press fills one, persisted as the `hatch_progress` int.
 
 Keep the baseline proximity gate as the default; use timing or multi-step only when the location's spec calls for that flavor.
 
@@ -277,7 +277,6 @@ Keep the baseline proximity gate as the default; use timing or multi-step only w
 - **Key puzzle(s):** Quinn repairs the pipe organ; requires `brass_organ_pipe` + `tuning_key` (Erin fast-talks the key from Mr. Bellows)
 - **Enemy types:** Grunts + Runners
 - **Level progress flags:** `enemies_cleared` / `organ_repaired` / `secret_revealed` / `manager_met` / `tuning_key_given`
-- **Camera bounds:** `(24,24)–(1352,656)`; `FLOOR_COLS = 43` / `FLOOR_ROWS = 20`
 - **NPCs:** Mr. Bellows (dialog-choice, at his desk in Manager's Office)
 - **Notes:** Erin is "on loan" at the start; officially recruited on completion. Secret passage reveals `spare_clockwork_gear`.
 
@@ -289,7 +288,6 @@ Keep the baseline proximity gate as the default; use timing or multi-step only w
 - **Key puzzle(s):** Quinn's respectful demeanor earns the congregation's trust; Erin's skepticism lets her see through deception — neither can solve it alone
 - **Enemy types:** None (dialogue-heavy)
 - **Level progress flags:** `quinn_done` / `erin_done` / `secret_revealed` / `father_aldric_impression`
-- **Camera bounds:** `(184,24)–(776,656)`
 - **NPCs:** Father Aldric (dialog-choice NPC at the altar; `father_aldric_impression` → `"good"` / `"cool"`)
 
 ---
@@ -300,7 +298,6 @@ Keep the baseline proximity gate as the default; use timing or multi-step only w
 - **Key puzzle(s):** Evan's strength moves the barbell sealing Ben's cage alcove
 - **Enemy types:** Grunts + Brutes
 - **Level progress flags:** `enemies_cleared` / `barbell_moved`
-- **Camera bounds:** `(24,24)–(936,536)`
 
 ---
 
@@ -310,7 +307,6 @@ Keep the baseline proximity gate as the default; use timing or multi-step only w
 - **Key puzzle(s):** Ben tunes the soundboard console, sliding open the glass BoothDoor and revealing Ethan
 - **Enemy types:** Grunts + Runners
 - **Level progress flags:** `enemies_cleared` / `console_tuned`
-- **Camera bounds:** `(24,24)–(896,536)`
 
 ---
 
@@ -319,7 +315,6 @@ Keep the baseline proximity gate as the default; use timing or multi-step only w
 - **Key puzzle(s):** Quinn repairs the gear floor escapement; Ben plays the correct belfry bell sequence (tuning fork item helps); clockwork-guardian Boss guards the stairs
 - **Enemy types:** Grunts + Boss (clockwork guardian)
 - **Level progress flags:** `enemies_cleared` / `gear_repaired` / `bells_played`
-- **Camera bounds:** `(264,24)–(616,616)` (tall vertical shaft)
 - **NPCs:** Hieronymus (stationary on landing floor)
 
 ---
@@ -329,7 +324,6 @@ Keep the baseline proximity gate as the default; use timing or multi-step only w
 - **Key puzzle(s):** Evan (or crowbar item) moves the cargo container blocking the crane platform; Calvin & Coolidge combat assist; Viktor's manifest confirms Doug's name on the shipment
 - **Enemy types:** Grunts (dock workers) + Runners (smugglers)
 - **Level progress flags:** `enemies_cleared` / `container_moved`
-- **Camera bounds:** `(24,24)–(936,536)`
 - **NPCs:** Viktor (harbourmaster, stationary near pier entrance)
 
 ---
@@ -339,7 +333,6 @@ Keep the baseline proximity gate as the default; use timing or multi-step only w
 - **Key puzzle(s):** Erin talks her way past the librarian (or library card item bypasses the desk); Ethan hacks the restricted archive terminal
 - **Enemy types:** Grunts + Sentry (ranged)
 - **Level progress flags:** `enemies_cleared` / `librarian_talked` / `archive_hacked`
-- **Camera bounds:** `(24,144)–(936,536)`
 
 ---
 
@@ -348,7 +341,6 @@ Keep the baseline proximity gate as the default; use timing or multi-step only w
 - **Key puzzle(s):** Quinn repairs the broken ride; Erin talks down the backstage gate (or backstage pass item skips the guard conversation)
 - **Enemy types:** Grunts ×2 + Brute
 - **Level progress flags:** `enemies_cleared` / `ride_repaired` / `backstage_talked`
-- **Camera bounds:** `(24,24)–(936,536)`
 
 ---
 
@@ -357,7 +349,6 @@ Keep the baseline proximity gate as the default; use timing or multi-step only w
 - **Key puzzle(s):** Evan clears west rubble (proximity gate); Ethan hacks east hatch (multi-step, 3 pips); Twinkle bark distraction; rusty key opens a shortcut door
 - **Enemy types:** Grunts ×2 + Runner (patrol-style)
 - **Level progress flags:** `enemies_cleared` / `rubble_cleared` / `hatch_progress` (int 0–3, persists partial hack)
-- **Camera bounds:** `(24,184)–(936,536)`
 - **NPCs:** Cyrus (tunnel maintainer, stationary at junction chamber)
 
 ---
@@ -367,7 +358,6 @@ Keep the baseline proximity gate as the default; use timing or multi-step only w
 - **Key puzzle(s):** Ethan hacks the Mid Platform control panel (proximity); Ben catches the timed High Platform release window (timing gate)
 - **Enemy types:** Grunt + Runners ×2
 - **Level progress flags:** `enemies_cleared` / `panel_hacked` / `release_timed`
-- **Camera bounds:** `(24,164)–(936,536)`
 - **NPCs:** Lena (safety warden, stationary on Landing platform)
 
 ---
@@ -377,7 +367,6 @@ Keep the baseline proximity gate as the default; use timing or multi-step only w
 - **Key puzzle(s):** Quinn repairs physics-glitch node in Stage Alpha; Ethan hacks system console in Stage Beta; Lizard companion offers an alternate bypass route
 - **Enemy types:** Grunts ×2 + Sentry (glitchy/corrupted)
 - **Level progress flags:** `enemies_cleared` / `glitch_repaired` / `system_hacked`
-- **Camera bounds:** `(24,24)–(776,536)`
 - **NPCs:** ARIA (virtual assistant, stationary in Boot Chamber)
 
 ---
@@ -387,7 +376,6 @@ Keep the baseline proximity gate as the default; use timing or multi-step only w
 - **Key puzzle(s):** Evan clears landing-site wreckage (or William & Mary two-point puzzle); Ethan hacks jammed chute release in Snag Grove; Rio confirms the marquee sign points to the endgame
 - **Enemy types:** Grunt + Runner + Brute (hostile ground crew)
 - **Level progress flags:** `enemies_cleared` / `chute_hacked` / `landing_cleared`
-- **Camera bounds:** `(24,24)–(576,536)`
 - **NPCs:** Rio (ex-crew, stationary in Touchdown Clearing)
 
 ---
@@ -397,19 +385,18 @@ Keep the baseline proximity gate as the default; use timing or multi-step only w
 - **Key puzzle(s):** Quinn repairs the projection booth; Ben plays the house organ on the Balcony; Boss guards the Backstage aisle; Uncle Doug found in the projection booth
 - **Enemy types:** Grunts ×2 + Boss (cinema guardian)
 - **Level progress flags:** `enemies_cleared` / `projector_repaired` / `organ_played`
-- **Camera bounds:** `(24,24)–(616,536)`
 - **NPCs:** Cecil / Usher (chief usher, dialog-choice tree, stationary in Lobby)
-- **Notes:** On clear, `_exit_to_overworld()` routes to `ResultScreen.tscn` (endgame). Completion id is `"grand_marquee"`.
+- **Notes:** Win needs enemies cleared + projector + organ + **all 5 tickets** → Uncle Doug is revealed in the booth and `_win` routes to `Result3D.tscn` after a beat. Completion id is `"grand_marquee"`.
 
 ```
 Location template:
 - Name:
+- Scene/script: (scenes/3d/<Name>3D.tscn / scripts/3d/<name>3d.gd)
 - Unlock condition:
 - Unlocks: (character, if applicable)
-- Key puzzle(s):
+- Key puzzle(s): (which character's ability gates each)
 - Enemy types:
 - Level progress flags:
-- Camera bounds:
 - NPCs: (if any)
 - Notes:
 ```
@@ -487,30 +474,35 @@ Owns global state: current location, unlocked characters, active duo, score,
 game over / victory. Spawns levels and broadcasts via signals. Never let scenes
 reach up into GameManager's internals — use signals.
 
-### Player (`CharacterBody2D`)
-FSM: `idle → walk → attack → dash → hurt → down/revive`.
-- `move_and_slide()` for motion; vertical movement is ~0.6× horizontal speed.
-- Dash grants brief i-frames.
-- **Character swap**: instantly switches active ↔ standby character. Standby character follows or holds position.
-- Character-specific stats and abilities live in a `CharacterData` Resource, loaded at runtime. No per-character code forks in `player_3d.gd`.
+### Player3D (`CharacterBody3D`) — `scripts/3d/player_3d.gd`
+One lead body; `Duo3D` owns two and swaps which is active. XZ-plane `move_and_slide`.
+- `mode` selects the input source: ACTIVE (player 1), STANDBY_P2 (co-op), STANDBY_AI
+  (follows the active teammate with a leash-teleport).
+- `_attack` opens a `Combat3D.strike` (and emits noise); `bies_charge` +0.1 per landed hit.
+- HP→0 **downs** the body (revivable, not dead); `is_hidden` is set by hiding spots.
+- Character-specific stats/abilities live in a `CharacterData` Resource — no per-character
+  code forks in `player_3d.gd`. (`PX_PER_M = 32` converts the px-based stats to m/s.)
 
-### Enemy (`CharacterBody2D`)
-Full FSM: `PATROL → INVESTIGATE → CHASE → WINDUP → STRIKE → RECOVER → HIT` (plus `AOE_TELEGRAPH`/`AOE_SLAM` for Boss).
-Bosses skip straight to `CHASE` — they're meant as known confrontations, not sneak-past targets.
-Windup **must telegraph** (animation + UI tell) before a strike.
+### Enemy3D (`CharacterBody3D`) — `scripts/3d/enemy_3d.gd`
+Full FSM: `PATROL → INVESTIGATE → CHASE → WINDUP → STRIKE → RECOVER → HIT` (plus
+`AOE_TELEGRAPH`/`AOE_SLAM` for Boss; ranged Sentry fires `Projectile3D` from STRIKE).
+Bosses skip straight to `CHASE` — known confrontations, not sneak-past targets.
+Windup **must telegraph** (anim + red tint) before a strike. `mesh_scale`/`mesh_tint`
+make a Brute/Boss a larger, darker grunt. Enemies join the `enemy3d` group.
 
-### Combat (Area2D)
-Attacks spawn a short-lived **Hitbox** (`Area2D`) that overlaps enemy **Hurtbox** (`Area2D`).
-All damage resolution via `Combat3D.strike` (`scripts/3d/combat3d.gd`, one-shot `Area3D`). Apply: knockback, hitstun, hit-flash, particles, screen-shake, brief hit-stop.
+### Combat3D — `scripts/3d/combat3d.gd`
+`Combat3D.strike(node, world_pos, radius, mask, on_hit, life)` spawns a one-shot `Area3D`
+that overlaps targets on the given layer (`L_WORLD=1` / `L_PLAYER=2` / `L_ENEMY=4`) and
+calls `on_hit(body)`. Damage resolution applies knockback + hit-flash; `CombatFX` adds
+screen-shake / hit-stop.
 
-### WaveSpawner
-Reads `data/waves.tres`. Spawns from screen edges up to a max concurrent count.
-Emits `wave_cleared` when queue is empty and no enemies remain.
-
-### PuzzleManager
-Tracks puzzle state per location. Emits signals when puzzle conditions are met
-(e.g., `clock_repaired`, `panel_hacked`). Puzzle logic references character
-abilities by type, not by character name, so new characters can plug in.
+### Spawning + win conditions
+Levels spawn enemies directly in `_build_level` via `Level3D.spawn_enemy(data, pos, mesh,
+scale, tint)` (no wave system — small fixed encounters per room) and poll
+`enemies_alive()`. Puzzle state is tracked inline per level as `GameManager` level-flags
+(`set_level_flag`/`get_level_flag`), keyed by ability via the `_on_special(char_name)`
+ladder (e.g. only Quinn repairs, only Ethan hacks), so the win check ANDs "enemies cleared"
+with the level's puzzle flags.
 
 ### Building level geometry (3D)
 Levels subclass `Level3D` and build their space in `_build_level()` from helpers:
@@ -545,8 +537,10 @@ Applies `Engine.time_scale = 0.4` for a brief window. Governs cooldown/charge. E
 `bies_activated` / `bies_ended` for HUD and VFX.
 
 ### HUD
-Per-character health, active duo display, Bies Mode charge, boss health bar.
-Driven by signals from GameManager / players — never polls node internals.
+Each 3D level builds a lightweight HUD in its own `_build_hud` (a goal line + a transient
+hint line + a centre banner, via `Level3D.hud_label`/`make_hud_layer`), plus the shared
+**Bies charge bar** (`Level3D._build_bies_bar`, bottom-centre, fills/pulses gold). Per-character
+health bars + a boss health bar aren't built yet — a candidate HUD upgrade.
 
 ### UI skin — UITheme + Nunito font (cozy-warm Synty)
 `scripts/ui/ui_theme.gd` (`class_name UITheme`) is the global UI look: a code-built warm
@@ -565,11 +559,11 @@ Use these instead of re-deriving styles:
   letter keys F/G/V/B/WASD composite on the blank key, Tab/Enter/arrows are dedicated sprites).
 Palette consts (`GOLD`, `CREAM`, `TEXT`, `ACCENT`, `PANEL_BG`, …) are the single source of UI colour.
 
-### Co-op revive
-A downed player is revived when their teammate stands within `REVIVE_RADIUS` (48px) for
-`REVIVE_HOLD_DURATION` (1.5s). Revival restores HP to 50% and grants i-frames.
-`Player._draw()` renders a radial progress-arc ring above the downed character's head.
-If both are `DOWN` simultaneously → game over overlay → `get_tree().reload_current_scene()` on `ui_accept`.
+### Co-op revive + game over (`Duo3D._tick_revive`)
+A downed body (HP→0; mesh crumples) is revived when the upright teammate stands within
+`REVIVE_RADIUS` (~2 m) for `REVIVE_HOLD` (1.5 s) — restores HP to 50% + brief i-frames.
+If the *active* body goes down, control auto-swaps to the upright partner. Both down →
+"BOTH DOWN — Press Enter to retry" overlay → `get_tree().reload_current_scene()` on `ui_accept`.
 
 ### NPC dialog & quests
 12 town NPCs are quest-givers (full roster + dialog in `QuestData`, `scripts/systems/quest_data.gd`). Key systems:
