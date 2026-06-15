@@ -15,6 +15,8 @@ enum State { CHASE, WINDUP, STRIKE, RECOVER, HIT, DEAD }
 
 @export var data: EnemyData = null
 @export var mesh_path: String = "res://assets/models/enemies/grunt.glb"
+@export var mesh_scale: float = 1.0
+@export var mesh_tint: Color = Color(1, 1, 1, 1)   # multiplies the base mesh albedo
 
 var hp: float = 60.0
 var _speed: float = 2.5
@@ -41,7 +43,14 @@ func _ready() -> void:
 	var ps: PackedScene = load(mesh_path)
 	if ps != null:
 		_mesh_root = ps.instantiate()
+		_mesh_root.scale = Vector3.ONE * mesh_scale
 		add_child(_mesh_root)
+		if mesh_tint != Color(1, 1, 1, 1):
+			for mi in _mesh_root.find_children("*", "MeshInstance3D"):
+				var src := (mi as MeshInstance3D).get_active_material(0)
+				var nm: StandardMaterial3D = src.duplicate() if src is StandardMaterial3D else StandardMaterial3D.new()
+				nm.albedo_color = nm.albedo_color * mesh_tint
+				(mi as MeshInstance3D).material_override = nm
 		_anim = _find_anim(_mesh_root)
 		if _anim != null:
 			for a: String in ["idle", "walk", "chase"]:

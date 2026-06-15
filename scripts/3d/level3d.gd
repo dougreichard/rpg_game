@@ -10,8 +10,12 @@ const PlayerScript: Script = preload("res://scripts/3d/player_3d.gd")
 const EnemyScript: Script = preload("res://scripts/3d/enemy_3d.gd")
 const CameraRigScript: Script = preload("res://scripts/3d/camera_rig_3d.gd")
 const Duo3DScript: Script = preload("res://scripts/3d/duo3d.gd")
+const Npc3DScript: Script = preload("res://scripts/3d/npc3d.gd")
+const DialogBoxScript: Script = preload("res://scripts/ui/dialog_box.gd")
 
 var player: Node3D = null  # a Player3D (single) or a Duo3D controller
+var location_id: String = ""   # set by subclass; used by dialog-effect helper
+var dialog = null              # shared DialogBox (created by make_dialog)
 var _shot_frames: int = -1
 
 func _ready() -> void:
@@ -138,15 +142,118 @@ func spawn_duo(datas: Array, pos: Vector3, with_camera: bool = true) -> Node3D:
 	player = duo
 	return duo
 
-func spawn_enemy(data: Resource, pos: Vector3, mesh_path: String = "") -> CharacterBody3D:
+func spawn_enemy(data: Resource, pos: Vector3, mesh_path: String = "", mesh_scale: float = 1.0, mesh_tint: Color = Color(1, 1, 1, 1)) -> CharacterBody3D:
 	var e := CharacterBody3D.new()
 	e.set_script(EnemyScript)
 	e.set("data", data)
 	if mesh_path != "":
 		e.set("mesh_path", mesh_path)
+	e.set("mesh_scale", mesh_scale)
+	e.set("mesh_tint", mesh_tint)
 	e.position = pos
 	add_child(e)
 	return e
+
+# Spawn a reusable Npc3D (mesh + idle/walk + optional wander + speech bubble).
+func spawn_npc(key: String, pos: Vector3, yaw: float = PI, quips: Array = [], waypoints: Array = []) -> Node3D:
+	var n := Node3D.new()
+	n.set_script(Npc3DScript)
+	n.set("mesh_key", key)
+	n.set("quips", quips)
+	n.set("waypoints", waypoints)
+	n.set("face_yaw", yaw)
+	n.position = pos
+	add_child(n)
+	return n
+
+func enemies_alive() -> int:
+	var n := 0
+	for c in get_children():
+		if c is CharacterBody3D and c.get_script() == EnemyScript:
+			n += 1
+	return n
+
+func near3(a: Vector3, b: Vector3, reach: float = 2.0) -> bool:
+	return Vector2(a.x - b.x, a.z - b.z).length() < reach
+
+# --- dialog plumbing (shared) ------------------------------------------------
+func make_dialog() -> Object:
+	dialog = DialogBoxScript.new()
+	var cl := CanvasLayer.new()
+	cl.add_child(dialog)
+	add_child(cl)
+	if not dialog.closed.is_connected(_on_dialog_closed_default):
+		dialog.closed.connect(_on_dialog_closed_default)
+	return dialog
+
+func open_dialog(npc: String, col: Color, tree: Dictionary, char_name: String) -> void:
+	if dialog == null or (dialog.has_method("is_open") and dialog.is_open()):
+		return
+	if player != null and player.has_method("set_input_locked"):
+		player.set_input_locked(true)
+	dialog.open(npc, col, tree, "start", char_name)
+
+# Default effect application: grant_items / set_flag / consume_item, keyed to
+# location_id. Subclasses can connect their own handler instead (or also).
+func _on_dialog_closed_default(effects: Array) -> void:
+	if player != null and player.has_method("set_input_locked"):
+		player.set_input_locked(false)
+	apply_dialog_effects(effects)
+
+func apply_dialog_effects(effects: Array) -> void:
+	var who: String = player.active_name() if (player != null and player.has_method("active_name")) else "Quinn"
+	for e in effects:
+		if not (e is Dictionary):
+			continue
+		if e.has("grant_items"):
+			for id in e["grant_items"]:
+				GameManager.grant_item(who, id)
+		if e.has("consume_item"):
+			GameManager.consume_item(who, e["consume_item"])
+		if e.has("set_flag") and location_id != "":
+			GameManager.set_level_flag(location_id, e["set_flag"], e.get("flag_value", true))
+
+# Call from a subclass _unhandled_input to drive dialog paging/choices.
+func dialog_input() -> bool:
+	if dialog == null or not (dialog.has_method("is_open") and dialog.is_open()):
+		return false
+	if Input.is_action_just_pressed("ui_accept"):
+		if dialog.is_choice_mode():
+			dialog.select_choice()
+		else:
+			dialog.advance()
+	elif Input.is_action_just_pressed("ui_up"):
+		dialog.move_choice_cursor(-1)
+	elif Input.is_action_just_pressed("ui_down"):
+		dialog.move_choice_cursor(1)
+	return true
+
+# --- HUD labels (shared) -----------------------------------------------------
+func make_hud_layer() -> CanvasLayer:
+	var cl := CanvasLayer.new()
+	add_child(cl)
+	return cl
+
+func hud_label(cl: CanvasLayer, y: float, size: int = 22, from_bottom: bool = false) -> Label:
+	var l := Label.new()
+	l.anchor_left = 0.0
+	l.anchor_right = 1.0
+	l.offset_left = 40
+	l.offset_right = -40
+	if from_bottom:
+		l.anchor_top = 1.0
+		l.anchor_bottom = 1.0
+	l.offset_top = y
+	l.offset_bottom = y + 70
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	l.add_theme_font_override("font", UITheme.font())
+	l.add_theme_font_size_override("font_size", size)
+	l.add_theme_color_override("font_color", UITheme.CREAM)
+	l.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
+	l.add_theme_constant_override("outline_size", 5)
+	cl.add_child(l)
+	return l
 
 # --- capture (windowed --capture) --------------------------------------------
 func _process(_d: float) -> void:
