@@ -118,6 +118,24 @@ func spawn_player(data: Resource, pos: Vector3, with_camera: bool = true) -> Cha
 		add_child(cam)
 	return p
 
+func spawn_duo(datas: Array, pos: Vector3, with_camera: bool = true) -> CharacterBody3D:
+	var p := CharacterBody3D.new()
+	p.set_script(PlayerScript)
+	var typed: Array[CharacterData] = []
+	for d in datas:
+		typed.append(d)
+	p.set("duo", typed)
+	p.position = pos
+	add_child(p)
+	player = p
+	if with_camera:
+		var cam := Camera3D.new()
+		cam.set_script(CameraRigScript)
+		cam.set("target", p)
+		cam.current = true
+		add_child(cam)
+	return p
+
 func spawn_enemy(data: Resource, pos: Vector3, mesh_path: String = "") -> CharacterBody3D:
 	var e := CharacterBody3D.new()
 	e.set_script(EnemyScript)
