@@ -60,6 +60,7 @@ func _build_level() -> void:
 	_floor1()
 	_floor2()
 	_floor3()
+	_links()
 	make_dialog()
 	_build_hud()
 	_hiero = spawn_npc("aldric", F1 + HIERO, deg_to_rad(180))
@@ -80,10 +81,8 @@ func _floor1() -> void:
 	add_child(_loot_box)
 	prop("res://assets/models/props/shelf.glb", F1 + Vector3(-3.5, 0, -14), deg_to_rad(90))
 	prop("res://assets/models/props/barrel.glb", F1 + Vector3(3.5, 0, -14))
-	# exit door (south) back to the overworld; stairs UP at the workshop's north
+	# exit door (south) back to the overworld (stairs are built in _links)
 	add_exit_portal(F1 + Vector3(0, 0, 6.5), Vector3(3, 3, 1.4))
-	stairs_mesh(F1 + Vector3(0, 0, -15.0), STONE.lightened(0.05))
-	add_stairwell(F1 + Vector3(0, 0, -15.5), Vector3(3, 3, 1.4), F2 + Vector3(0, 0.1, 0.0), F_GEAR.x, F_GEAR.y)
 
 # --- Floor 2: Landing + Gear Hall -------------------------------------------
 func _floor2() -> void:
@@ -93,12 +92,7 @@ func _floor2() -> void:
 	point_light(F2 + Vector3(0, 2.6, 0), Color(0.9, 0.85, 0.7), 1.6, 6.0)
 	point_light(F2 + Vector3(0, 3.2, -11), Color(1.0, 0.8, 0.5), 2.6, 11.0)
 	_gear_mechanism()
-	# stairs DOWN to floor 1 (at the landing) and UP to the belfry (gated by the gear)
-	stairs_mesh(F2 + Vector3(0, 0, 3.0), STONE.lightened(0.05))
-	add_stairwell(F2 + Vector3(0, 0, 3.5), Vector3(3, 3, 1.4), F1 + Vector3(0, 0.1, -12.0), F_LOBBY.x, F_LOBBY.y)
-	stairs_mesh(F2 + Vector3(0, 0, -16.0), STONE.lightened(0.05))
-	_stair2 = add_stairwell(F2 + Vector3(0, 0, -16.5), Vector3(3, 3, 1.4), F3 + Vector3(0, 0.1, 0.0), F_BELFRY.x, F_BELFRY.y, true)
-	_gate_door(F2 + Vector3(0, 0, -15.0))
+	_gate_door(F2 + Vector3(0, 0, -15.0))   # barred belfry stair (opens with the gear)
 
 # --- Floor 3: Antechamber + Belfry ------------------------------------------
 func _floor3() -> void:
@@ -108,10 +102,19 @@ func _floor3() -> void:
 	point_light(F3 + Vector3(0, 2.6, 0), Color(0.9, 0.85, 0.7), 1.4, 5.0)
 	point_light(F3 + Vector3(0, 3.8, -12), Color(1.0, 0.8, 0.5), 2.8, 16.0)
 	point_light(F3 + BELLS + Vector3(0, 2.5, 0), Color(1.0, 0.9, 0.6), 1.6, 6.0)
-	# stairs DOWN to the gear floor (at the antechamber)
-	stairs_mesh(F3 + Vector3(0, 0, 3.0), STONE.lightened(0.05))
-	add_stairwell(F3 + Vector3(0, 0, 3.5), Vector3(3, 3, 1.4), F2 + Vector3(0, 0.1, -12.0), F_GEAR.x, F_GEAR.y)
 	_bell_rack()
+
+# Shared staircases (walk-on, both ways): Lobby<->Gear, and Gear<->Belfry (the up
+# leg barred until the gear turns). Up/down use the same staircase per connection.
+func _links() -> void:
+	add_floor_link(
+		F1 + Vector3(0, 0, -15.5), F1 + Vector3(0, 0.1, -12.5), F_LOBBY,
+		F2 + Vector3(0, 0, 3.5), F2 + Vector3(0, 0.1, 0.0), F_GEAR,
+		STONE.lightened(0.05))
+	_stair2 = add_floor_link(
+		F2 + Vector3(0, 0, -16.5), F2 + Vector3(0, 0.1, -13.0), F_GEAR,
+		F3 + Vector3(0, 0, 3.5), F3 + Vector3(0, 0.1, 0.0), F_BELFRY,
+		STONE.lightened(0.05), true)
 	# clock-face on the belfry back wall
 	var face := MeshInstance3D.new()
 	var cm := CylinderMesh.new(); cm.top_radius = 2.6; cm.bottom_radius = 2.6; cm.height = 0.2

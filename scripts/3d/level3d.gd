@@ -461,6 +461,19 @@ func teleport_duo(dest: Vector3) -> void:
 	if player != null and player.has_method("teleport_to"):
 		player.teleport_to(dest)
 
+# A single shared staircase between two floors (walk-on, both ways): going UP from
+# `lo_stairs` lands you in front of the upper stairs (`hi_land`) and reframes to the
+# upper floor; going DOWN from `hi_stairs` lands you in front of the lower stairs
+# (`lo_land`). Up can be locked behind a puzzle (down is always open). Each landing
+# sits just off its stairs so you don't immediately ride back. Returns the UP portal
+# so the level can unlock it.
+func add_floor_link(lo_stairs: Vector3, lo_land: Vector3, lo_frame: Vector2, hi_stairs: Vector3, hi_land: Vector3, hi_frame: Vector2, col: Color, locked: bool = false) -> Object:
+	stairs_mesh(lo_stairs + Vector3(0, 0, 0.5), col)
+	stairs_mesh(hi_stairs + Vector3(0, 0, 0.5), col)
+	var up := add_stairwell(lo_stairs, Vector3(3, 3, 1.4), hi_land, hi_frame.x, hi_frame.y, locked)
+	add_stairwell(hi_stairs, Vector3(3, 3, 1.4), lo_land, lo_frame.x, lo_frame.y, false)
+	return up
+
 # Stairwell transition: fade to black, carry the duo + reframe at the dark point,
 # fade back. Input is briefly locked so you don't slide off mid-fade.
 func stair_transition(dest: Vector3, dist: float, elev: float) -> void:
