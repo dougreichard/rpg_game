@@ -11,7 +11,9 @@ const RECOVER_TIME: float = 0.5
 const HIT_TIME: float = 0.25
 const KNOCKBACK_FRICTION: float = 10.0
 
-enum State { CHASE, WINDUP, STRIKE, RECOVER, HIT, DEAD }
+enum State { CHASE, WINDUP, STRIKE, RECOVER, HIT, DEAD, AOE_TELEGRAPH, AOE_SLAM }
+
+const ProjectileScript: Script = preload("res://scripts/3d/projectile3d.gd")
 
 @export var data: EnemyData = null
 @export var mesh_path: String = "res://assets/models/enemies/grunt.glb"
@@ -26,6 +28,8 @@ var _mesh_root: Node3D = null
 var _anim: AnimationPlayer = null
 var _target: Node3D = null
 var _knockback: Vector3 = Vector3.ZERO
+var _slam_cd: float = 0.0
+var _ring: MeshInstance3D = null
 
 func _ready() -> void:
 	if data != null:
@@ -78,12 +82,15 @@ func _physics_process(delta: float) -> void:
 	else:
 		velocity.y = 0.0
 	_t = maxf(_t - delta, 0.0)
+	_slam_cd = maxf(_slam_cd - delta, 0.0)
 	match _state:
-		State.CHASE:    _tick_chase(delta)
-		State.WINDUP:   _tick_windup()
-		State.STRIKE:   _tick_strike()
-		State.RECOVER:  _tick_recover()
-		State.HIT:      _tick_hit(delta)
+		State.CHASE:          _tick_chase(delta)
+		State.WINDUP:         _tick_windup()
+		State.STRIKE:         _tick_strike()
+		State.RECOVER:        _tick_recover()
+		State.HIT:            _tick_hit(delta)
+		State.AOE_TELEGRAPH:  _tick_aoe_telegraph(delta)
+		State.AOE_SLAM:       _tick_aoe_slam()
 	move_and_slide()
 
 func _tick_chase(delta: float) -> void:
@@ -92,6 +99,10 @@ func _tick_chase(delta: float) -> void:
 		return
 	var to: Vector3 = _target.global_position - global_position
 	to.y = 0.0
+	# Boss ground-slam: when off cooldown and the player is within slam reach, telegraph it.
+	if data != null and data.is_boss and _slam_cd == 0.0 and to.length() <= (data.slam_radius / PX_PER_M):
+		_enter_aoe_telegraph()
+		return
 	var rng: float = (data.attack_range / PX_PER_M) if data != null else 1.4
 	if to.length() <= rng:
 		velocity.x = 0.0; velocity.z = 0.0
@@ -121,10 +132,61 @@ func _tick_strike() -> void:
 	var aim := Vector3.FORWARD
 	if _target != null:
 		aim = (_target.global_position - global_position).normalized()
-	Combat3D.strike(self, global_position + aim * 1.1 + Vector3(0, 0.9, 0), 0.8,
+	if data != null and data.is_ranged:
+		# Sentry: fire a projectile down the aim line instead of a melee swing.
+		var proj: Area3D = ProjectileScript.new()
+		proj.call("setup", aim, (data.projectile_speed / PX_PER_M), dmg)
+		proj.position = global_position + aim * 0.8 + Vector3(0, 0.9, 0)
+		get_parent().add_child(proj)
+		Audio.play("attack")
+	else:
+		Combat3D.strike(self, global_position + aim * 1.1 + Vector3(0, 0.9, 0), 0.8,
+			Combat3D.L_PLAYER, func(b: Node) -> void:
+				if b.has_method("take_damage"):
+					b.take_damage(dmg, aim))
+	_t = RECOVER_TIME
+	_state = State.RECOVER
+
+# --- Boss ground-slam: expanding warning ring, then one damage window ---------
+func _enter_aoe_telegraph() -> void:
+	velocity.x = 0.0; velocity.z = 0.0
+	_t = data.slam_telegraph_duration
+	_state = State.AOE_TELEGRAPH
+	_play("windup")
+	_set_tint(Color(1.0, 0.4, 0.3))
+	var radius: float = data.slam_radius / PX_PER_M
+	_ring = MeshInstance3D.new()
+	var cm := CylinderMesh.new(); cm.top_radius = radius; cm.bottom_radius = radius; cm.height = 0.06
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(1.0, 0.25, 0.15, 0.45)
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.emission_enabled = true; mat.emission = Color(1.0, 0.3, 0.15); mat.emission_energy_multiplier = 1.2
+	cm.material = mat; _ring.mesh = cm
+	_ring.position = Vector3(0, 0.05, 0)
+	_ring.scale = Vector3(0.05, 1.0, 0.05)
+	add_child(_ring)
+
+func _tick_aoe_telegraph(_delta: float) -> void:
+	velocity.x = 0.0; velocity.z = 0.0
+	if _ring != null and data.slam_telegraph_duration > 0.0:
+		var p: float = 1.0 - (_t / data.slam_telegraph_duration)   # grow 0→1
+		_ring.scale = Vector3(lerpf(0.05, 1.0, p), 1.0, lerpf(0.05, 1.0, p))
+	if _t == 0.0:
+		_state = State.AOE_SLAM
+
+func _tick_aoe_slam() -> void:
+	_clear_tint()
+	_play("attack")
+	if _ring != null:
+		_ring.queue_free(); _ring = null
+	var radius: float = data.slam_radius / PX_PER_M
+	CombatFX.shake(0.6)
+	Audio.play("special")
+	Combat3D.strike(self, global_position + Vector3(0, 0.5, 0), radius,
 		Combat3D.L_PLAYER, func(b: Node) -> void:
 			if b.has_method("take_damage"):
-				b.take_damage(dmg, aim))
+				b.take_damage(data.slam_damage, (b.global_position - global_position).normalized()))
+	_slam_cd = data.slam_cooldown
 	_t = RECOVER_TIME
 	_state = State.RECOVER
 
@@ -149,9 +211,14 @@ func take_damage(amount: float, from_dir: Vector3) -> void:
 	_set_tint(Color(3, 3, 3))
 	get_tree().create_timer(0.09, false).timeout.connect(_clear_tint)
 	if hp == 0.0:
+		if _ring != null:
+			_ring.queue_free(); _ring = null
 		_die()
 		return
 	Audio.play("hit")
+	# Boss commits to its slam — damage lands but the wind-up isn't interrupted.
+	if _state == State.AOE_TELEGRAPH or _state == State.AOE_SLAM:
+		return
 	_play("hurt")
 	var kbf: float = (data.knockback_force / PX_PER_M) if data != null else 4.0
 	_knockback = from_dir.normalized() * kbf
