@@ -20,6 +20,7 @@ const LEASH: float = 9.0         # teleport to the active's side past this (~300
 
 var hp: float = 100.0
 var bies_charge: float = 0.0   # 0..1; +0.1 per hit landed, spent on Bies Mode
+var is_hidden: bool = false    # set by 3D hiding volumes; suppresses enemy sight
 var mode: int = Mode.ACTIVE
 var follow_target: Node3D = null
 var _speed: float = 5.0
@@ -127,6 +128,9 @@ func _physics_process(delta: float) -> void:
 	if _attack_cd == 0.0 and Input.is_action_just_pressed(prefix + "attack"):
 		_attack()
 	if Input.is_action_just_pressed(prefix + "special"):
+		# Erin's special doubles as a distraction — calms nearby alerted guards.
+		if active_name() == "Erin":
+			GameManager.calm_enemies(Vector2(global_position.x, global_position.z), 130.0 / PX_PER_M)
 		special_used.emit(active_name())
 
 func _attack() -> void:
@@ -135,6 +139,8 @@ func _attack() -> void:
 	var dmg: float = data.attack_damage if data != null else 20.0
 	var pos := global_position + _facing * 1.3 + Vector3(0.0, 0.9, 0.0)
 	Audio.play("attack")
+	# a swing makes noise — patrolling guards investigate (110px ≈ 3.4 m)
+	GameManager.emit_noise(Vector2(global_position.x, global_position.z), 110.0 / PX_PER_M)
 	Combat3D.strike(self, pos, 0.8, Combat3D.L_ENEMY, func(b: Node) -> void:
 		if b.has_method("take_damage"):
 			b.take_damage(dmg, _facing)

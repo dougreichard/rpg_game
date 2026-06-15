@@ -11,7 +11,18 @@ const RECOVER_TIME: float = 0.5
 const HIT_TIME: float = 0.25
 const KNOCKBACK_FRICTION: float = 10.0
 
-enum State { CHASE, WINDUP, STRIKE, RECOVER, HIT, DEAD, AOE_TELEGRAPH, AOE_SLAM }
+# Stealth tunables (ported from enemy.gd)
+const SUSPICION_THRESHOLD: float = 0.35
+const ALERT_THRESHOLD: float = 1.0
+const NOISE_ALERT_FLOOR: float = 0.4
+const ALERT_DECAY_RATE: float = 0.25
+const SIGHT_GAIN_RATE: float = 0.6
+const PATROL_SPEED_SCALE: float = 0.5
+const PATROL_PAUSE_DURATION: float = 1.2
+const PATROL_ARRIVE_DISTANCE: float = 0.45   # metres
+const INVESTIGATE_LOOK_DURATION: float = 2.5
+
+enum State { PATROL, INVESTIGATE, CHASE, WINDUP, STRIKE, RECOVER, HIT, DEAD, AOE_TELEGRAPH, AOE_SLAM }
 
 const ProjectileScript: Script = preload("res://scripts/3d/projectile3d.gd")
 
@@ -22,7 +33,7 @@ const ProjectileScript: Script = preload("res://scripts/3d/projectile3d.gd")
 
 var hp: float = 60.0
 var _speed: float = 2.5
-var _state: State = State.CHASE
+var _state: State = State.PATROL
 var _t: float = 0.0
 var _mesh_root: Node3D = null
 var _anim: AnimationPlayer = null
@@ -30,6 +41,16 @@ var _target: Node3D = null
 var _knockback: Vector3 = Vector3.ZERO
 var _slam_cd: float = 0.0
 var _ring: MeshInstance3D = null
+
+var _home: Vector3 = Vector3.ZERO
+var _patrol_target: Vector3 = Vector3.ZERO
+var _patrol_pause: float = 0.0
+var _alert: float = 0.0
+var _investigate: Vector3 = Vector3.ZERO
+var _look_timer: float = 0.0
+var _facing: Vector3 = Vector3.FORWARD
+var _cone: MeshInstance3D = null
+var _cone_mat: StandardMaterial3D = null
 
 func _ready() -> void:
 	if data != null:
@@ -63,6 +84,16 @@ func _ready() -> void:
 					an.loop_mode = Animation.LOOP_LINEAR
 			_anim.play("idle")
 
+	# Stealth: patrol the home area until the player is seen/heard. Bosses are
+	# known confrontations — they skip straight to chase.
+	_home = global_position
+	_patrol_target = _pick_patrol_point()
+	_state = State.CHASE if (data != null and data.is_boss) else State.PATROL
+	GameManager.noise_emitted.connect(_on_noise_emitted)
+	GameManager.enemies_calmed.connect(_on_enemies_calmed)
+	if _state == State.PATROL:
+		_build_vision_cone()
+
 func _find_anim(node: Node) -> AnimationPlayer:
 	if node is AnimationPlayer:
 		return node
@@ -75,8 +106,7 @@ func _find_anim(node: Node) -> AnimationPlayer:
 func _physics_process(delta: float) -> void:
 	if _state == State.DEAD:
 		return
-	if _target == null or not is_instance_valid(_target):
-		_target = get_tree().get_first_node_in_group("player3d")
+	_target = _nearest_player()
 	if not is_on_floor():
 		velocity.y -= GRAVITY * delta
 	else:
@@ -84,6 +114,8 @@ func _physics_process(delta: float) -> void:
 	_t = maxf(_t - delta, 0.0)
 	_slam_cd = maxf(_slam_cd - delta, 0.0)
 	match _state:
+		State.PATROL:         _tick_patrol(delta)
+		State.INVESTIGATE:    _tick_investigate(delta)
 		State.CHASE:          _tick_chase(delta)
 		State.WINDUP:         _tick_windup()
 		State.STRIKE:         _tick_strike()
@@ -92,6 +124,166 @@ func _physics_process(delta: float) -> void:
 		State.AOE_TELEGRAPH:  _tick_aoe_telegraph(delta)
 		State.AOE_SLAM:       _tick_aoe_slam()
 	move_and_slide()
+	_update_vision_cone()
+
+# --- Stealth: patrol / investigate / detection -------------------------------
+func _nearest_player() -> Node3D:
+	var best: Node3D = null
+	var best_d := INF
+	for p in get_tree().get_nodes_in_group("player3d"):
+		if not is_instance_valid(p):
+			continue
+		var d: float = global_position.distance_to((p as Node3D).global_position)
+		if d < best_d:
+			best_d = d; best = p
+	return best
+
+func _pick_patrol_point() -> Vector3:
+	var a: float = randf() * TAU
+	var r: float = randf() * ((data.patrol_radius / PX_PER_M) if data != null else 2.5)
+	return _home + Vector3(cos(a), 0.0, sin(a)) * r
+
+# Walk on the XZ plane toward a point at patrol speed; returns true once arrived.
+func _walk_toward(point: Vector3) -> void:
+	var to: Vector3 = point - global_position; to.y = 0.0
+	if to.length() <= PATROL_ARRIVE_DISTANCE:
+		velocity.x = 0.0; velocity.z = 0.0
+		return
+	var dir := to.normalized()
+	_facing = dir
+	velocity.x = dir.x * _speed * PATROL_SPEED_SCALE
+	velocity.z = dir.z * _speed * PATROL_SPEED_SCALE
+	_face(dir, get_physics_process_delta_time())
+	_play("walk")
+
+func _arrived(point: Vector3) -> bool:
+	return Vector2(point.x - global_position.x, point.z - global_position.z).length() <= PATROL_ARRIVE_DISTANCE
+
+func _can_see(target: Node3D) -> bool:
+	if target.get("is_hidden") == true:
+		return false
+	var to: Vector3 = target.global_position - global_position; to.y = 0.0
+	var dist: float = to.length()
+	if dist > (data.vision_range / PX_PER_M) or dist <= 0.01:
+		return false
+	var half: float = deg_to_rad(data.vision_angle_deg) * 0.5
+	var fwd := Vector2(_facing.x, _facing.z)
+	if absf(fwd.angle_to(Vector2(to.x, to.z) / dist)) > half:
+		return false
+	var ss := get_world_3d().direct_space_state
+	var q := PhysicsRayQueryParameters3D.create(
+		global_position + Vector3(0, 0.9, 0), target.global_position + Vector3(0, 0.9, 0), Combat3D.L_WORLD)
+	q.exclude = [self]
+	return ss.intersect_ray(q).is_empty()
+
+func _update_alert(delta: float) -> bool:
+	var t := _nearest_player()
+	if t == null or t.get("hp") != null and float(t.get("hp")) <= 0.0:
+		_alert = maxf(_alert - ALERT_DECAY_RATE * delta, 0.0)
+		return false
+	if _can_see(t):
+		_investigate = t.global_position
+		_alert = minf(_alert + SIGHT_GAIN_RATE * delta, ALERT_THRESHOLD)
+		return true
+	_alert = maxf(_alert - ALERT_DECAY_RATE * delta, 0.0)
+	return false
+
+func _tick_patrol(delta: float) -> void:
+	_update_alert(delta)
+	if _alert >= ALERT_THRESHOLD:
+		_enter_chase(); return
+	if _alert >= SUSPICION_THRESHOLD:
+		_state = State.INVESTIGATE; _look_timer = INVESTIGATE_LOOK_DURATION; return
+	if _patrol_pause > 0.0:
+		_patrol_pause = maxf(_patrol_pause - delta, 0.0)
+		velocity.x = 0.0; velocity.z = 0.0
+		_play("idle")
+		return
+	_walk_toward(_patrol_target)
+	if _arrived(_patrol_target):
+		_patrol_pause = PATROL_PAUSE_DURATION
+		_patrol_target = _pick_patrol_point()
+
+func _tick_investigate(delta: float) -> void:
+	var seen: bool = _update_alert(delta)
+	if _alert >= ALERT_THRESHOLD:
+		_enter_chase(); return
+	if _alert < SUSPICION_THRESHOLD:
+		_enter_patrol(); return
+	if seen:
+		_look_timer = INVESTIGATE_LOOK_DURATION
+	_walk_toward(_investigate)
+	if _arrived(_investigate):
+		velocity.x = 0.0; velocity.z = 0.0
+		_play("idle")
+		_look_timer = maxf(_look_timer - delta, 0.0)
+		if _look_timer <= 0.0:
+			_enter_patrol()
+
+func _enter_patrol() -> void:
+	_alert = 0.0; _patrol_pause = 0.0
+	_patrol_target = _pick_patrol_point()
+	_state = State.PATROL
+
+func _enter_chase() -> void:
+	if _state == State.PATROL or _state == State.INVESTIGATE:
+		Audio.play("alert")
+	_alert = ALERT_THRESHOLD
+	_state = State.CHASE
+
+func _on_noise_emitted(position: Vector2, radius: float) -> void:
+	if _state != State.PATROL and _state != State.INVESTIGATE:
+		return
+	var reach: float = maxf(radius, (data.hearing_range / PX_PER_M) if data != null else 2.8)
+	if Vector2(global_position.x, global_position.z).distance_to(position) > reach:
+		return
+	_investigate = Vector3(position.x, 0.0, position.y)
+	_alert = maxf(_alert, NOISE_ALERT_FLOOR)
+	if _state == State.PATROL:
+		_state = State.INVESTIGATE; _look_timer = INVESTIGATE_LOOK_DURATION
+
+func _on_enemies_calmed(position: Vector2, radius: float) -> void:
+	if _state != State.INVESTIGATE and _state != State.CHASE and _state != State.RECOVER:
+		return
+	if Vector2(global_position.x, global_position.z).distance_to(position) > radius:
+		return
+	_enter_patrol()
+
+# --- vision-cone telegraph (flat translucent sector on the ground) -----------
+func _build_vision_cone() -> void:
+	var rng: float = (data.vision_range / PX_PER_M) if data != null else 5.3
+	var half: float = deg_to_rad(data.vision_angle_deg) * 0.5 if data != null else deg_to_rad(50)
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var segs := 12
+	for i in segs:
+		var a0: float = -half + (2.0 * half) * float(i) / float(segs)
+		var a1: float = -half + (2.0 * half) * float(i + 1) / float(segs)
+		st.add_vertex(Vector3.ZERO)
+		st.add_vertex(Vector3(sin(a0), 0, cos(a0)) * rng)
+		st.add_vertex(Vector3(sin(a1), 0, cos(a1)) * rng)
+	_cone = MeshInstance3D.new()
+	_cone.mesh = st.commit()
+	_cone_mat = StandardMaterial3D.new()
+	_cone_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	_cone_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	_cone_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	_cone_mat.albedo_color = Color(0.9, 0.85, 0.4, 0.12)
+	_cone.material_override = _cone_mat
+	_cone.position = Vector3(0, 0.06, 0)
+	add_child(_cone)
+
+func _update_vision_cone() -> void:
+	if _cone == null:
+		return
+	if _state == State.CHASE or _state == State.DEAD:
+		_cone.visible = false
+		return
+	_cone.visible = true
+	_cone.rotation.y = atan2(_facing.x, _facing.z)
+	var hot: Color = Color(1.0, 0.3, 0.2, 0.30)
+	var cool: Color = Color(0.9, 0.85, 0.4, 0.10)
+	_cone_mat.albedo_color = cool.lerp(hot, clampf(_alert / ALERT_THRESHOLD, 0.0, 1.0))
 
 func _tick_chase(delta: float) -> void:
 	if _target == null:
@@ -109,6 +301,7 @@ func _tick_chase(delta: float) -> void:
 		_enter_windup()
 		return
 	var dir := to.normalized()
+	_facing = dir
 	velocity.x = dir.x * _speed
 	velocity.z = dir.z * _speed
 	_face(dir, delta)
