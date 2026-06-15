@@ -14,16 +14,41 @@ const Npc3DScript: Script = preload("res://scripts/3d/npc3d.gd")
 const DialogBoxScript: Script = preload("res://scripts/ui/dialog_box.gd")
 
 var player: Node3D = null  # a Player3D (single) or a Duo3D controller
+const OVERWORLD_3D := "res://scenes/3d/Overworld3D.tscn"
+
 var location_id: String = ""   # set by subclass; used by dialog-effect helper
 var dialog = null              # shared DialogBox (created by make_dialog)
+var allow_overworld_exit := true   # the overworld itself disables this
 var _shot_frames: int = -1
 
 func _ready() -> void:
 	_build_level()
+	if allow_overworld_exit and location_id != "":
+		_add_exit_hint()
 	if "--capture" in OS.get_cmdline_user_args() or "--capture" in OS.get_cmdline_args():
 		_shot_frames = 18
 	if "--capture-late" in OS.get_cmdline_user_args() or "--capture-late" in OS.get_cmdline_args():
 		_shot_frames = 440
+
+func _add_exit_hint() -> void:
+	var cl := CanvasLayer.new(); add_child(cl)
+	var l := Label.new()
+	l.anchor_left = 1.0; l.anchor_right = 1.0; l.anchor_top = 1.0; l.anchor_bottom = 1.0
+	l.offset_left = -200; l.offset_right = -12; l.offset_top = -40; l.offset_bottom = -10
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	l.text = "Esc — Town Map"
+	l.add_theme_font_override("font", UITheme.font())
+	l.add_theme_font_size_override("font_size", 16)
+	l.add_theme_color_override("font_color", UITheme.CREAM)
+	l.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
+	l.add_theme_constant_override("outline_size", 4)
+	cl.add_child(l)
+
+func _input(e: InputEvent) -> void:
+	if allow_overworld_exit and e.is_action_pressed("ui_cancel"):
+		if dialog != null and dialog.has_method("is_open") and dialog.is_open():
+			return
+		get_tree().change_scene_to_file(OVERWORLD_3D)
 
 # Override in subclasses: build env, floor, walls, props, spawns.
 func _build_level() -> void:

@@ -11,13 +11,23 @@ const FOLLOW_LERP: float = 8.0
 const HEIGHT_LOOK: float = 0.9  # aim a touch above the feet
 
 var target: Node3D = null
+var dist: float = DISTANCE
+var elev: float = ELEV_DEG
 var _offset: Vector3 = Vector3.ZERO
 var _scripted: bool = false  # true while a tween move owns the camera
 
+# Re-frame the follow (e.g. pull back for the overworld overview). Recomputes the
+# fixed offset; takes effect next follow tick.
+func reframe(p_dist: float, p_elev: float) -> void:
+	dist = p_dist
+	elev = p_elev
+	var el: float = deg_to_rad(elev)
+	_offset = Vector3(0.0, sin(el) * dist, cos(el) * dist)
+
 func _ready() -> void:
-	var el: float = deg_to_rad(ELEV_DEG)
+	var el: float = deg_to_rad(elev)
 	# Camera up and toward +Z (screen-south), looking north + down at the target.
-	_offset = Vector3(0.0, sin(el) * DISTANCE, cos(el) * DISTANCE)
+	_offset = Vector3(0.0, sin(el) * dist, cos(el) * dist)
 	if target != null:
 		global_position = target.global_position + _offset
 		look_at(target.global_position + Vector3(0.0, HEIGHT_LOOK, 0.0), Vector3.UP)

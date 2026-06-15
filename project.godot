@@ -11,10 +11,10 @@ config_version=5
 [application]
 
 config/name="Hunkle Bunkle"
-run/main_scene="res://scenes/ui/TitleScreen.tscn"
+run/main_scene="res://scenes/3d/Overworld3D.tscn"
 config/features=PackedStringArray("4.6", "Forward Plus")
 config/icon="res://icon.svg"
-config/run/main_scene="res://scenes/ui/TitleScreen.tscn"
+config/run/main_scene="res://scenes/3d/Overworld3D.tscn"
 
 [autoload]
 
