@@ -230,9 +230,8 @@ often; Evan is the slowest but hits hardest and has the most HP.
 - Swap has no cooldown; add one later if it feels exploitable
 
 ### Game flow & UI systems
-- **Flow:** TitleScreen → OverworldMap → Level → (on clear) → OverworldMap
-- **Overworld map** (`scenes/overworld/OverworldMap.tscn`) — 40×19 `TileMap` with three layers (grass, roads, buildings). Duo walks the town; proximity to a building door shows name/status and triggers `_launch()`. See `locations/00_overworld_map.md`.
-- **DuoPanel** (`scripts/ui/duo_panel.gd`) — always-visible `_draw()` panel showing both duo members' name/color/special, active highlight pulses on `GameManager.characters_swapped`.
+- **Flow:** `Title3D` → `Overworld3D` → `*3D` level → (Esc/clear) → `Overworld3D`; endgame → `Result3D`.
+- **Overworld** (`scenes/3d/Overworld3D.tscn`, `scripts/3d/overworld3d.gd`) — a walkable Synty city (City-pack road/building/prop GLBs in `assets/models/town/`). Duo walks the avenue; proximity to a building shows its name billboard + status and `G` enters that location's 3D scene (unlock-gated). 12 town NPC quest-givers are placed here too.
 - **Combat polish** (`CombatFX` autoload): screen shake, hit sparks (`CPUParticles2D`), hit flash (overbright tween), hit-stop (`set_physics_process` pause).
 
 ---
