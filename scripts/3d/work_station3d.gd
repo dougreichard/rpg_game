@@ -72,17 +72,28 @@ func _make_prompt() -> void:
 	add_child(_prompt)
 
 # --- interaction (called from the level's _on_special ladder) ----------------
-func try_use(char_name: String, from: Vector3) -> bool:
+# `party` is the duo's character names: raw materials are SHARED across the duo
+# (whoever picked one up), even though a tool/fixture may be restricted to one
+# operator via best_with. Output is granted to the active character.
+func try_use(char_name: String, from: Vector3, party: Array = []) -> bool:
 	if Vector2(from.x - global_position.x, from.z - global_position.z).length() > reach:
 		return false
+	var holders: Array = party if not party.is_empty() else [char_name]
 	if best_with != "" and char_name != best_with:
 		message.emit("%s should handle the %s." % [best_with, label_text.to_lower()])
 		return true
 	match kind:
 		Kind.SOURCE:   return _use_source(char_name)
-		Kind.TOOL:     return _use_tool(char_name)
-		Kind.ASSEMBLY: return _use_assembly(char_name)
+		Kind.TOOL:     return _use_tool(char_name, holders)
+		Kind.ASSEMBLY: return _use_assembly(holders)
 	return false
+
+# Returns the first party member carrying item_id, or "" if nobody has it.
+func _holder(item_id: String, holders: Array) -> String:
+	for who: String in holders:
+		if GameManager.has_item(who, item_id):
+			return who
+	return ""
 
 func _use_source(char_name: String) -> bool:
 	if _taken:
@@ -96,10 +107,11 @@ func _use_source(char_name: String) -> bool:
 	Audio.play("special")
 	return true
 
-func _use_tool(char_name: String) -> bool:
+func _use_tool(char_name: String, holders: Array) -> bool:
 	for r: Dictionary in recipes:
-		if GameManager.has_item(char_name, r["in"]):
-			GameManager.consume_item(char_name, r["in"])
+		var who: String = _holder(r["in"], holders)
+		if who != "":
+			GameManager.consume_item(who, r["in"])
 			GameManager.grant_item(char_name, r["out"])
 			_refresh_prompt()
 			message.emit("%s -> %s" % [_disp(r["in"]), _disp(r["out"])])
@@ -109,12 +121,13 @@ func _use_tool(char_name: String) -> bool:
 	message.emit("%s: bring %s here." % [label_text, _recipe_inputs()])
 	return true
 
-func _use_assembly(char_name: String) -> bool:
+func _use_assembly(holders: Array) -> bool:
 	for p: String in parts:
 		if p in _placed:
 			continue
-		if GameManager.has_item(char_name, p):
-			GameManager.consume_item(char_name, p)
+		var who: String = _holder(p, holders)
+		if who != "":
+			GameManager.consume_item(who, p)
 			_placed[p] = true
 			_refresh_prompt()
 			message.emit("Fitted: %s  (%d/%d)" % [_disp(p), _placed.size(), parts.size()])

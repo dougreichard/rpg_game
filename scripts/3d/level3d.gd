@@ -66,9 +66,7 @@ func _add_exit_hint() -> void:
 func build_ui_stack(in_overworld: bool) -> void:
 	var ach: Node = load("res://scripts/ui/achievements_overlay.gd").new(); ach.name = "AchievementsOverlay"; add_child(ach)
 	var inv: Node = load("res://scripts/ui/inventory_overlay.gd").new(); inv.name = "InventoryOverlay"; add_child(inv)
-	if player != null and player.has_method("duo_names"):
-		var names: Array = player.duo_names()
-		inv.call("setup", names[0], names[1])
+	refresh_duo_inventory_names()
 	var ql: Node = load("res://scripts/ui/quest_log_overlay.gd").new(); ql.name = "QuestLogOverlay"; add_child(ql)
 	var toast: Node = load("res://scripts/ui/achievement_toast.gd").new(); toast.name = "AchievementToast"; add_child(toast)
 	var pm: Node = load("res://scripts/ui/pause_menu.gd").new(); pm.name = "PauseMenu"
@@ -265,6 +263,17 @@ func add_station(p_kind: int, pos: Vector3, label: String, best_with: String = "
 	s.call("setup", p_kind, pos, label, best_with)   # set vars before _ready builds visuals
 	add_child(s)
 	return s
+
+# Point the InventoryOverlay's two tabs at the current duo members. Call after the
+# party changes mid-level (e.g. recruiting a second lead) so the newcomer's bag shows.
+func refresh_duo_inventory_names() -> void:
+	var inv: Node = get_node_or_null("InventoryOverlay")
+	if inv == null or player == null:
+		return
+	var bodies: Array = player.get("bodies") if "bodies" in player else []
+	var a: String = bodies[0].active_name() if bodies.size() > 0 else "Quinn"
+	var b: String = bodies[1].active_name() if bodies.size() > 1 else ""
+	inv.call("setup", a, b)
 
 func enemies_alive() -> int:
 	var n := 0

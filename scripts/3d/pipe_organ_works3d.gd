@@ -275,6 +275,9 @@ func _on_special(char_name: String) -> void:
 	if dialog.is_open():
 		return
 	var pp: Vector3 = player.global_position
+	# Raw materials are shared across the duo (whoever grabbed them), so pass the
+	# party names — the active operator can mill/fit a part Erin is carrying.
+	var party: Array = player.duo_names() if player.has_method("duo_names") else [char_name]
 	# crafting stations (sources / tools / organ) — the organ stays locked until
 	# Erin gets the tuning key from Bellows.
 	for s: Node3D in _stations:
@@ -284,7 +287,7 @@ func _on_special(char_name: String) -> void:
 					_hud_hint.text = "The organ console is locked -- Erin needs Mr. Bellows' tuning key first."
 					return
 				continue
-		if s.call("try_use", char_name, pp):
+		if s.call("try_use", char_name, pp, party):
 			return
 	# secret lever → reveal the spare-gear nook
 	if char_name == "Quinn" and not _secret_revealed and near3(pp, F2 + LEVER, REACH):
@@ -338,6 +341,7 @@ func _recruit_erin(show_line: bool) -> void:
 		_erin_npc = null
 	if player.has_method("add_member"):
 		player.call("add_member", ERIN, at)
+	refresh_duo_inventory_names()   # so Erin's bag now shows a tab in the inventory
 	if show_line:
 		Audio.play("swap")
 		var tree := {"start": {"lines": [

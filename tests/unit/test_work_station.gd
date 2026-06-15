@@ -59,6 +59,26 @@ func test_tool_best_with_blocks_wrong_character() -> void:
 	assert_true(GameManager.has_item("Erin", "rough_plank"), "the wrong character can't run the tool")
 	assert_false(GameManager.has_item("Erin", "windchest_board"))
 
+func test_tool_pulls_input_from_a_party_member() -> void:
+	# Erin grabbed the raw pipe; Quinn operates the saw. The material is shared
+	# across the duo, so the saw consumes it from Erin and gives Quinn the output.
+	var s := _station(Station.Kind.TOOL)
+	s.best_with = "Quinn"
+	s.recipes = [{"in": "rough_organ_pipe", "out": "cut_organ_pipe"}]
+	GameManager.grant_item("Erin", "rough_organ_pipe")
+	assert_true(s.try_use("Quinn", Vector3.ZERO, ["Quinn", "Erin"]))
+	assert_false(GameManager.has_item("Erin", "rough_organ_pipe"), "input consumed from the party member who held it")
+	assert_true(GameManager.has_item("Quinn", "cut_organ_pipe"), "output goes to the active operator")
+
+func test_assembly_pulls_parts_from_either_member() -> void:
+	var s := _station(Station.Kind.ASSEMBLY)
+	s.parts = ["windchest_board", "brass_organ_pipe"]
+	GameManager.grant_item("Erin", "windchest_board")
+	GameManager.grant_item("Quinn", "brass_organ_pipe")
+	s.try_use("Quinn", Vector3.ZERO, ["Quinn", "Erin"])
+	s.try_use("Quinn", Vector3.ZERO, ["Quinn", "Erin"])
+	assert_true(s.is_complete(), "parts split across the duo still complete the assembly")
+
 func test_assembly_completes_when_all_parts_fitted() -> void:
 	var s := _station(Station.Kind.ASSEMBLY)
 	s.parts = ["windchest_board", "brass_organ_pipe", "trued_gear"]
