@@ -9,6 +9,7 @@ const EVAN := preload("res://data/characters/evan.tres")
 const GRUNT := preload("res://data/enemies/grunt.tres")
 const RUNNER := preload("res://data/enemies/runner.tres")
 const CrowbarItem: ItemData = preload("res://data/items/crowbar.tres")
+const LanternItem: ItemData = preload("res://data/items/pocket_lantern.tres")
 
 const FLOOR_COL := Color(0.22, 0.24, 0.27)
 const WATER_COL := Color(0.10, 0.22, 0.30)
@@ -27,6 +28,7 @@ var _container_moved := false
 var _spawned := 0
 var _viktor = null
 var _container: Node3D = null
+var _lantern_box: Node3D = null
 var _hud_goal: Label = null
 var _hud_hint: Label = null
 var _hud_banner: Label = null
@@ -43,6 +45,7 @@ func _build_level() -> void:
 	_container_block()
 	_dock_clutter()
 	_crowbar_pickup()
+	_lantern_pickup()
 	make_dialog()
 	_build_hud()
 	_viktor = spawn_npc("bellows", VIKTOR_POS, deg_to_rad(-110))   # weathered harbourmaster
@@ -108,6 +111,12 @@ func _crowbar_pickup() -> void:
 	box.set_meta("crowbar", true)
 	add_child(box)
 
+# A pier supply lantern — the gate item for descending into the Underground Tunnels.
+func _lantern_pickup() -> void:
+	_lantern_box = box_mesh(Vector3(0.4, 0.5, 0.4), Color(0.85, 0.72, 0.3), Vector3(HALF_W - 2.0, 0.25, 4.5), 0.8)
+	_lantern_box.set_meta("pocket_lantern", true)
+	add_child(_lantern_box)
+
 func _spawn_enemies() -> void:
 	spawn_enemy(GRUNT, Vector3(-2.0, 0.1, 1.0), "res://assets/models/enemies/grunt.glb"); _spawned += 1
 	for spot: Vector3 in [Vector3(2.5, 0.1, 0.0), Vector3(1.0, 0.1, -2.5)]:
@@ -118,6 +127,8 @@ func _restore() -> void:
 	_container_moved = GameManager.get_level_flag(location_id, "container_moved", false)
 	if _container_moved:
 		_move_container(false)
+	if GameManager.get_level_flag(location_id, "lantern_taken", false) and _lantern_box != null:
+		_lantern_box.queue_free(); _lantern_box = null
 	if _enemies_cleared and _container_moved:
 		_win(false)
 
@@ -135,6 +146,13 @@ func _on_special(char_name: String) -> void:
 			c.queue_free()
 			_hud_hint.text = "Picked up a crowbar — now you can pry the container."
 			Audio.play("special"); return
+	# lantern pickup — needed later to enter the Underground Tunnels
+	if _lantern_box != null and is_instance_valid(_lantern_box) and near3(pp, _lantern_box.position, REACH):
+		GameManager.grant_item(char_name, LanternItem.id)
+		GameManager.set_level_flag(location_id, "lantern_taken", true)
+		_lantern_box.queue_free(); _lantern_box = null
+		_hud_hint.text = "Pocket lantern stowed — handy for dark places underground."
+		Audio.play("special"); return
 	if not _container_moved and near3(pp, CONTAINER_POS, REACH + 0.8):
 		var has_crowbar := GameManager.has_item("Quinn", CrowbarItem.id) or GameManager.has_item("Evan", CrowbarItem.id)
 		if char_name == "Evan" or has_crowbar:

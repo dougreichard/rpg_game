@@ -44,6 +44,13 @@ const LOCS := [
 	{"id": "gimme_dat_spoon", "name": "Gimme Dat Spoon", "scene": "res://scenes/3d/Spoon3D.tscn", "req": "grand_marquee", "glb": "bld_round3"},
 ]
 
+# Some locations also need an item in hand, not just an unlock. The Underground
+# Tunnels are pitch black — you need the pocket lantern (found at the Harbor & Docks).
+const ITEM_GATE := {
+	"underground": {"item": "pocket_lantern", "hint": "you'll need a lantern (try the Harbor & Docks)"},
+}
+const ALL_CHARS := ["quinn", "erin", "evan", "ben", "ethan"]
+
 const NPC_REACH := 3.2
 const NPC_MESHES := ["bellows", "congregant_m", "congregant_f", "aldric", "uncle_doug"]
 
@@ -243,10 +250,24 @@ func _on_special(_char_name: String) -> void:
 	var near := _nearest_door()
 	if near.is_empty():
 		return
-	if _is_unlocked(near["req"]):
-		get_tree().change_scene_to_file(near["scene"])
-	else:
+	if not _is_unlocked(near["req"]):
+		Audio.play("hurt"); return
+	if _gate_missing(near["id"]) != "":
 		Audio.play("hurt")
+		_hud_prompt.text = "%s — %s" % [near["name"], _gate_missing(near["id"])]
+		_hud_prompt.add_theme_color_override("font_color", Color(0.85, 0.7, 0.45))
+		return
+	get_tree().change_scene_to_file(near["scene"])
+
+# Returns the gate hint if this location needs an item nobody is carrying, else "".
+func _gate_missing(loc_id: String) -> String:
+	if loc_id not in ITEM_GATE:
+		return ""
+	var gate: Dictionary = ITEM_GATE[loc_id]
+	for ch: String in ALL_CHARS:
+		if GameManager.has_item(ch, gate["item"]):
+			return ""
+	return gate["hint"]
 
 func _nearest_door() -> Dictionary:
 	var pp: Vector3 = player.global_position
@@ -282,7 +303,11 @@ func _process(d: float) -> void:
 	if near.is_empty():
 		_hud_prompt.text = ""
 		return
-	if near["id"] in GameManager.completed_locations:
+	var gate_hint: String = _gate_missing(near["id"]) if _is_unlocked(near["req"]) else ""
+	if gate_hint != "":
+		_hud_prompt.text = "%s — %s" % [near["name"], gate_hint]
+		_hud_prompt.add_theme_color_override("font_color", Color(0.85, 0.7, 0.45))
+	elif near["id"] in GameManager.completed_locations:
 		_hud_prompt.text = "%s  ✓ cleared — press G to revisit" % near["name"]
 		_hud_prompt.add_theme_color_override("font_color", UITheme.GOLD)
 	elif _is_unlocked(near["req"]):

@@ -135,7 +135,7 @@ so they must all be created as direct children of the level root — done centra
 | Security badge | Auto-fills one pip of Ethan's Underground Tunnels hatch hack |
 | Crowbar | Lets Evan force a stuck Harbor & Docks crate without summoning Calvin & Coolidge |
 | Library card | Lets Erin/Ethan bypass the librarian dialogue gate at the Library & Archive |
-| Pocket lantern | Reveals hidden loot boxes in the dark Underground Tunnels |
+| Pocket lantern | **Entry gate** for the Underground Tunnels — found in a Harbor & Docks loot crate; you must carry it to descend (the overworld blocks the door without it) |
 | Faded photograph | Lore pickup — short Uncle Doug clue dialogue, no mechanical gate |
 | Spare clockwork gear | Speeds up Quinn's Clocktower mechanism repair |
 | Guard whistle | Shared one-shot noise distraction (`GameManager.emit_noise`) usable by any character |
@@ -232,7 +232,7 @@ often; Evan is the slowest but hits hardest and has the most HP.
 
 ### Game flow & UI systems
 - **Flow:** `Title3D` → `Overworld3D` → `*3D` level → (Esc/clear) → `Overworld3D`; endgame → `Result3D`.
-- **Overworld** (`scenes/3d/Overworld3D.tscn`, `scripts/3d/overworld3d.gd`) — a walkable Synty city (City-pack road/building/prop GLBs in `assets/models/town/`). Duo walks the avenue; proximity to a building shows its name billboard + status and `G` enters that location's 3D scene (unlock-gated). 12 town NPC quest-givers are placed here too.
+- **Overworld** (`scenes/3d/Overworld3D.tscn`, `scripts/3d/overworld3d.gd`) — a walkable Synty city (City-pack road/building/prop GLBs in `assets/models/town/`). Duo walks the avenue; proximity to a building shows its name billboard + status and `G` enters that location's 3D scene (unlock-gated via each `LOCS` entry's `req` = a completed-location id). The strolling duo is drawn from `GameManager.unlocked_characters` (first two, in unlock order — so Quinn walks alone at the start). Some locations also need an **item in hand** (`ITEM_GATE`, checked across all characters): the Underground Tunnels need the `pocket_lantern` (the door shows a "you'll need a lantern (try the Harbor & Docks)" hint until you carry one). 12 town NPC quest-givers are placed here too.
 - **Combat polish** (`CombatFX` autoload): screen shake + hit-stop; enemies flash an overbright tint on hit and a red tint on windup. (The old 2D hit-spark particles don't render in 3D — a 3D `GPUParticles3D` spark is a candidate add.)
 
 ---
@@ -355,12 +355,20 @@ Loft. Still-single-room levels inherit this as they're converted to multi-room.)
 
 ---
 
-### 9. The Underground Tunnels — `UndergroundTunnels.tscn`
-- **Unlock condition:** TBD
-- **Key puzzle(s):** Evan clears west rubble (proximity gate); Ethan hacks east hatch (multi-step, 3 pips); Twinkle bark distraction; rusty key opens a shortcut door
-- **Enemy types:** Grunts ×2 + Runner (patrol-style)
-- **Level progress flags:** `enemies_cleared` / `rubble_cleared` / `hatch_progress` (int 0–3, persists partial hack)
-- **NPCs:** Cyrus (tunnel maintainer, stationary at junction chamber)
+### 9. The Underground Tunnels — `UndergroundTunnels3D.tscn` (MULTI-FLOOR, 3 depths)
+- **Unlock condition:** Recording Studio complete **+ must carry the `pocket_lantern`** (an
+  overworld item-gate — see below). The lantern is found in a loot crate at the **Harbor & Docks**.
+- **Entering duo:** Evan + Ethan
+- **Depths (each its own world region, like Clocktower/Pipe Organ):**
+  - **Depth 1 — Maintenance:** the LOBBY (Cyrus + overworld exit, combat-free) + a Pump Room holding the **security badge**. Stairs down to Depth 2.
+  - **Depth 2 — The Junction:** the patrol (2 Grunts + Runner) + 2 dark-alcove hiding spots. **West** passage blocked by Evan's **rubble** → Storeroom (`rusty_key` + a `faded_photograph` lore pickup). **East** Hatch Bay: Ethan's **3-pip hatch hack** (carrying the security badge auto-fills one pip) → unlocks the stairs **down to Depth 3** (`add_floor_link(..., locked=true)`, unlocked when `hatch_progress >= 3`).
+  - **Depth 3 — The Sealed Vault:** Evan forces the seized wheel (`vault_forced`) **and** Ethan hacks the lock panel (`vault_hacked`) → the blast door grinds open (Uncle-Doug clue dialogue). The **rusty key** opens a maintenance-ladder **shortcut** (a locked `add_stairwell`) straight back up to Depth 1.
+- **Key puzzle(s):** Evan rubble (proximity) · Ethan hatch (multi-step, badge-assisted) · Evan+Ethan combined vault finale · rusty-key shortcut. (Twinkle bark distraction is still design-only.)
+- **Enemy types:** Grunts ×2 + Runner (Depth 2 patrol). Lobby + vault are combat-free.
+- **Win:** `enemies_cleared` + `rubble_cleared` + `hatch_progress >= 3` + `vault_opened`.
+- **Level progress flags:** `enemies_cleared` / `rubble_cleared` / `hatch_progress` (int 0–3) / `badge_taken` / `badge_used` / `key_taken` / `photo_taken` / `vault_forced` / `vault_hacked` / `vault_opened` / `shortcut_open`
+- **NPCs:** Cyrus (tunnel maintainer, in the Depth 1 lobby; briefs the descent)
+- **Notes:** It's lit because you're carrying the lantern (no in-level lantern pickup anymore). The lantern is purely the **entry gate** now; extra loot is found by exploration (behind Evan's rubble), not lantern-revealed.
 
 ---
 
