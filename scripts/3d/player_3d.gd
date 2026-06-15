@@ -13,7 +13,10 @@ const GRAVITY: float = 24.0
 const TURN_LERP: float = 14.0
 const MESH_DIR: String = "res://assets/models/characters/"
 const FOLLOW_STOP: float = 1.6   # standby keeps roughly this gap
+const FOLLOW_RAMP: float = 1.2   # standby eases speed to 0 over this distance into FOLLOW_STOP
 const LEASH: float = 9.0         # teleport to the active's side past this (~300px)
+const MOVE_START: float = 0.25   # walk/idle hysteresis (intent magnitude) — enter walk
+const MOVE_STOP: float = 0.06    # …and drop back to idle (held in between → no flip-flop)
 const CompanionScript: Script = preload("res://scripts/3d/animal_companion3d.gd")
 const COMPANION_CD: float = 6.0
 const COMPANION_RANGE: float = 12.0   # only summons when an enemy is this close
@@ -34,6 +37,7 @@ var _speed: float = 5.0
 var _mesh: Node3D = null
 var _anim: AnimationPlayer = null
 var _facing: Vector3 = Vector3.FORWARD
+var _moving: bool = false
 var _attack_cd: float = 0.0
 var _attack_anim_t: float = 0.0
 var _input_locked: bool = false
@@ -103,14 +107,17 @@ func _physics_process(delta: float) -> void:
 	elif mode == Mode.STANDBY_P2:
 		prefix = "p2_"
 		dir = _move_input("p2_")
-	else:  # STANDBY_AI — follow the active teammate
+	else:  # STANDBY_AI — follow the active teammate, easing speed to 0 near the gap
 		if follow_target != null and is_instance_valid(follow_target):
 			var to: Vector3 = follow_target.global_position - global_position
 			to.y = 0.0
-			if to.length() > LEASH:
+			var dist: float = to.length()
+			if dist > LEASH:
 				global_position = follow_target.global_position - to.normalized() * FOLLOW_STOP
-			elif to.length() > FOLLOW_STOP:
-				dir = to.normalized()
+			elif dist > FOLLOW_STOP:
+				# ramp 0→1 over FOLLOW_RAMP so it decelerates in instead of
+				# overshooting and oscillating across the threshold.
+				dir = to.normalized() * clampf((dist - FOLLOW_STOP) / FOLLOW_RAMP, 0.0, 1.0)
 	velocity.x = dir.x * _speed
 	velocity.z = dir.z * _speed
 	if not is_on_floor():
@@ -118,19 +125,26 @@ func _physics_process(delta: float) -> void:
 	else:
 		velocity.y = 0.0
 	move_and_slide()
-	var moving := dir.length() > 0.05
-	if moving:
+	# Walk/idle with hysteresis: only flip state at distinct enter/leave
+	# thresholds, so neither the standby nor the active restarts the clip
+	# frame-to-frame (that per-frame restart was the A-pose jitter).
+	var intent: float = dir.length()
+	if _moving and intent < MOVE_STOP:
+		_moving = false
+	elif not _moving and intent > MOVE_START:
+		_moving = true
+	if intent > MOVE_STOP:
 		_facing = dir.normalized()
-	if _mesh != null and moving:
-		var want_yaw := atan2(dir.x, dir.z)
-		_mesh.rotation.y = lerp_angle(_mesh.rotation.y, want_yaw, clampf(TURN_LERP * delta, 0.0, 1.0))
+		if _mesh != null:
+			var want_yaw := atan2(dir.x, dir.z)
+			_mesh.rotation.y = lerp_angle(_mesh.rotation.y, want_yaw, clampf(TURN_LERP * delta, 0.0, 1.0))
 	_attack_anim_t = maxf(_attack_anim_t - delta, 0.0)
 	if _anim != null:
 		if _attack_anim_t > 0.0:
 			if _anim.current_animation != "attack":
 				_anim.play("attack")
 		else:
-			var want := "walk" if moving else "idle"
+			var want := "walk" if _moving else "idle"
 			if _anim.current_animation != want:
 				_anim.play(want)
 	# actions (player-controlled modes only)
