@@ -5,12 +5,18 @@ extends Node3D
 ## atmospheric wanderers across the 3D levels. No class_name — preload()+untyped.
 
 const MESH_DIR := "res://assets/models/characters/"
+const BARK_GAP_MS := 2500   # global min gap between ANY two NPC barks (one-at-a-time)
+
+# Shared across all Npc3D instances so a crowd (e.g. the 12 town quest-givers) never
+# talks over itself — replaces the old BubbleCoordinator node with a static gate.
+static var _last_bark_ms: int = 0
 
 # Configure via setup() before adding to the tree, or set fields directly.
 var mesh_key: String = ""
 var quips: Array = []          # random barks; empty = silent
 var waypoints: Array = []      # Vector3 local targets; empty = stationary
 var face_yaw: float = PI       # initial facing (default: toward +Z / the camera)
+var paused: bool = false       # halt wander/bark (e.g. while the player is talking to it)
 var speed: float = 1.6
 var idle_time: float = 2.2
 var yell_min: float = 5.0
@@ -77,11 +83,19 @@ func _process(d: float) -> void:
 		_bubble_t -= d
 		if _bubble_t <= 0.0:
 			_bubble.visible = false
+	if paused:
+		_play("idle")
+		return
 	if not quips.is_empty():
 		_yell -= d
 		if _yell <= 0.0:
-			_yell = randf_range(yell_min, yell_max)
-			say(quips[randi() % quips.size()])
+			var now: int = Time.get_ticks_msec()
+			if now - _last_bark_ms >= BARK_GAP_MS:
+				_last_bark_ms = now
+				_yell = randf_range(yell_min, yell_max)
+				say(quips[randi() % quips.size()])
+			else:
+				_yell = 0.5   # someone else is talking — retry shortly
 	if waypoints.size() > 0:
 		_wander(d)
 

@@ -18,7 +18,8 @@ const CHARS := {
 	"ethan": preload("res://data/characters/ethan.tres"),
 }
 const SPACING := 20.0
-const ZOFF := 12.0          # building rows at z = ±ZOFF
+const ZOFF := 15.0          # building rows at z = ±ZOFF (set back so façades clear the
+                            # ±7.5 street-prop / ±9 sidewalk band; door plaza bridges the gap)
 # big office towers scaled down so footprints fit the block; shops stay 1.0
 const BLD_SCALE := {"bld_round": 0.7, "bld_round3": 0.7, "bld_octagon": 0.7,
 	"bld_office_large": 0.75, "bld_square": 0.8, "bld_square3": 0.8, "bld_office_small": 0.85}
@@ -53,6 +54,22 @@ const ALL_CHARS := ["quinn", "erin", "evan", "ben", "ethan"]
 
 const NPC_REACH := 3.2
 const NPC_MESHES := ["bellows", "congregant_m", "congregant_f", "aldric", "uncle_doug"]
+# Atmospheric idle barks for the town quest-givers (one NPC speaks at a time — see the
+# static bark gate in npc3d.gd). Drawn from at random; kept generic so any NPC can say any.
+const TOWN_QUIPS := [
+	"Any word on Uncle Doug?",
+	"Strange folks about lately.",
+	"You lot aren't from around here.",
+	"Mind how you go.",
+	"Heard a racket down the tunnels.",
+	"Spare a minute for an old soul?",
+	"Town's not what it was.",
+	"They say he just... vanished.",
+	"Careful past the docks.",
+	"Lovely day for a stroll, eh?",
+	"Got a job for you, if you're keen.",
+	"Keep your wits about you.",
+]
 
 var _doors: Array = []     # {id, name, scene, req, pos}
 var _npcs: Array = []      # {quest_id, name, color, pos, node}
@@ -141,11 +158,12 @@ func _buildings() -> void:
 		_doors.append({"id": loc["id"], "name": loc["name"], "scene": loc["scene"], "req": loc["req"], "pos": door})
 
 func _crosswalk(x: float, north: bool) -> void:
-	# a crossing tile + plaza connecting the sidewalk to the door (crossing sits
-	# highest so it reads cleanly over the road lane it overlaps)
-	var zc: float = -5.0 if north else 5.0
-	_tile("road_crossing", Vector3(x, 0.08, zc))
-	_tile("sidewalk", Vector3(x, 0.05, (-9.0 if north else 9.0)))
+	# a crossing tile + plaza connecting the sidewalk all the way up to the (set-back)
+	# door (crossing sits highest so it reads cleanly over the road lane it overlaps)
+	var s: float = -1.0 if north else 1.0
+	_tile("road_crossing", Vector3(x, 0.08, 5.0 * s))
+	_tile("sidewalk", Vector3(x, 0.05, 9.0 * s))
+	_tile("sidewalk", Vector3(x, 0.05, 13.0 * s))   # plaza in front of the building door
 
 func _street_dressing(x: float, north: bool) -> void:
 	var zs: float = -7.5 if north else 7.5
@@ -183,19 +201,45 @@ func _spawn_town_npcs() -> void:
 		var x: float = -55.0 + float(i) * 10.0
 		var z: float = 6.0 if i % 2 == 0 else -6.0
 		var pos := Vector3(x, 0.0, z)
-		var node := spawn_npc(NPC_MESHES[i % NPC_MESHES.size()], pos, 0.0 if z > 0.0 else PI)
+		var node := spawn_npc(NPC_MESHES[i % NPC_MESHES.size()], pos, 0.0 if z > 0.0 else PI,
+			TOWN_QUIPS, _npc_waypoints(pos, z))
 		_npcs.append({"quest_id": data["quest_id"], "name": data["name"], "color": data["color"], "pos": pos, "node": node})
 		i += 1
+
+# A small loop along the sidewalk around the NPC's spot (stays off the road, which runs
+# z = ±2.5..±5). Kept tight so the quest-giver never strays far from its post.
+func _npc_waypoints(pos: Vector3, z: float) -> Array:
+	var out: float = 1.2 if z > 0.0 else -1.2   # drift toward the building side, not the road
+	return [
+		pos,
+		pos + Vector3(2.6, 0.0, out * 0.4),
+		pos + Vector3(0.4, 0.0, out),
+		pos + Vector3(-2.4, 0.0, out * 0.3),
+	]
 
 func _nearest_npc() -> Dictionary:
 	var pp: Vector3 = player.global_position
 	var best := {}
 	var best_d := NPC_REACH
 	for n in _npcs:
-		var dist: float = Vector2(pp.x - n["pos"].x, pp.z - n["pos"].z).length()
+		var np: Vector3 = _npc_pos(n)
+		var dist: float = Vector2(pp.x - np.x, pp.z - np.z).length()
 		if dist < best_d:
 			best_d = dist; best = n
 	return best
+
+# The NPC's live position (it wanders), falling back to its spawn pos if freed.
+func _npc_pos(n: Dictionary) -> Vector3:
+	var node = n["node"]
+	return node.global_position if (node != null and is_instance_valid(node)) else n["pos"]
+
+# Halt whichever NPC the player is standing next to (so it waits to be talked to);
+# let the rest keep wandering.
+func _update_npc_pause(active_node) -> void:
+	for n in _npcs:
+		var node = n["node"]
+		if node != null and is_instance_valid(node):
+			node.set("paused", node == active_node and active_node != null)
 
 func _talk_npc(npc: Dictionary) -> void:
 	var quest: Dictionary = QuestData.get_quest(npc["quest_id"])
@@ -293,6 +337,7 @@ func _process(d: float) -> void:
 		_hud_prompt.text = ""   # don't show the activation prompt over the dialog box
 		return
 	var npc := _nearest_npc()
+	_update_npc_pause(npc.get("node"))   # the one you're next to holds still to talk
 	if not npc.is_empty():
 		var state: String = GameManager.get_level_flag(QuestData.TOWN_ID, "quest_" + npc["quest_id"], "not_started")
 		var tag: String = "  ✓" if state == "complete" else ("  !" if state == "active" else "")
