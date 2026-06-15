@@ -35,7 +35,11 @@ const LOCS := [
 	{"id": "gimme_dat_spoon", "name": "Gimme Dat Spoon", "scene": "res://scenes/3d/Spoon3D.tscn", "req": "grand_marquee", "glb": "bld_round3"},
 ]
 
+const NPC_REACH := 3.2
+const NPC_MESHES := ["bellows", "congregant_m", "congregant_f", "aldric", "uncle_doug"]
+
 var _doors: Array = []     # {id, name, scene, req, pos}
+var _npcs: Array = []      # {quest_id, name, color, pos, node}
 var _hud_prompt: Label = null
 var _hud_title: Label = null
 
@@ -45,6 +49,7 @@ func _build_level() -> void:
 	floor_box(180.0, 90.0, GROUND)
 	_avenue()
 	_buildings()
+	_spawn_town_npcs()
 	make_dialog()
 	_build_hud()
 	var p := spawn_duo([QUINN, ERIN], Vector3(_col_x(0) - SPACING, 0.1, 0.0))
@@ -123,8 +128,83 @@ func _name_billboard(loc: Dictionary, pos: Vector3) -> void:
 func _is_unlocked(req: String) -> bool:
 	return req == "" or req in GameManager.completed_locations
 
+# --- town NPC quest-givers ---------------------------------------------------
+# Place the 12 quest-givers along the avenue edges (offset from building doors).
+# Tobias/Agnes only appear once their gating secret has been found.
+func _spawn_town_npcs() -> void:
+	var i := 0
+	for data: Dictionary in QuestData.NPC_DATA + QuestData.NPC_DATA_2:
+		var req: Dictionary = data.get("requires_flag", {})
+		if not req.is_empty() and not GameManager.get_level_flag(req["location"], req["flag"], false):
+			i += 1
+			continue
+		var x: float = -55.0 + float(i) * 10.0
+		var z: float = 6.0 if i % 2 == 0 else -6.0
+		var pos := Vector3(x, 0.0, z)
+		var node := spawn_npc(NPC_MESHES[i % NPC_MESHES.size()], pos, 0.0 if z > 0.0 else PI)
+		_npcs.append({"quest_id": data["quest_id"], "name": data["name"], "color": data["color"], "pos": pos, "node": node})
+		i += 1
+
+func _nearest_npc() -> Dictionary:
+	var pp: Vector3 = player.global_position
+	var best := {}
+	var best_d := NPC_REACH
+	for n in _npcs:
+		var dist: float = Vector2(pp.x - n["pos"].x, pp.z - n["pos"].z).length()
+		if dist < best_d:
+			best_d = dist; best = n
+	return best
+
+func _talk_npc(npc: Dictionary) -> void:
+	var quest: Dictionary = QuestData.get_quest(npc["quest_id"])
+	if quest.is_empty():
+		return
+	var state: String = GameManager.get_level_flag(QuestData.TOWN_ID, "quest_" + npc["quest_id"], "not_started")
+	var tree: Dictionary
+	match state:
+		"complete":
+			tree = quest["after"]
+		"active":
+			tree = quest["turn_in"] if _find_holder(quest["want_item"]) != "" else quest["reminder"]
+		_:
+			tree = quest["intro"]
+	open_dialog(npc["name"], npc["color"], tree, player.active_name())
+
+func _find_holder(item_id: String) -> String:
+	for character_name in GameManager.unlocked_characters:
+		if GameManager.has_item(character_name, item_id):
+			return character_name
+	return ""
+
+# Town quest effects apply against TOWN_ID and the item's actual holder (overrides
+# Level3D's location_id-keyed default).
+func apply_dialog_effects(effects: Array) -> void:
+	for fx in effects:
+		if not (fx is Dictionary):
+			continue
+		var holder: String = player.active_name().to_lower()
+		if fx.has("consume_item"):
+			var found: String = _find_holder(fx["consume_item"])
+			if found != "":
+				holder = found
+				GameManager.consume_item(holder, fx["consume_item"])
+		for item_id: String in fx.get("grant_items", []):
+			GameManager.grant_item(holder, item_id)
+		if fx.has("set_flag"):
+			GameManager.set_level_flag(QuestData.TOWN_ID, fx["set_flag"], fx.get("flag_value", true))
+
+func _unhandled_input(_e: InputEvent) -> void:
+	dialog_input()
+
 # --- interaction -------------------------------------------------------------
 func _on_special(_char_name: String) -> void:
+	if dialog.is_open():
+		return
+	var npc := _nearest_npc()
+	if not npc.is_empty():
+		Audio.play("ui_select")
+		_talk_npc(npc)
+		return
 	var near := _nearest_door()
 	if near.is_empty():
 		return
@@ -153,6 +233,13 @@ func _build_hud() -> void:
 
 func _process(d: float) -> void:
 	super._process(d)
+	var npc := _nearest_npc()
+	if not npc.is_empty():
+		var state: String = GameManager.get_level_flag(QuestData.TOWN_ID, "quest_" + npc["quest_id"], "not_started")
+		var tag: String = "  ✓" if state == "complete" else ("  !" if state == "active" else "")
+		_hud_prompt.text = "Talk to %s%s — press G" % [npc["name"], tag]
+		_hud_prompt.add_theme_color_override("font_color", UITheme.CREAM)
+		return
 	var near := _nearest_door()
 	if near.is_empty():
 		_hud_prompt.text = ""
