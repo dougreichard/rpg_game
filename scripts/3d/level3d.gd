@@ -18,6 +18,8 @@ func _ready() -> void:
 	_build_level()
 	if "--capture" in OS.get_cmdline_user_args() or "--capture" in OS.get_cmdline_args():
 		_shot_frames = 18
+	if "--capture-late" in OS.get_cmdline_user_args() or "--capture-late" in OS.get_cmdline_args():
+		_shot_frames = 440
 
 # Override in subclasses: build env, floor, walls, props, spawns.
 func _build_level() -> void:
