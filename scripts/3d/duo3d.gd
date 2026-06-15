@@ -17,12 +17,16 @@ const P2_ACTIONS := ["p2_move_left", "p2_move_right", "p2_move_up", "p2_move_dow
 
 const BIES_SLOWDOWN := 0.4
 const BIES_DURATION := 5.0
+const REVIVE_RADIUS := 2.0      # metres (~48 px)
+const REVIVE_HOLD := 1.5
 
 var bodies: Array = []
 var active: int = 0
 var coop: bool = false
 var camera = null
 var _bies_t: float = 0.0
+var _game_over: bool = false
+var _go_layer: CanvasLayer = null
 
 func setup(datas: Array, pos: Vector3, cam, parent: Node) -> void:
 	camera = cam
@@ -48,7 +52,14 @@ func _apply_roles() -> void:
 			bodies[i].follow_target = bodies[active]
 
 func _process(d: float) -> void:
+	if _game_over:
+		if Input.is_action_just_pressed("ui_accept"):
+			get_tree().reload_current_scene()
+		return
 	_tick_bies(d)
+	_tick_revive(d)
+	if _game_over:
+		return
 	if bodies.size() > 1:
 		if not coop and _p2_pressed():
 			coop = true
@@ -61,6 +72,62 @@ func _process(d: float) -> void:
 			Audio.play("swap")
 	if not bodies.is_empty():
 		global_position = bodies[active].global_position
+
+# Co-op revive: stand the upright teammate near a downed one for REVIVE_HOLD to
+# revive them at half HP. Both down → game over. If the active body goes down,
+# control snaps to the upright partner so the player can go revive them.
+func _tick_revive(d: float) -> void:
+	if bodies.size() < 2:
+		if not bodies.is_empty() and bodies[0].is_down():
+			_trigger_game_over()
+		return
+	if bodies[active].is_down() and not bodies[1 - active].is_down():
+		active = 1 - active
+		_apply_roles()
+		if camera != null:
+			camera.set("target", bodies[active])
+	var down_count := 0
+	for b in bodies:
+		if b.is_down():
+			down_count += 1
+	if down_count >= bodies.size():
+		_trigger_game_over()
+		return
+	for i in bodies.size():
+		var downed = bodies[i]
+		var helper = bodies[1 - i]
+		if downed.is_down() and not helper.is_down():
+			if downed.global_position.distance_to(helper.global_position) <= REVIVE_RADIUS:
+				downed.revive_progress += d
+				if downed.revive_progress >= REVIVE_HOLD:
+					downed.revive()
+					Audio.play("special")
+			else:
+				downed.revive_progress = maxf(downed.revive_progress - d * 2.0, 0.0)
+
+func _trigger_game_over() -> void:
+	if _game_over:
+		return
+	_game_over = true
+	_go_layer = CanvasLayer.new(); _go_layer.layer = 40
+	var bg := ColorRect.new(); bg.color = Color(0.05, 0.02, 0.02, 0.82)
+	bg.set_anchors_preset(Control.PRESET_FULL_RECT); _go_layer.add_child(bg)
+	_go_label("BOTH DOWN", 270, 60, Color(0.9, 0.3, 0.25))
+	_go_label("Press Enter to retry", 360, 28, UITheme.CREAM)
+	get_tree().current_scene.add_child(_go_layer)
+	Audio.play("defeat")
+
+func _go_label(text: String, y: float, size: int, col: Color) -> void:
+	var l := Label.new()
+	l.text = text
+	l.anchor_right = 1.0; l.offset_top = y; l.offset_bottom = y + size + 12
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	l.add_theme_font_override("font", UITheme.font())
+	l.add_theme_font_size_override("font_size", size)
+	l.add_theme_color_override("font_color", col)
+	l.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.9))
+	l.add_theme_constant_override("outline_size", 6)
+	_go_layer.add_child(l)
 
 # Bies Mode — bullet time. The active body spends a full charge to slow the
 # world (Engine.time_scale) for BIES_DURATION real seconds.

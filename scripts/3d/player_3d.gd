@@ -24,6 +24,9 @@ const COMPANION_RANGE: float = 12.0   # only summons when an enemy is this close
 var hp: float = 100.0
 var bies_charge: float = 0.0   # 0..1; +0.1 per hit landed, spent on Bies Mode
 var is_hidden: bool = false    # set by 3D hiding volumes; suppresses enemy sight
+var is_downed: bool = false     # hp hit 0 — revivable by a teammate, not dead
+var revive_progress: float = 0.0
+var _iframes: float = 0.0
 var _companion_cd: float = 0.0
 var mode: int = Mode.ACTIVE
 var follow_target: Node3D = null
@@ -84,8 +87,13 @@ func _move_input(prefix: String) -> Vector3:
 	return Vector3(v.x, 0.0, v.y)
 
 func _physics_process(delta: float) -> void:
-	if _input_locked:
-		velocity = Vector3.ZERO
+	_iframes = maxf(_iframes - delta, 0.0)
+	if is_downed or _input_locked:
+		velocity.x = 0.0; velocity.z = 0.0
+		if not is_on_floor():
+			velocity.y -= GRAVITY * delta
+		else:
+			velocity.y = 0.0
 		move_and_slide()
 		return
 	var dir := Vector3.ZERO
@@ -180,5 +188,30 @@ func _attack() -> void:
 			bies_charge = minf(bies_charge + 0.1, 1.0))
 
 func take_damage(amount: float, _from: Vector3) -> void:
+	if is_downed or _iframes > 0.0:
+		return
 	hp = maxf(hp - amount, 0.0)
 	Audio.play("hurt")
+	if hp <= 0.0:
+		_go_down()
+
+func is_down() -> bool:
+	return is_downed
+
+func _go_down() -> void:
+	is_downed = true
+	revive_progress = 0.0
+	Audio.play("defeat")
+	if _mesh != null:
+		_mesh.rotation.x = deg_to_rad(82)   # crumple to the ground
+		_mesh.position.y = 0.2
+
+# Revived by a teammate — back to half HP with brief invulnerability.
+func revive() -> void:
+	is_downed = false
+	revive_progress = 0.0
+	hp = (data.max_hp if data != null else 100.0) * 0.5
+	_iframes = 1.2
+	if _mesh != null:
+		_mesh.rotation.x = 0.0
+		_mesh.position.y = 0.0

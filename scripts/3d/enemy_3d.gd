@@ -132,8 +132,8 @@ func _nearest_player() -> Node3D:
 	var best: Node3D = null
 	var best_d := INF
 	for p in get_tree().get_nodes_in_group("player3d"):
-		if not is_instance_valid(p):
-			continue
+		if not is_instance_valid(p) or p.get("is_downed") == true:
+			continue   # ignore downed players — go for whoever's still up
 		var d: float = global_position.distance_to((p as Node3D).global_position)
 		if d < best_d:
 			best_d = d; best = p
