@@ -52,7 +52,17 @@ func _build_level() -> void:
 	_spawn_town_npcs()
 	make_dialog()
 	_build_hud()
-	var p := spawn_duo([QUINN, ERIN], Vector3(_col_x(0) - SPACING, 0.1, 0.0))
+	# Returning from a level drops the duo back outside that building's door;
+	# a fresh arrival (title) starts at the west end of the avenue.
+	var start := Vector3(_col_x(0) - SPACING, 0.1, 0.0)
+	var ret: String = GameManager.last_location_id
+	if ret != "":
+		for d2 in _doors:
+			if d2["id"] == ret:
+				start = d2["pos"] + Vector3(0.0, 0.1, 0.0)
+				break
+		GameManager.last_location_id = ""
+	var p := spawn_duo([QUINN, ERIN], start)
 	p.special_used.connect(_on_special)
 	# pull the follow camera back for a town overview
 	for c in get_children():

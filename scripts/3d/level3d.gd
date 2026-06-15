@@ -25,6 +25,10 @@ var allow_overworld_exit := true   # the overworld itself disables this
 var _shot_frames: int = -1
 var _bies_fill: ColorRect = null   # Bies charge bar (levels only)
 var _bies_pulse: float = 0.0
+var _floor_hw: float = 0.0         # floor half-extents (for walk-out detection)
+var _floor_hd: float = 0.0
+var _floor_center: Vector3 = Vector3.ZERO
+var _returning: bool = false       # guard so the walk-out exit fires once
 
 func _ready() -> void:
 	_build_level()
@@ -33,6 +37,9 @@ func _ready() -> void:
 	if location_id != "":
 		build_ui_stack(false)
 		_add_exit_hint()
+		# Remember which building we're in, so any return to the overworld (walk
+		# out, Esc → Quit to Map, or on clear) drops the duo back at its door.
+		GameManager.last_location_id = location_id
 	if "--capture" in OS.get_cmdline_user_args() or "--capture" in OS.get_cmdline_args():
 		_shot_frames = 18
 	if "--capture-late" in OS.get_cmdline_user_args() or "--capture-late" in OS.get_cmdline_args():
@@ -138,6 +145,9 @@ func floor_box(w: float, d: float, col: Color, center := Vector3.ZERO) -> void:
 	sb.add_child(box_mesh(Vector3(w, 1.0, d), col, Vector3(0, -0.5, 0)))
 	sb.position = center
 	add_child(sb)
+	_floor_hw = w * 0.5
+	_floor_hd = d * 0.5
+	_floor_center = center
 
 func wall(center: Vector3, size: Vector3, col: Color) -> void:
 	var sb := StaticBody3D.new()
@@ -336,6 +346,7 @@ func hud_label(cl: CanvasLayer, y: float, size: int = 22, from_bottom: bool = fa
 # --- capture (windowed --capture) --------------------------------------------
 func _process(d: float) -> void:
 	_update_bies_bar(d)
+	_check_walk_out()
 	if _shot_frames < 0:
 		return
 	_shot_frames -= 1
@@ -343,6 +354,23 @@ func _process(d: float) -> void:
 		get_viewport().get_texture().get_image().save_png("res://_arena3d_shot.png")
 		print("SHOT_SAVED")
 		get_tree().quit()
+
+# Walking off the level floor (out the entrance) — or falling off it — returns to
+# the overworld instead of dropping into the void. Levels only (not the overworld).
+const EXIT_MARGIN: float = 0.4
+const FALL_Y: float = -2.5
+
+func _check_walk_out() -> void:
+	if location_id == "" or _returning or player == null or not is_instance_valid(player):
+		return
+	var p: Vector3 = player.global_position
+	var off := p.y < FALL_Y \
+		or absf(p.x - _floor_center.x) > _floor_hw + EXIT_MARGIN \
+		or absf(p.z - _floor_center.z) > _floor_hd + EXIT_MARGIN
+	if off and _floor_hw > 0.0:
+		_returning = true
+		GameManager.last_location_id = location_id
+		get_tree().change_scene_to_file(OVERWORLD_3D)
 
 func _update_bies_bar(d: float) -> void:
 	if _bies_fill == null or player == null or not player.has_method("bies_charge"):
