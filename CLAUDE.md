@@ -67,18 +67,19 @@ standby. Press the swap button to switch instantly during play.
 
 | Animal | Breed / Type | Appearance / Traits | Role |
 |--------|-------------|---------------------|------|
-| Frosty | Schnoodle (Schnauzer/Poodle mix) | White fur | **Combat distractor** — charges the nearest enemy, headbutts it to interrupt a windup/stagger it, then returns to Evan's side. |
-| Twinkle | Pomeranian | Small, blind, snaggle tooth, annoying bark | **Noise distraction** — trots out in Evan's facing direction, barks via `GameManager.emit_noise`, luring patrolling guards toward the noise and away from the duo. Implemented in `underground_tunnels.gd`. |
-| William & Mary | Rabbits | Quick, burrows (William) / Calm, good listener (Mary) | **Puzzle scouts — always a pair**: solve two-point puzzles by holding two positions simultaneously. Implemented in `the_drop.gd` to clear the landing site as an alternate to Evan's strength. |
-| Calvin & Coolidge | Great Pyrenees (brothers) | Large, white | **Heavy muscle — always a pair**: Calvin is the combat charger, Coolidge is the puzzle mover. Implemented in `harbor_docks.gd` to charge/stagger the two nearest enemies. |
-| *(unnamed)* | Guinea pigs | Small, numerous, skittish | **Crowd cover** — a scurrying group that floods a floor, drawing every eye in the room. Erin's stealth sections are the natural pairing. |
-| *(unnamed)* | Lizard | Cold-blooded, climbs | **Vertical-traversal scout** — scales walls/pipes to flip a switch or drop a rope. Implemented in `lizard_companion.gd` (CLIMB → PERCH → RETURN); summonable by Ethan in Zip Line Park and VR Escape Room. |
+| Frosty | Schnoodle (Schnauzer/Poodle mix) | White fur | **Combat distractor** — charges the nearest enemy, headbutts it to interrupt a windup/stagger it, then returns to Evan's side. **(in 3D)** |
+| Calvin & Coolidge | Great Pyrenees (brothers) | Large, white | **Heavy muscle — always a pair**: charge/stagger the two nearest enemies. **(in 3D — Evan's Special summons one dog per nearby enemy, up to two.)** |
+| Twinkle | Pomeranian | Small, blind, snaggle tooth, annoying bark | **Noise distraction** — trots out in Evan's facing, barks via `GameManager.emit_noise` to lure patrolling guards away. *(design; not yet ported to 3D)* |
+| William & Mary | Rabbits | Quick, burrows (William) / Calm, good listener (Mary) | **Puzzle scouts — always a pair**: hold two positions to solve two-point puzzles. *(design; not yet ported)* |
+| *(unnamed)* | Guinea pigs | Small, numerous, skittish | **Crowd cover** — a scurrying group that floods a floor, drawing every eye in the room (Erin's stealth sections). *(design; not yet ported)* |
+| *(unnamed)* | Lizard | Cold-blooded, climbs | **Vertical-traversal scout** — scales walls/pipes to flip a switch or drop a rope; Ethan summons it in Zip Line Park / VR Escape Room. *(design; not yet ported)* |
 
-**Animal companion pattern** (`scripts/systems/animal_companion.gd`, no `class_name` — preload()+untyped var):
-three-phase `CHARGE → STRIKE → RETURN` FSM; `STRIKE` toggles `monitoring` on a runtime `Hitbox`
-(`collision_layer/mask 8/64`) that rides the existing damage/knockback pipeline. Wire up via
-`special_used` signal → `AnimalCompanionScript.new(); .setup(summoner, target, color); add_child(...)`,
-gated by a per-companion cooldown.
+**Animal companion (3D)** — `scripts/3d/animal_companion3d.gd` (`AnimalCompanion3D`, preload):
+`CHARGE → STRIKE → RETURN`; STRIKE does a one-shot `Combat3D.strike` (damage + knockback that
+staggers a windup). Evan's Special summons one dog per nearby enemy up to two (Frosty solo /
+Calvin & Coolidge pair) — see `Player3D._summon_companion`, gated by a cooldown
+(`GameManager.companion_cooldown_scale`). The other named companions (Twinkle/William&Mary/Lizard)
+are puzzle-specific and not yet ported to 3D.
 
 > Add new animals here as they are designed. Note their combat use, puzzle use, and which locations they appear in.
 
@@ -116,12 +117,12 @@ all five are required to enter The Grand Marquee Cinema.
 `id`, `display_name`, `description`, `icon_color`, `owner_character`, `is_junk`. Inventory lives on
 `GameManager` (`inventories: Dictionary`, lowercase name → `Array[String]`); use `has_item()` /
 `grant_item()` (idempotent) / `consume_item()` and `item_collected` signal — never reach into internals.
-`LootBox` (`scripts/systems/loot_box.gd`, no `class_name`) has `setup(item, pos)` /
-`try_open(character_name, character_pos) -> bool`; a level's `_on_special_used` tries loot boxes
-first, then falls through to puzzle-gate checks.
-**Gotcha:** any new `HUD.tscn` overlay that `PauseMenu` looks up as a sibling must also be added to
-`overworld_map.gd._build_ui()`'s programmatic sibling list — `OverworldMap.tscn` has no static overlay
-nodes, so a missing entry crashes `pause_menu.gd._ready()` on "Continue" from the title screen.
+In 3D, levels place loot as a `box_mesh` crate and grant its item in `_on_special` (proximity +
+`GameManager.grant_item`, set a persisted flag), then fall through to puzzle-gate checks — see
+`pipe_organ_works3d.gd._loot_crate` / `_on_special` for the pattern.
+**Gotcha:** `PauseMenu` looks up its overlays (Achievements/Inventory/QuestLog/toast) as siblings,
+so they must all be created as direct children of the level root — done centrally in
+`Level3D.build_ui_stack()` (every level + the overworld call it). A new overlay must be added there.
 
 ### Functional collectibles (gate or buff something)
 | Item | Use |
@@ -214,8 +215,8 @@ often; Evan is the slowest but hits hardest and has the most HP.
 **Grunt:** walks toward the player, melee attack with a visible windup.
 **Runner:** dashes in fast, low health, easy to one-shot but hard to hit.
 **Brute:** slow, telegraphs a long windup, but hits hard and soaks damage.
-**Sentry** (`data/enemies/sentry.tres`, `is_ranged = true`): holds at long range, fires a `Projectile` (`scripts/systems/projectile.gd`, `extends Hitbox`) instead of opening a melee Hitbox.
-**Boss** (`data/enemies/boss.tres`, `is_boss = true`): adds `AOE_TELEGRAPH → AOE_SLAM` states. Draws an expanding warning ring via `_draw()`/`queue_redraw()` for `slam_telegraph_duration`, then spawns a runtime `Hitbox` with `CircleShape2D` for one active window. In Clocktower and Grand Marquee Cinema.
+**Sentry** (`data/enemies/sentry.tres`, `is_ranged = true`): holds at long range, fires a `Projectile3D` (`scripts/3d/projectile3d.gd`, a moving `Area3D`) instead of a melee `Combat3D.strike`.
+**Boss** (`data/enemies/boss.tres`, `is_boss = true`): `Enemy3D` adds `AOE_TELEGRAPH → AOE_SLAM` — an expanding translucent red ring mesh grows over `slam_telegraph_duration`, then one `Combat3D.strike` of `slam_radius` + screen shake; bosses commit (take damage during the wind-up, not interrupted). In Clocktower and Grand Marquee Cinema. (Mesh is currently a scaled/tinted grunt.)
 
 ### Bies Mode
 - **Charges** as the active character deals damage — 10% charge per hit landed
@@ -456,29 +457,25 @@ confirm it loads with no script/parse errors before marking a task done.
 ```
 project.godot
 CLAUDE.md
-scenes/
-  players/      Player.tscn, CharacterSelect.tscn
-  enemies/      Grunt.tscn, Runner.tscn, Brute.tscn, Boss.tscn
-  levels/       (one .tscn per location)
-  overworld/    OverworldMap.tscn
-  ui/           HUD.tscn, TitleScreen.tscn, ResultScreen.tscn, PauseMenu.tscn
-scripts/
-  players/      player.gd, character_data.gd
-                states/  idle.gd walk.gd attack.gd dash.gd hurt.gd down.gd
-  enemies/      enemy.gd
-                states/  chase.gd windup.gd strike.gd recover.gd hit.gd
-  systems/      wave_spawner.gd, combat.gd, hitbox.gd, hurtbox.gd
-                bies_mode.gd, puzzle_manager.gd
-  autoload/     game_manager.gd, audio.gd, save_manager.gd
+scenes/3d/        Title3D, Overworld3D, Result3D, Spoon3D + one *3D.tscn per location
+scripts/3d/       level3d, overworld3d, title3d, result3d, <location>3d (×13),
+                  player_3d, duo3d, enemy_3d, combat3d, projectile3d, camera_rig_3d,
+                  npc3d, animal_companion3d, hiding_spot3d, spoon3d
+  ui/             ui_theme, dialog_box, pause_menu, inventory/quest/achievement
+                  overlays, how_to_play_overlay, ui_factory  (shared Control UI)
+  systems/        item_data, dialog_tree, quest_data, achievement_data, spoon_game
+                  (Resource/shared logic — render-agnostic)
+  players/        character_data.gd   (CharacterData Resource only)
+  enemies/        enemy_data.gd       (EnemyData Resource only)
+  autoload/       game_manager, save_manager, achievement_manager, audio,
+                  combat_fx, transition_manager, …
 data/
-  characters/   quinn.tres, erin.tres, evan.tres, ben.tres, ethan.tres
-  waves.tres
-  enemy_stats.tres
-assets/         art/, sfx/, music/, fonts/
-addons/         gut/ (vendored GUT v9.6.0+ — see "GUT unit tests" below)
-tests/
-  unit/         test_character_data.gd, test_enemy_data.gd, test_unlock_chain.gd,
-                test_stealth_fsm.gd
+  characters/   quinn.tres … ethan.tres   enemies/  grunt … boss.tres   items/  *.tres
+assets/
+  models/       characters/ enemies/ props/ town/  (Synty glTF)
+  art/ui/  fonts/  music/  sfx/
+addons/         gut/ (vendored GUT v9.6.0+)
+tests/unit/     test_character_data, test_enemy_data, test_unlock_chain, test_stealth_fsm, …
 ```
 
 ---
@@ -495,7 +492,7 @@ FSM: `idle → walk → attack → dash → hurt → down/revive`.
 - `move_and_slide()` for motion; vertical movement is ~0.6× horizontal speed.
 - Dash grants brief i-frames.
 - **Character swap**: instantly switches active ↔ standby character. Standby character follows or holds position.
-- Character-specific stats and abilities live in a `CharacterData` Resource, loaded at runtime. No per-character code forks in `player.gd`.
+- Character-specific stats and abilities live in a `CharacterData` Resource, loaded at runtime. No per-character code forks in `player_3d.gd`.
 
 ### Enemy (`CharacterBody2D`)
 Full FSM: `PATROL → INVESTIGATE → CHASE → WINDUP → STRIKE → RECOVER → HIT` (plus `AOE_TELEGRAPH`/`AOE_SLAM` for Boss).
@@ -504,7 +501,7 @@ Windup **must telegraph** (animation + UI tell) before a strike.
 
 ### Combat (Area2D)
 Attacks spawn a short-lived **Hitbox** (`Area2D`) that overlaps enemy **Hurtbox** (`Area2D`).
-All damage resolution in `combat.gd` via signals. Apply: knockback, hitstun, hit-flash, particles, screen-shake, brief hit-stop.
+All damage resolution via `Combat3D.strike` (`scripts/3d/combat3d.gd`, one-shot `Area3D`). Apply: knockback, hitstun, hit-flash, particles, screen-shake, brief hit-stop.
 
 ### WaveSpawner
 Reads `data/waves.tres`. Spawns from screen edges up to a max concurrent count.
@@ -530,20 +527,20 @@ Enemy FSM opens with `PATROL → INVESTIGATE` before the combat loop. Key rules:
 - **PATROL:** walks between randomized points within `patrol_radius` of `_home_position` at half speed.
 - **Detection (`_can_see`):** vision-cone + LOS raycast. Distance ≤ `vision_range`, angle within `vision_angle_deg/2`, no wall obstruction, and `Player.is_hidden == false`. Alert fills toward `ALERT_THRESHOLD`; losing sight decays it. `SUSPICION_THRESHOLD` (~35%) → INVESTIGATE; `ALERT_THRESHOLD` (100%) → CHASE.
 - **INVESTIGATE:** walks to last seen/heard position, lingers `INVESTIGATE_LOOK_DURATION`, then stands down to PATROL if alert drops below `SUSPICION_THRESHOLD`.
-- **Noise:** `GameManager.emit_noise(position, radius)` / `noise_emitted` signal. `Player._enter_attack()` / `_enter_dash()` emit noise at 110px / 160px. Guards within `max(radius, hearing_range)` raise alert to at least `NOISE_ALERT_FLOOR` (40%) and investigate the source.
-- **Hiding spots** (`scripts/systems/hiding_spot.gd`, no `class_name`): `Area2D` that sets `Player.is_hidden` while overlapping. Dims sprite to 55% alpha. One per level at `HIDING_SPOT_POS`.
-- **Distraction:** `GameManager.calm_enemies(position, radius)` / `enemies_calmed` resets INVESTIGATE/CHASE guards back to PATROL. Erin's Special fires this at 130px. Twinkle's bark uses `emit_noise` to lure guards away.
-- **Awareness telegraph:** Vision-cone wedge (`draw_colored_polygon`) + alert-meter arc rendered via `_draw()`, color-graded by alert level.
+- **Noise:** `GameManager.emit_noise(pos, radius)` / `noise_emitted` (positions passed as XZ `Vector2`, metres). `Player3D._attack` emits noise; guards within `max(radius, hearing_range)` raise alert to at least `NOISE_ALERT_FLOOR` (40%) and investigate.
+- **Hiding spots** (`scripts/3d/hiding_spot3d.gd`, `HidingSpot3D`): an `Area3D` that sets `Player3D.is_hidden` while a body overlaps (suppresses sight; noise still gives you away). `Level3D.add_hiding_spot(pos)`; placed in Underground/Library/VR.
+- **Distraction:** `GameManager.calm_enemies(pos, radius)` / `enemies_calmed` resets INVESTIGATE/CHASE guards to PATROL. Erin's Special fires this (130px ≈ 4 m).
+- **Awareness telegraph:** a flat translucent vision-cone **sector mesh** on the ground, rotated to the guard's facing and graded yellow→red by alert (hidden once chasing).
 - **EnemyData tunables:** `vision_range` (170px), `vision_angle_deg` (100°), `hearing_range` (90px), `patrol_radius` (80px).
 
 ### Doorways, camera-follow & mid-level persistence
 All 13 locations use three structural systems:
 
-- **`Doorway`** (`scripts/systems/doorway.gd`, no `class_name`): arms after the active character walks `ARM_RADIUS` (96px) away from spawn; triggers exit when they return within `TRIGGER_RADIUS` (56px). Exit allowed at any time. Poll `doorway.check(player_pos)` from `_process` and call `_exit_to_overworld()` on `true`.
-- **Camera follows active player:** `Camera2D` stays a level-root child (not reparented). `_setup_camera()` turns on `position_smoothing` and sets `limit_*` from `CAMERA_LIMIT_*` consts. `_process` sets `camera.global_position = GameManager.active_player.global_position` each frame.
-- **Mid-level progress persistence:** `GameManager.level_progress: Dictionary` (`location_id → {flag: value}`). Use `get_level_flag(id, key, default)` / `set_level_flag(id, key, value)` (setter calls `SaveManager.save_game()`). `_restore_progress()` in `_ready()` reads flags back to skip re-spawning cleared enemies, restore solved-state sprites, and pass `already_open` to pre-open looted boxes.
+- **Exit to overworld:** press **Esc** → the shared Pause menu (`Level3D.build_ui_stack`) → **Quit to Map** returns to `Overworld3D`. (The old Doorway return-to-spawn system is retired.)
+- **Camera follows active body:** `camera_rig_3d` (`Camera3D`) stays a level-root child, smoothly follows the active duo body at the fixed 3/4 angle; `reframe(dist, elev)` pulls it back for the overworld.
+- **Mid-level progress persistence:** `GameManager.level_progress: Dictionary` (`location_id → {flag: value}`). Use `get_level_flag(id, key, default)` / `set_level_flag(id, key, value)` (setter auto-saves). Each level's `_restore()` reads flags back in `_build_level` to skip cleared enemies, show solved-state, and re-grant looted items.
 
-### Bies Mode (`bies_mode.gd`)
+### Bies Mode (`Duo3D` / `Player3D`)
 Applies `Engine.time_scale = 0.4` for a brief window. Governs cooldown/charge. Emits
 `bies_activated` / `bies_ended` for HUD and VFX.
 
@@ -579,7 +576,7 @@ If both are `DOWN` simultaneously → game over overlay → `get_tree().reload_c
 
 - **`DialogBox`** (`scripts/ui/dialog_box.gd`, no `class_name`): `open(npc_name, portrait_color, tree, start_node, active_character)` walks a `DialogTree`. `advance()` pages, enters choice mode, or closes (emitting `closed(effects: Array)`).
 - **Quest state machine:** `not_started → active → complete`, persisted at `GameManager.level_progress["town"]["quest_<id>"]` via `get_level_flag`/`set_level_flag(TOWN_ID, ...)`.
-- **`QuestData`** (`scripts/systems/quest_data.gd`, `class_name`): `TOWN_ID`, `NPC_DATA`/`NPC_DATA_2`, `QUESTS`/`QUESTS_2`, `TOWN_QUEST_IDS`, `get_quest(id)`, `get_npc(id)`. Used by both `overworld_map.gd` and `achievement_manager.gd`.
+- **`QuestData`** (`scripts/systems/quest_data.gd`, `class_name`): `TOWN_ID`, `NPC_DATA`/`NPC_DATA_2`, `QUESTS`/`QUESTS_2`, `TOWN_QUEST_IDS`, `get_quest(id)`, `get_npc(id)`. Used by both `overworld3d.gd` and `achievement_manager.gd`.
 - **Effects:** `_apply_dialog_effects(effects: Array)` — applied on `dialog_box.closed`, never mid-conversation. Handles `consume_item`, `grant_items`, `set_flag`.
 - In-level NPCs (Hieronymus, Lena, Rio, Viktor, ARIA, Cyrus, Cecil/Usher) follow the same `DialogBox` / `effects` pattern with `_create_<npc>_npc()` / `_talk_to_<npc>()` / `_on_<npc>_dialog_closed()`.
 
