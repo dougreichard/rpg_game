@@ -58,6 +58,7 @@ func _ready() -> void:
 		_speed = data.move_speed / PX_PER_M
 	collision_layer = Combat3D.L_ENEMY
 	collision_mask = Combat3D.L_WORLD
+	add_to_group("enemy3d")
 	var shape := CollisionShape3D.new()
 	var cap := CapsuleShape3D.new()
 	cap.radius = 0.35

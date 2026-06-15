@@ -14,6 +14,9 @@ const TURN_LERP: float = 14.0
 const MESH_DIR: String = "res://assets/models/characters/"
 const FOLLOW_STOP: float = 1.6   # standby keeps roughly this gap
 const LEASH: float = 9.0         # teleport to the active's side past this (~300px)
+const CompanionScript: Script = preload("res://scripts/3d/animal_companion3d.gd")
+const COMPANION_CD: float = 6.0
+const COMPANION_RANGE: float = 12.0   # only summons when an enemy is this close
 
 @export var data: CharacterData = null
 @export var mesh_path: String = ""
@@ -21,6 +24,7 @@ const LEASH: float = 9.0         # teleport to the active's side past this (~300
 var hp: float = 100.0
 var bies_charge: float = 0.0   # 0..1; +0.1 per hit landed, spent on Bies Mode
 var is_hidden: bool = false    # set by 3D hiding volumes; suppresses enemy sight
+var _companion_cd: float = 0.0
 var mode: int = Mode.ACTIVE
 var follow_target: Node3D = null
 var _speed: float = 5.0
@@ -127,11 +131,40 @@ func _physics_process(delta: float) -> void:
 	_attack_cd = maxf(_attack_cd - delta, 0.0)
 	if _attack_cd == 0.0 and Input.is_action_just_pressed(prefix + "attack"):
 		_attack()
+	_companion_cd = maxf(_companion_cd - delta, 0.0)
 	if Input.is_action_just_pressed(prefix + "special"):
 		# Erin's special doubles as a distraction — calms nearby alerted guards.
 		if active_name() == "Erin":
 			GameManager.calm_enemies(Vector2(global_position.x, global_position.z), 130.0 / PX_PER_M)
+		# Evan's special summons Frosty to charge a nearby enemy (combat only).
+		if active_name() == "Evan":
+			_summon_companion()
 		special_used.emit(active_name())
+
+func _summon_companion() -> void:
+	if _companion_cd > 0.0:
+		return
+	var enemy := _nearest_enemy()
+	if enemy == null:
+		return
+	_companion_cd = COMPANION_CD * GameManager.companion_cooldown_scale()
+	var comp: Node3D = CompanionScript.new()
+	comp.position = global_position
+	get_parent().add_child(comp)
+	comp.call("setup", self, enemy, Color(0.96, 0.96, 0.96))
+	GameManager.companion_summoned.emit("frosty")
+	Audio.play("special")
+
+func _nearest_enemy() -> Node3D:
+	var best: Node3D = null
+	var best_d := COMPANION_RANGE
+	for e in get_tree().get_nodes_in_group("enemy3d"):
+		if not is_instance_valid(e):
+			continue
+		var dist: float = global_position.distance_to((e as Node3D).global_position)
+		if dist < best_d:
+			best_d = dist; best = e
+	return best
 
 func _attack() -> void:
 	_attack_cd = data.attack_cooldown if data != null else 0.5
