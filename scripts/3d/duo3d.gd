@@ -15,10 +15,14 @@ const M_P2 := 2
 const P2_ACTIONS := ["p2_move_left", "p2_move_right", "p2_move_up", "p2_move_down",
 	"p2_attack", "p2_special"]
 
+const BIES_SLOWDOWN := 0.4
+const BIES_DURATION := 5.0
+
 var bodies: Array = []
 var active: int = 0
 var coop: bool = false
 var camera = null
+var _bies_t: float = 0.0
 
 func setup(datas: Array, pos: Vector3, cam, parent: Node) -> void:
 	camera = cam
@@ -43,7 +47,8 @@ func _apply_roles() -> void:
 			bodies[i].mode = M_P2 if coop else M_AI
 			bodies[i].follow_target = bodies[active]
 
-func _process(_d: float) -> void:
+func _process(d: float) -> void:
+	_tick_bies(d)
 	if bodies.size() > 1:
 		if not coop and _p2_pressed():
 			coop = true
@@ -56,6 +61,27 @@ func _process(_d: float) -> void:
 			Audio.play("swap")
 	if not bodies.is_empty():
 		global_position = bodies[active].global_position
+
+# Bies Mode — bullet time. The active body spends a full charge to slow the
+# world (Engine.time_scale) for BIES_DURATION real seconds.
+func _tick_bies(d: float) -> void:
+	if _bies_t > 0.0:
+		_bies_t -= d / maxf(Engine.time_scale, 0.01)   # count real time while slowed
+		if _bies_t <= 0.0:
+			Engine.time_scale = 1.0
+			GameManager.bies_ended.emit()
+		return
+	if bodies.is_empty():
+		return
+	if Input.is_action_just_pressed("bies_mode") and bodies[active].bies_charge >= 1.0:
+		bodies[active].bies_charge = 0.0
+		_bies_t = BIES_DURATION
+		Engine.time_scale = BIES_SLOWDOWN
+		Audio.play("bies")
+		GameManager.bies_activated.emit()
+
+func bies_charge() -> float:
+	return bodies[active].bies_charge if not bodies.is_empty() else 0.0
 
 func _p2_pressed() -> bool:
 	for a: String in P2_ACTIONS:

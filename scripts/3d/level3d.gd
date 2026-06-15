@@ -23,6 +23,8 @@ var location_id: String = ""   # set by subclass; used by dialog-effect helper
 var dialog = null              # shared DialogBox (created by make_dialog)
 var allow_overworld_exit := true   # the overworld itself disables this
 var _shot_frames: int = -1
+var _bies_fill: ColorRect = null   # Bies charge bar (levels only)
+var _bies_pulse: float = 0.0
 
 func _ready() -> void:
 	_build_level()
@@ -67,6 +69,31 @@ func build_ui_stack(in_overworld: bool) -> void:
 	pm.set("title_scene", TITLE_3D)
 	pm.set("spoon_scene", "res://scenes/3d/Spoon3D.tscn")
 	add_child(pm)
+	if not in_overworld:
+		_build_bies_bar()
+
+func _build_bies_bar() -> void:
+	var cl := CanvasLayer.new(); cl.layer = 6; add_child(cl)
+	var w := 240.0
+	var bg := ColorRect.new()
+	bg.color = Color(0.12, 0.09, 0.07, 0.85)
+	bg.anchor_left = 0.5; bg.anchor_right = 0.5; bg.anchor_top = 1.0; bg.anchor_bottom = 1.0
+	bg.offset_left = -w * 0.5 - 2; bg.offset_right = w * 0.5 + 2; bg.offset_top = -34; bg.offset_bottom = -14
+	cl.add_child(bg)
+	_bies_fill = ColorRect.new()
+	_bies_fill.color = UITheme.GOLD
+	_bies_fill.anchor_left = 0.5; _bies_fill.anchor_right = 0.5; _bies_fill.anchor_top = 1.0; _bies_fill.anchor_bottom = 1.0
+	_bies_fill.offset_left = -w * 0.5; _bies_fill.offset_right = -w * 0.5; _bies_fill.offset_top = -32; _bies_fill.offset_bottom = -16
+	cl.add_child(_bies_fill)
+	var lbl := Label.new()
+	lbl.text = "BIES"
+	lbl.anchor_left = 0.5; lbl.anchor_right = 0.5; lbl.anchor_top = 1.0; lbl.anchor_bottom = 1.0
+	lbl.offset_left = -w * 0.5; lbl.offset_right = w * 0.5; lbl.offset_top = -34; lbl.offset_bottom = -14
+	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	lbl.add_theme_font_override("font", UITheme.font())
+	lbl.add_theme_font_size_override("font_size", 13)
+	lbl.add_theme_color_override("font_color", Color(0.15, 0.10, 0.07))
+	cl.add_child(lbl)
 
 # Override in subclasses: build env, floor, walls, props, spawns.
 func _build_level() -> void:
@@ -299,7 +326,8 @@ func hud_label(cl: CanvasLayer, y: float, size: int = 22, from_bottom: bool = fa
 	return l
 
 # --- capture (windowed --capture) --------------------------------------------
-func _process(_d: float) -> void:
+func _process(d: float) -> void:
+	_update_bies_bar(d)
 	if _shot_frames < 0:
 		return
 	_shot_frames -= 1
@@ -307,3 +335,16 @@ func _process(_d: float) -> void:
 		get_viewport().get_texture().get_image().save_png("res://_arena3d_shot.png")
 		print("SHOT_SAVED")
 		get_tree().quit()
+
+func _update_bies_bar(d: float) -> void:
+	if _bies_fill == null or player == null or not player.has_method("bies_charge"):
+		return
+	var charge: float = player.bies_charge()
+	var w := 240.0
+	_bies_fill.offset_right = _bies_fill.offset_left + w * clampf(charge, 0.0, 1.0)
+	if charge >= 1.0:
+		_bies_pulse += d * 6.0
+		var t: float = 0.5 + 0.5 * sin(_bies_pulse)
+		_bies_fill.color = UITheme.GOLD.lerp(Color(1, 1, 0.7), t)
+	else:
+		_bies_fill.color = UITheme.GOLD_DIM

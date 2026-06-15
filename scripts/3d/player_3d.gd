@@ -19,6 +19,7 @@ const LEASH: float = 9.0         # teleport to the active's side past this (~300
 @export var mesh_path: String = ""
 
 var hp: float = 100.0
+var bies_charge: float = 0.0   # 0..1; +0.1 per hit landed, spent on Bies Mode
 var mode: int = Mode.ACTIVE
 var follow_target: Node3D = null
 var _speed: float = 5.0
@@ -136,7 +137,8 @@ func _attack() -> void:
 	Audio.play("attack")
 	Combat3D.strike(self, pos, 0.8, Combat3D.L_ENEMY, func(b: Node) -> void:
 		if b.has_method("take_damage"):
-			b.take_damage(dmg, _facing))
+			b.take_damage(dmg, _facing)
+			bies_charge = minf(bies_charge + 0.1, 1.0))
 
 func take_damage(amount: float, _from: Vector3) -> void:
 	hp = maxf(hp - amount, 0.0)
