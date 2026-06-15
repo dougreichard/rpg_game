@@ -586,7 +586,7 @@ A downed player is revived when their teammate stands within `REVIVE_RADIUS` (48
 If both are `DOWN` simultaneously → game over overlay → `get_tree().reload_current_scene()` on `ui_accept`.
 
 ### NPC dialog & quests
-12 town NPCs are quest-givers (`npc_dialog/` for full writeups). Key systems:
+12 town NPCs are quest-givers (full roster + dialog in `QuestData`, `scripts/systems/quest_data.gd`). Key systems:
 
 - **`DialogBox`** (`scripts/ui/dialog_box.gd`, no `class_name`): `open(npc_name, portrait_color, tree, start_node, active_character)` walks a `DialogTree`. `advance()` pages, enters choice mode, or closes (emitting `closed(effects: Array)`).
 - **Quest state machine:** `not_started → active → complete`, persisted at `GameManager.level_progress["town"]["quest_<id>"]` via `get_level_flag`/`set_level_flag(TOWN_ID, ...)`.
