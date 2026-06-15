@@ -24,7 +24,6 @@ GameManager="*res://scripts/autoload/game_manager.gd"
 CombatFX="*res://scripts/autoload/combat_fx.gd"
 Audio="*res://scripts/autoload/audio.gd"
 TransitionManager="*res://scripts/autoload/transition_manager.gd"
-CRTOverlay="*res://scripts/autoload/crt_overlay.gd"
 ScreenshotHelper="*res://scripts/autoload/screenshot_helper.gd"
 
 [display]

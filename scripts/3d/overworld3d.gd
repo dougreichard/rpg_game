@@ -72,12 +72,14 @@ func _avenue() -> void:
 	var x1: float = _col_x(_num_cols() - 1) + SPACING
 	var x: float = x0
 	while x <= x1:
+		# Stagger tile heights so overlapping layers never share a plane (z-fight):
+		# ground 0 < sidewalk 0.04 < road 0.06 < crossing 0.08.
 		# two-lane road down the avenue (z = ±2.5)
-		_tile("road", Vector3(x, 0.02, -2.5))
-		_tile("road", Vector3(x, 0.02, 2.5))
+		_tile("road", Vector3(x, 0.06, -2.5))
+		_tile("road", Vector3(x, 0.06, 2.5))
 		# sidewalks flanking the road
-		_tile("sidewalk", Vector3(x, 0.01, -7.5))
-		_tile("sidewalk", Vector3(x, 0.01, 7.5))
+		_tile("sidewalk", Vector3(x, 0.04, -7.5))
+		_tile("sidewalk", Vector3(x, 0.04, 7.5))
 		x += 5.0
 
 func _tile(key: String, pos: Vector3) -> void:
@@ -100,10 +102,11 @@ func _buildings() -> void:
 		_doors.append({"id": loc["id"], "name": loc["name"], "scene": loc["scene"], "req": loc["req"], "pos": door})
 
 func _crosswalk(x: float, north: bool) -> void:
-	# a crossing tile + plaza connecting the sidewalk to the door
+	# a crossing tile + plaza connecting the sidewalk to the door (crossing sits
+	# highest so it reads cleanly over the road lane it overlaps)
 	var zc: float = -5.0 if north else 5.0
-	_tile("road_crossing", Vector3(x, 0.02, zc))
-	_tile("sidewalk", Vector3(x, 0.015, (-9.0 if north else 9.0)))
+	_tile("road_crossing", Vector3(x, 0.08, zc))
+	_tile("sidewalk", Vector3(x, 0.05, (-9.0 if north else 9.0)))
 
 func _street_dressing(x: float, north: bool) -> void:
 	var zs: float = -7.5 if north else 7.5
@@ -233,6 +236,9 @@ func _build_hud() -> void:
 
 func _process(d: float) -> void:
 	super._process(d)
+	if dialog != null and dialog.is_open():
+		_hud_prompt.text = ""   # don't show the activation prompt over the dialog box
+		return
 	var npc := _nearest_npc()
 	if not npc.is_empty():
 		var state: String = GameManager.get_level_flag(QuestData.TOWN_ID, "quest_" + npc["quest_id"], "not_started")
