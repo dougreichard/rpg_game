@@ -8,6 +8,15 @@ extends Level3D
 const TOWN := "res://assets/models/town/"
 const QUINN := preload("res://data/characters/quinn.tres")
 const ERIN := preload("res://data/characters/erin.tres")
+# Overworld duo is drawn from who's actually unlocked (in unlock order), so a fresh
+# game shows Quinn alone until Bellows & Sons unlocks Erin, etc.
+const CHARS := {
+	"quinn": QUINN,
+	"erin": ERIN,
+	"evan": preload("res://data/characters/evan.tres"),
+	"ben": preload("res://data/characters/ben.tres"),
+	"ethan": preload("res://data/characters/ethan.tres"),
+}
 const SPACING := 20.0
 const ZOFF := 12.0          # building rows at z = ±ZOFF
 # big office towers scaled down so footprints fit the block; shops stay 1.0
@@ -62,13 +71,26 @@ func _build_level() -> void:
 				start = d2["pos"] + Vector3(0.0, 0.1, 0.0)
 				break
 		GameManager.last_location_id = ""
-	var p := spawn_duo([QUINN, ERIN], start)
+	var p := spawn_duo(_overworld_duo(), start)
 	p.special_used.connect(_on_special)
 	# pull the follow camera back for a town overview
 	for c in get_children():
 		if c is Camera3D and c.has_method("reframe"):
 			c.call("reframe", 11.0, 50.0)   # closer to the duo (was 16, 46 — felt distant)
 	build_ui_stack(true)   # pause menu + overlays (Esc opens it)
+
+# The strolling duo = the first (up to two) unlocked characters, in unlock order.
+# Quinn alone at the start; Quinn+Erin once Bellows & Sons is done; and so on.
+func _overworld_duo() -> Array:
+	var duo: Array = []
+	for name: String in GameManager.unlocked_characters:
+		if name in CHARS:
+			duo.append(CHARS[name])
+		if duo.size() >= 2:
+			break
+	if duo.is_empty():
+		duo.append(QUINN)
+	return duo
 
 func _num_cols() -> int:
 	return (LOCS.size() + 1) / 2
