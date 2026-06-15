@@ -175,14 +175,13 @@ Agnes by Old Parish Church `secret_revealed`.
 
 ## Game specs
 
-### Tile & sprite grid
-*(A gameplay grid, not a pixel-art constraint — the art is Synty 2.5D, see above.)*
-- **Tile size:** 32×32 px (gameplay/collision grid)
-- **Character gameplay footprint:** 32×32 px (tile-aligned)
-- **Synty billboards** (`assets/art/synty/…`): rendered 3/4 at high res, alpha-trimmed,
-  imported with smooth filtering, and scaled to fit the grid at runtime — not pixel art.
-- **Legacy PIL character/enemy sheets** (`assets/art/sprites/…`): 64×64 px/frame
-  (2× oversample), via `generators/gen_*.py` — still used for in-level combat animation.
+### Scale & meshes (3D)
+- **World scale:** ~1 unit = 1 metre; characters ~1.7 m (capsule). Movement is on the
+  **XZ ground plane** (`PX_PER_M = 32` converts the old px-based `*Data` stats to m/s).
+- **Character/enemy meshes:** Synty glTF in `assets/models/characters|enemies/`.
+- **Level geometry:** mostly primitives via `Level3D.box_mesh`/`floor_box`/`wall` + a few
+  committed prop GLBs (`assets/models/props/`); the overworld uses the City town kit in
+  `assets/models/town/`.
 - **Viewport:** 1280×720
 
 ### Character stats *(starting values — tune via exported vars)*
@@ -434,8 +433,8 @@ Location template:
 # Run the project
 godot --path .
 
-# Run a single scene
-godot --path . res://scenes/levels/arena.tscn
+# Run a single scene (e.g. a level directly, skipping the title/overworld)
+godot --path . res://scenes/3d/IronStringsGym3D.tscn
 
 # Headless boot check (CI)
 godot --headless --path . --quit-after 200
@@ -516,25 +515,14 @@ Tracks puzzle state per location. Emits signals when puzzle conditions are met
 (e.g., `clock_repaired`, `panel_hacked`). Puzzle logic references character
 abilities by type, not by character name, so new characters can plug in.
 
-### Tile-mapped floors & wall art
-All 13 levels use a `TileMap` floor + textured wall sprites. The current art is
-**Synty-derived**: `PlaceholderArt.make_synty_floor_tileset(path)` (per-theme
-floor atlas baked from Synty textures) and `make_synty_wall_tile(path)` (tiled
-across each wall rect via `region` + `texture_repeat`), with Synty billboard
-props on top. The original programmatic generators
-(`make_level_tileset`/`make_wall_texture`) remain as fallbacks.
-
-**Floor:** `PlaceholderArt.make_level_tileset(base, accent) -> TileSet` draws a 64×32 px atlas
-(two 32×32 tiles). `_build_floor()` builds a `TileMap`, `move_child(tm, 0)` so it renders behind
-everything else, and `set_cell()`s a grid with `FLOOR_COLS/ROWS/ACCENT_PERIOD` consts.
-Standard rooms share `FLOOR_COLS = 20` / `FLOOR_ROWS = 12` / `FLOOR_ACCENT_PERIOD = 4`; only
-`FLOOR_BASE_COLOR` / `FLOOR_ACCENT_COLOR` vary per location. For non-standard rooms,
-recompute as `room_px / 32` (round up).
-
-**Walls:** `_build_walls()` iterates `$Walls.get_children()`, reads each `CollisionShape2D`'s
-`RectangleShape2D.size`, and attaches a `Sprite2D` via `PlaceholderArt.make_wall_texture(color, w, h)`
-(running-bond brick pattern, sized at runtime). Wall color is `FLOOR_BASE_COLOR.darkened(0.35)` —
-derived automatically, no separate const needed.
+### Building level geometry (3D)
+Levels subclass `Level3D` and build their space in `_build_level()` from helpers:
+`build_env(bg, ambient, …)` (sun + WorldEnvironment), `floor_box(w, d, col)`,
+`wall(center, size, col)`, `box_mesh(size, col, ofs, emissive)` for primitive props,
+and `prop(path, pos, yaw, scale)` for committed GLBs. Theme per location with light
+colours + a small palette; dress with primitives and the prop GLBs. Collision uses 3D
+layers from `Combat3D` (`L_WORLD=1`, `L_PLAYER=2`, `L_ENEMY=4`). See the existing
+`scripts/3d/*3d.gd` for patterns (e.g. the organ/gear/carousel built from cylinders+boxes).
 
 ### Stealth & awareness
 Enemy FSM opens with `PATROL → INVESTIGATE` before the combat loop. Key rules:
@@ -705,12 +693,12 @@ with how the editor serializes, then reopen in the editor to confirm it's valid.
 ## Guardrails
 
 - Original IP for **names, story, characters, music** — no licensed/brand names.
-- **Art assets:** the look is **Synty low-poly 2.5D**, built from the licensed
-  Synty POLYGON packs the project owns (raw FBX/textures staged in git-ignored
-  `synty_source/`; rendered PNGs live in `assets/art/synty/`). Original art and
-  CC0/OFL assets are also fine. `PlaceholderArt` (programmatic) and the PIL pixel
-  sheets are **fallbacks**, not the target style — don't treat the game as
-  retro/pixel-art (see Project overview).
+- **Art assets:** the look is **Synty low-poly 3D**, built from the licensed Synty
+  POLYGON packs the project owns (raw FBX/textures staged in git-ignored `synty_source/`;
+  baked glTF meshes committed under `assets/models/`). Bake new static meshes with
+  `synty_source/blender/scripts/export_prop.py` (per-pack scale gotcha: City = metres,
+  Town = cm). Original art and CC0/OFL assets are also fine. **Not** retro/pixel-art and
+  **not** 2.5D billboards — both pipelines are retired (see Project overview).
 - Enemy attacks must be **telegraphed**; combat must stay **readable**.
 - Character abilities should feel distinct and be required by at least one puzzle
   or encounter — no ability should be purely cosmetic.
