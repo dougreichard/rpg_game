@@ -42,6 +42,5 @@ func _on_body(b: Node) -> void:
 					level.on_stair_locked()
 				return
 			_busy = true   # both duo bodies cross — only carry once
-			level.teleport_duo(dest)
-			level.reframe_camera(cam_dist, cam_elev)
-			get_tree().create_timer(0.6).timeout.connect(func() -> void: _busy = false)
+			level.stair_transition(dest, cam_dist, cam_elev)
+			get_tree().create_timer(0.8).timeout.connect(func() -> void: _busy = false)

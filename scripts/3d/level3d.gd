@@ -394,14 +394,14 @@ func reframe_camera(dist: float, elev: float) -> void:
 # Build a room: floor + perimeter walls with gaps on the named sides
 # ("n"=-Z, "s"=+Z, "e"=+X, "w"=-X) for doorways. Dress it afterwards relative to
 # `center`. Does NOT set the walk-out bounds (multi-room levels use a portal).
-func room(center: Vector3, w: float, d: float, floor_col: Color, wall_col: Color, h: float = 3.2, openings: Array = [], gap: float = 3.0) -> void:
-	# floor
-	var sb := StaticBody3D.new()
-	sb.collision_layer = Combat3D.L_WORLD
-	var cs := CollisionShape3D.new(); var bs := BoxShape3D.new()
-	bs.size = Vector3(w, 1.0, d); cs.shape = bs; cs.position = Vector3(0, -0.5, 0)
-	sb.add_child(cs); sb.add_child(box_mesh(Vector3(w, 1.0, d), floor_col, Vector3(0, -0.5, 0)))
-	sb.position = center; add_child(sb)
+func room(center: Vector3, w: float, d: float, floor_col: Color, wall_col: Color, h: float = 3.2, openings: Array = [], gap: float = 3.0, with_floor: bool = true) -> void:
+	if with_floor:
+		var sb := StaticBody3D.new()
+		sb.collision_layer = Combat3D.L_WORLD
+		var cs := CollisionShape3D.new(); var bs := BoxShape3D.new()
+		bs.size = Vector3(w, 1.0, d); cs.shape = bs; cs.position = Vector3(0, -0.5, 0)
+		sb.add_child(cs); sb.add_child(box_mesh(Vector3(w, 1.0, d), floor_col, Vector3(0, -0.5, 0)))
+		sb.position = center; add_child(sb)
 	# walls (split each side around a centred gap if that side is an opening)
 	_room_wall_side(center, "n", w, d, h, wall_col, "n" in openings, gap)
 	_room_wall_side(center, "s", w, d, h, wall_col, "s" in openings, gap)
@@ -460,6 +460,38 @@ func add_stairwell(pos: Vector3, size: Vector3, dest: Vector3, dist: float, elev
 func teleport_duo(dest: Vector3) -> void:
 	if player != null and player.has_method("teleport_to"):
 		player.teleport_to(dest)
+
+# Stairwell transition: fade to black, carry the duo + reframe at the dark point,
+# fade back. Input is briefly locked so you don't slide off mid-fade.
+func stair_transition(dest: Vector3, dist: float, elev: float) -> void:
+	if player != null and player.has_method("set_input_locked"):
+		player.set_input_locked(true)
+	var cl := CanvasLayer.new(); cl.layer = 50; add_child(cl)
+	var r := ColorRect.new()
+	r.color = Color(0, 0, 0, 0)
+	r.set_anchors_preset(Control.PRESET_FULL_RECT)
+	cl.add_child(r)
+	var tw := create_tween()
+	tw.tween_property(r, "color:a", 1.0, 0.18)
+	tw.tween_callback(func() -> void:
+		teleport_duo(dest)
+		reframe_camera(dist, elev))
+	tw.tween_interval(0.05)
+	tw.tween_property(r, "color:a", 0.0, 0.22)
+	tw.tween_callback(func() -> void:
+		cl.queue_free()
+		if player != null and player.has_method("set_input_locked"):
+			player.set_input_locked(false))
+
+# A floor spanning a whole multi-room floor region (so rooms never leave a gap to
+# fall through). Unlike floor_box it doesn't set the walk-out bounds.
+func region_floor(center: Vector3, w: float, d: float, col: Color) -> void:
+	var sb := StaticBody3D.new()
+	sb.collision_layer = Combat3D.L_WORLD
+	var cs := CollisionShape3D.new(); var bs := BoxShape3D.new()
+	bs.size = Vector3(w, 1.0, d); cs.shape = bs; cs.position = Vector3(0, -0.5, 0)
+	sb.add_child(cs); sb.add_child(box_mesh(Vector3(w, 1.0, d), col, Vector3(0, -0.5, 0)))
+	sb.position = center; add_child(sb)
 
 # A short flight of steps (visual cue for a stairwell). Climbs +Z, rising `rise`.
 func stairs_mesh(base: Vector3, col: Color, steps: int = 5, width: float = 3.0, rise: float = 1.2) -> void:

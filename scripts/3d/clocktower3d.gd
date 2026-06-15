@@ -71,39 +71,46 @@ func _build_level() -> void:
 
 # --- Floor 1: Lobby + Workshop ----------------------------------------------
 func _floor1() -> void:
-	room(F1, 12, 12, FLOOR_COL, WALL_COL, 3.4, ["n", "s"])           # lobby
-	room(F1 + Vector3(0, 0, -11), 10, 10, STONE, WALL_COL, 3.0, ["s"]) # workshop
+	region_floor(F1 + Vector3(0, 0, -5), 14, 24, FLOOR_COL)           # continuous floor
+	room(F1, 12, 12, FLOOR_COL, WALL_COL, 3.4, ["n", "s"], 3.0, false)         # lobby walls
+	room(F1 + Vector3(0, 0, -11), 10, 10, STONE, WALL_COL, 3.0, ["s"], 3.0, false)  # workshop walls
 	point_light(F1 + Vector3(0, 3.0, 0), Color(1.0, 0.85, 0.6), 2.2, 9.0)
 	point_light(F1 + Vector3(0, 2.6, -11), Color(0.9, 0.85, 0.7), 1.6, 7.0)
-	# loot crate (workshop)
 	_loot_box = box_mesh(Vector3(0.7, 0.7, 0.7), Color(0.45, 0.32, 0.18), F1 + LOOT + Vector3(0, 0.35, 0))
 	add_child(_loot_box)
 	prop("res://assets/models/props/shelf.glb", F1 + Vector3(-3.5, 0, -14), deg_to_rad(90))
 	prop("res://assets/models/props/barrel.glb", F1 + Vector3(3.5, 0, -14))
-	# exit door (south) back to the overworld, and stairs up at the workshop's north
+	# exit door (south) back to the overworld; stairs UP at the workshop's north
 	add_exit_portal(F1 + Vector3(0, 0, 6.5), Vector3(3, 3, 1.4))
 	stairs_mesh(F1 + Vector3(0, 0, -15.0), STONE.lightened(0.05))
-	add_stairwell(F1 + Vector3(0, 0, -15.5), Vector3(3, 3, 1.4), F2 + Vector3(0, 0.1, 3.0), F_GEAR.x, F_GEAR.y)
+	add_stairwell(F1 + Vector3(0, 0, -15.5), Vector3(3, 3, 1.4), F2 + Vector3(0, 0.1, 0.0), F_GEAR.x, F_GEAR.y)
 
 # --- Floor 2: Landing + Gear Hall -------------------------------------------
 func _floor2() -> void:
-	room(F2, 8, 8, STONE, WALL_COL, 3.0, ["n"])                       # landing
-	room(F2 + Vector3(0, 0, -11), 14, 12, FLOOR_COL, WALL_COL, 3.6, ["s", "n"])  # gear hall
+	region_floor(F2 + Vector3(0, 0, -6.5), 16, 24, FLOOR_COL)
+	room(F2, 8, 8, STONE, WALL_COL, 3.0, ["n"], 3.0, false)                       # landing
+	room(F2 + Vector3(0, 0, -11), 14, 12, FLOOR_COL, WALL_COL, 3.6, ["s", "n"], 3.0, false)  # gear hall
 	point_light(F2 + Vector3(0, 2.6, 0), Color(0.9, 0.85, 0.7), 1.6, 6.0)
 	point_light(F2 + Vector3(0, 3.2, -11), Color(1.0, 0.8, 0.5), 2.6, 11.0)
 	_gear_mechanism()
-	# stairs up to the belfry — gated by a brass grate until the gear turns
+	# stairs DOWN to floor 1 (at the landing) and UP to the belfry (gated by the gear)
+	stairs_mesh(F2 + Vector3(0, 0, 3.0), STONE.lightened(0.05))
+	add_stairwell(F2 + Vector3(0, 0, 3.5), Vector3(3, 3, 1.4), F1 + Vector3(0, 0.1, -12.0), F_LOBBY.x, F_LOBBY.y)
 	stairs_mesh(F2 + Vector3(0, 0, -16.0), STONE.lightened(0.05))
-	_stair2 = add_stairwell(F2 + Vector3(0, 0, -16.5), Vector3(3, 3, 1.4), F3 + Vector3(0, 0.1, 3.0), F_BELFRY.x, F_BELFRY.y, true)
+	_stair2 = add_stairwell(F2 + Vector3(0, 0, -16.5), Vector3(3, 3, 1.4), F3 + Vector3(0, 0.1, 0.0), F_BELFRY.x, F_BELFRY.y, true)
 	_gate_door(F2 + Vector3(0, 0, -15.0))
 
 # --- Floor 3: Antechamber + Belfry ------------------------------------------
 func _floor3() -> void:
-	room(F3, 8, 8, STONE, WALL_COL, 3.0, ["n"])                       # antechamber
-	room(F3 + Vector3(0, 0, -12), 16, 14, FLOOR_COL, WALL_COL, 4.2, ["s"])  # belfry
+	region_floor(F3 + Vector3(0, 0, -7.5), 18, 26, FLOOR_COL)
+	room(F3, 8, 8, STONE, WALL_COL, 3.0, ["n"], 3.0, false)                       # antechamber
+	room(F3 + Vector3(0, 0, -12), 16, 14, FLOOR_COL, WALL_COL, 4.2, ["s"], 3.0, false)  # belfry
 	point_light(F3 + Vector3(0, 2.6, 0), Color(0.9, 0.85, 0.7), 1.4, 5.0)
 	point_light(F3 + Vector3(0, 3.8, -12), Color(1.0, 0.8, 0.5), 2.8, 16.0)
 	point_light(F3 + BELLS + Vector3(0, 2.5, 0), Color(1.0, 0.9, 0.6), 1.6, 6.0)
+	# stairs DOWN to the gear floor (at the antechamber)
+	stairs_mesh(F3 + Vector3(0, 0, 3.0), STONE.lightened(0.05))
+	add_stairwell(F3 + Vector3(0, 0, 3.5), Vector3(3, 3, 1.4), F2 + Vector3(0, 0.1, -12.0), F_GEAR.x, F_GEAR.y)
 	_bell_rack()
 	# clock-face on the belfry back wall
 	var face := MeshInstance3D.new()
