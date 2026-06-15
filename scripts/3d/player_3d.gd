@@ -14,10 +14,18 @@ const TURN_LERP: float = 14.0
 var _speed: float = 5.0
 var _mesh_root: Node3D = null
 var _anim: AnimationPlayer = null
+var _facing: Vector3 = Vector3.FORWARD
+var hp: float = 100.0
+var _attack_cd: float = 0.0
 
 func _ready() -> void:
 	if data != null:
 		_speed = data.move_speed / PX_PER_M
+		hp = data.max_hp
+	# Combat layers: this body IS a player; it collides with the world.
+	collision_layer = Combat3D.L_PLAYER
+	collision_mask = Combat3D.L_WORLD
+	add_to_group("player3d")
 	# Body collision (capsule) so the character collides with walls/props.
 	var shape := CollisionShape3D.new()
 	var cap := CapsuleShape3D.new()
@@ -60,6 +68,8 @@ func _physics_process(delta: float) -> void:
 		velocity.y = 0.0
 	move_and_slide()
 	var moving := dir.length() > 0.05
+	if moving:
+		_facing = dir.normalized()
 	# Face travel direction (smooth yaw).
 	if _mesh_root != null and moving:
 		var want_yaw := atan2(dir.x, dir.z)
@@ -69,3 +79,21 @@ func _physics_process(delta: float) -> void:
 		var want := "walk" if moving else "idle"
 		if _anim.current_animation != want:
 			_anim.play(want)
+	# Attack (no 3D attack clip yet — spawns the damage volume; visuals later).
+	_attack_cd = maxf(_attack_cd - delta, 0.0)
+	if _attack_cd == 0.0 and Input.is_action_just_pressed("attack"):
+		_attack()
+
+func _attack() -> void:
+	var dmg: float = data.attack_damage if data != null else 20.0
+	var reach: float = 1.3
+	_attack_cd = data.attack_cooldown if data != null else 0.5
+	var pos := global_position + _facing * reach + Vector3(0.0, 0.9, 0.0)
+	Audio.play("attack")
+	Combat3D.strike(self, pos, 0.8, Combat3D.L_ENEMY, func(b: Node) -> void:
+		if b.has_method("take_damage"):
+			b.take_damage(dmg, _facing))
+
+func take_damage(amount: float, _from: Vector3) -> void:
+	hp = maxf(hp - amount, 0.0)
+	Audio.play("hurt")

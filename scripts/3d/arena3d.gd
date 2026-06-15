@@ -5,8 +5,10 @@ extends Node3D
 ## Run windowed with --capture to save a screenshot then quit (headless can't render).
 
 const PlayerScript: Script = preload("res://scripts/3d/player_3d.gd")
+const EnemyScript: Script = preload("res://scripts/3d/enemy_3d.gd")
 const CameraRigScript: Script = preload("res://scripts/3d/camera_rig_3d.gd")
 const QUINN: Resource = preload("res://data/characters/quinn.tres")
+const GRUNT: Resource = preload("res://data/enemies/grunt.tres")
 
 var _shot_frames: int = -1
 
@@ -14,6 +16,7 @@ func _ready() -> void:
 	_build_world()
 	var player := _build_player()
 	_build_camera(player)
+	_build_enemy(Vector3(2.5, 0.1, -2.5))
 	if "--capture" in OS.get_cmdline_user_args() or "--capture" in OS.get_cmdline_args():
 		_shot_frames = 18  # let a few frames render, then screenshot + quit
 
@@ -60,6 +63,13 @@ func _build_player() -> CharacterBody3D:
 	p.position = Vector3(0.0, 0.1, 0.0)
 	add_child(p)
 	return p
+
+func _build_enemy(pos: Vector3) -> void:
+	var e := CharacterBody3D.new()
+	e.set_script(EnemyScript)
+	e.set("data", GRUNT)
+	e.position = pos
+	add_child(e)
 
 func _build_camera(target: Node3D) -> void:
 	var cam := Camera3D.new()
