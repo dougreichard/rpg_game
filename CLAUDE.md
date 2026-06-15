@@ -258,9 +258,10 @@ often; Evan is the slowest but hits hardest and has the most HP.
 | 12 | The Drop | Evan + Ethan | — | `"the_drop"` |
 | 13 | The Grand Marquee Cinema | Quinn + Ben | Endgame | `"grand_marquee"` |
 
-All 13 locations are fully implemented with multi-room layouts, camera follow, Doorway system,
-stealth patrol, and mid-level progress persistence. See `docs/implementation_history.md` for the
-full per-location build narrative.
+All 13 locations are fully implemented as native-3D scenes (`scenes/3d/*3D.tscn`,
+`scripts/3d/*3d.gd`) on the shared `Level3D` kit, with stealth, camera follow, and mid-level
+progress persistence. The per-location design (puzzles/NPCs/flags/duo) is captured in the
+per-location subsections below.
 
 **Puzzle-gate variety:** Most locations use a **proximity gate** (in-range + press Special = instant success).
 Two diversify this:
