@@ -142,37 +142,38 @@ const ZMIN := -52.0
 const ZMAX := 26.0
 
 func _streets() -> void:
-	# Solid blacktop strips (box_mesh) so there are no mis-oriented Synty lane lines;
-	# center dashes are painted in the strip's own direction. N-S cross-streets sit a
-	# touch lower so the E-W boulevards read cleanly across the intersections.
+	# Solid blacktop strips (box_mesh) so there are no mis-oriented Synty lane lines.
+	# Distinct, well-separated heights per layer avoid z-fighting: N-S cross-streets
+	# (top 0.04) sit below the E-W boulevards (top 0.07) so the boulevards read cleanly
+	# across the intersections; dashes/crosswalks float clearly above their road.
 	for cx: float in CROSS_X:
-		_road_ns(cx, ZMIN, ZMAX, 6.0, 0.03)
+		_road_ns(cx, ZMIN, ZMAX, 6.0, 0.04, 0.055)
 	for bz: float in BLVD_Z:
-		_road_ew(bz, XMIN, XMAX, 7.0, 0.05)
+		_road_ew(bz, XMIN, XMAX, 7.0, 0.07, 0.10)
 		var x: float = XMIN
 		while x <= XMAX:
-			_tile("sidewalk", Vector3(x, 0.045, bz - 6.5))   # building-side walk
-			_tile("sidewalk", Vector3(x, 0.045, bz + 6.5))   # far-side walk
+			_tile("sidewalk", Vector3(x, 0.05, bz - 6.5))   # building-side walk
+			_tile("sidewalk", Vector3(x, 0.05, bz + 6.5))   # far-side walk
 			x += 5.0
 
-func _road_ew(z: float, x0: float, x1: float, w: float, y: float) -> void:
-	add_child(box_mesh(Vector3(x1 - x0, 0.06, w), ROAD_COL, Vector3((x0 + x1) * 0.5, y, z)))
+func _road_ew(z: float, x0: float, x1: float, w: float, top_y: float, dash_y: float) -> void:
+	add_child(box_mesh(Vector3(x1 - x0, 0.12, w), ROAD_COL, Vector3((x0 + x1) * 0.5, top_y - 0.06, z)))
 	var x: float = x0 + 2.5
 	while x < x1:
-		add_child(box_mesh(Vector3(1.6, 0.02, 0.18), LANE_COL, Vector3(x, y + 0.04, z)))
+		add_child(box_mesh(Vector3(1.6, 0.02, 0.18), LANE_COL, Vector3(x, dash_y, z)))
 		x += 4.0
 
-func _road_ns(x: float, z0: float, z1: float, w: float, y: float) -> void:
-	add_child(box_mesh(Vector3(w, 0.06, z1 - z0), ROAD_COL, Vector3(x, y, (z0 + z1) * 0.5)))
+func _road_ns(x: float, z0: float, z1: float, w: float, top_y: float, dash_y: float) -> void:
+	add_child(box_mesh(Vector3(w, 0.12, z1 - z0), ROAD_COL, Vector3(x, top_y - 0.06, (z0 + z1) * 0.5)))
 	var z: float = z0 + 2.5
 	while z < z1:
-		add_child(box_mesh(Vector3(0.18, 0.02, 1.6), LANE_COL, Vector3(x, y + 0.04, z)))
+		add_child(box_mesh(Vector3(0.18, 0.02, 1.6), LANE_COL, Vector3(x, dash_y, z)))
 		z += 4.0
 
 # A zebra crosswalk (white bars) across the E-W boulevard in front of a building door.
 func _crosswalk(x: float, z: float) -> void:
 	for i in 4:
-		add_child(box_mesh(Vector3(0.4, 0.02, 2.6), LANE_COL, Vector3(x - 1.2 + float(i) * 0.8, 0.11, z)))
+		add_child(box_mesh(Vector3(0.4, 0.02, 2.6), LANE_COL, Vector3(x - 1.2 + float(i) * 0.8, 0.12, z)))
 
 func _tile(key: String, pos: Vector3) -> void:
 	prop(TOWN + key + ".glb", pos, 0.0, 1.0)
@@ -197,8 +198,9 @@ func _buildings() -> void:
 
 # A sidewalk plaza + crossing bridging the boulevard up to the building door (+Z).
 func _entry_plaza(x: float, rz: float) -> void:
-	_tile("sidewalk", Vector3(x, 0.05, rz + 3.0))
-	_tile("sidewalk", Vector3(x, 0.05, rz + 7.0))
+	# a plaza tile at the door (clear of the road edge at rz+4.5), lifted above the
+	# boulevard's flanking sidewalk (0.05) to avoid a coplanar z-fight, + a crosswalk.
+	_tile("sidewalk", Vector3(x, 0.065, rz + 2.0))
 	_crosswalk(x, rz + 8.0)   # zebra crossing over the boulevard
 
 func _entry_dressing(x: float, rz: float) -> void:
@@ -254,7 +256,7 @@ func _park() -> void:
 	# trees, benches facing the fountain, park lamps + flower beds.
 	for gx in [-5.0, 0.0, 5.0]:
 		for gz in [-10.0, -5.0, 0.0]:   # tiles are 5x5 with origin at a corner
-			prop(TOWN + "grass.glb", PARK_C + Vector3(gx, 0.0, gz), 0.0, 1.0)
+			prop(TOWN + "grass.glb", PARK_C + Vector3(gx, 0.02, gz), 0.0, 1.0)   # lift off the ground plane
 	prop(TOWN + "fountain.glb", PARK_C, 0.0)
 	prop(TOWN + "gazebo.glb", PARK_C + Vector3(-7.5, 0.0, -6.5), deg_to_rad(30))
 	prop(TOWN + "pond.glb", PARK_C + Vector3(7.0, 0.0, -6.0))
@@ -268,23 +270,40 @@ func _park() -> void:
 		prop(TOWN + "park_lamp.glb", PARK_C + c)
 		prop(TOWN + "flowerbed.glb", PARK_C + c + Vector3(1.5, 0, 0))
 
-# --- foliage scatter along the medians between rows --------------------------
+# --- foliage scatter on the green areas (never on roads/buildings/park) ------
 func _foliage() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 0x70A11   # deterministic
-	# green medians between each boulevard's far side and the next row
-	for mz: float in [BLVD_Z[0] + 10.0, BLVD_Z[1] + 9.0]:
-		var x: float = XMIN + 6.0
-		while x <= XMAX - 6.0:
-			if absf(x) > 13.0 or mz < -20.0:   # keep the park frontage clear-ish
-				var kind: String = ["tree", "bush", "tree", "flowerbed"][rng.randi() % 4]
-				prop(TOWN + kind + ".glb", Vector3(x + rng.randf_range(-1.5, 1.5), 0.0,
-					mz + rng.randf_range(-1.5, 1.5)), rng.randf() * TAU)
-			x += rng.randf_range(7.0, 10.0)
-	# street trees + lamps along the front boulevard edges
+	var placed := 0
+	for _n in 240:
+		if placed >= 90:
+			break
+		var x: float = rng.randf_range(XMIN + 2.0, XMAX - 2.0)
+		var z: float = rng.randf_range(ZMIN + 2.0, ZMAX - 2.0)
+		if _on_road(x, z) or _near_building(x, z) or _in_park(x, z):
+			continue
+		var kind: String = ["tree", "tree", "bush", "bush", "flowerbed", "tree_large"][rng.randi() % 6]
+		prop(TOWN + kind + ".glb", Vector3(x, 0.0, z), rng.randf() * TAU)
+		placed += 1
+
+func _on_road(x: float, z: float) -> bool:
+	for bz: float in BLVD_Z:
+		if absf(z - bz) < 5.0 or absf(z - (bz - 6.5)) < 3.0 or absf(z - (bz + 6.5)) < 3.0:
+			return true   # boulevard + its flanking sidewalks
 	for cx: float in CROSS_X:
-		prop(TOWN + "park_lamp.glb", Vector3(cx + 3.0, 0.0, BLVD_Z[2] + 6.0))
-		prop(TOWN + "bush.glb", Vector3(cx - 3.0, 0.0, BLVD_Z[2] + 6.0))
+		if absf(x - cx) < 4.5:
+			return true
+	return false
+
+func _near_building(x: float, z: float) -> bool:
+	for slot: Vector2i in SLOTS:
+		var p: Vector3 = _slot_pos(slot)
+		if absf(x - p.x) < 9.0 and z < p.z + 9.0 and z > p.z - 11.0:
+			return true
+	return false
+
+func _in_park(x: float, z: float) -> bool:
+	return Vector2(x - PARK_C.x, z - PARK_C.z).length() < 14.0
 
 func _name_billboard(loc: Dictionary, pos: Vector3) -> void:
 	var unlocked: bool = _is_unlocked(loc["req"])
