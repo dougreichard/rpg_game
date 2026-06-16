@@ -72,6 +72,8 @@ const F_LOFT := Vector2(9.5, 52.0)
 const ORGAN_PARTS := ["windchest_board", "brass_organ_pipe", "trued_gear"]
 
 var _organ_node: MeshInstance3D = null
+var _organ_base: Node3D = null      # part-additive: bare console (always)
+var _organ_pipes: Node3D = null     # the pipe bank that installs with the brass pipe
 var _organ_station: Node3D = null
 var _stations: Array = []
 var _erin_npc: Node3D = null
@@ -152,25 +154,46 @@ func _floor1() -> void:
 	_organ_station = add_station(Station.Kind.ASSEMBLY, F1 + ORGAN_HIT, "Organ", "Quinn")
 	_organ_station.set("parts", ORGAN_PARTS.duplicate())
 	_register_station(_organ_station)
-	_organ_station.connect("produced", func(id: String) -> void: GameManager.set_level_flag(location_id, "organ_part_" + id, true))
+	_organ_station.connect("produced", func(id: String) -> void:
+		GameManager.set_level_flag(location_id, "organ_part_" + id, true)
+		if id == "brass_organ_pipe": _reveal_pipes())   # the pipe bank visibly installs
 	_organ_station.connect("completed", _on_organ_complete)
 	add_exit_portal(F1 + Vector3(0, 0, 6.3), Vector3(3, 3, 1.4))
 
 func _organ() -> void:
-	var base_z: float = (F1 + ORGAN).z - 0.2
+	# Generated Synty low-poly organ (synty-prop-gen), split in Blender into co-registered
+	# PARTS for a part-additive build: the bare console always stands; the pipe bank
+	# installs when the brass pipe is fitted; the whole thing warms + glows when repaired.
+	# VISUAL ONLY — the organ's collision + ASSEMBLY station/marker (ORGAN_HIT) are unchanged.
+	_organ_base = prop("res://assets/models/props/organ_part_base.glb", F1 + ORGAN, 0.0, 2.4)
+	_organ_pipes = prop("res://assets/models/props/organ_part_pipes.glb", F1 + ORGAN, 0.0, 2.4)
+	_tint_prop(_organ_pipes, BRASS, 0.4, 0.5)
+	if _organ_pipes != null: _organ_pipes.visible = false
 	var bx: float = (F1 + ORGAN).x
-	add_child(box_mesh(Vector3(5.0, 2.2, 0.6), WOOD, Vector3(bx, 1.1, base_z - 0.4)))
-	for i: int in range(11):
-		var x: float = bx - 2.0 + float(i) * 0.4
-		var h: float = 1.4 + 0.9 * sin(float(i) * 0.9) + (0.6 if i % 2 == 0 else 0.0)
-		var pipe := MeshInstance3D.new()
-		var cm := CylinderMesh.new(); cm.top_radius = 0.14; cm.bottom_radius = 0.14; cm.height = h
-		var mat := StandardMaterial3D.new(); mat.albedo_color = BRASS; mat.metallic = 0.6; mat.roughness = 0.35
-		cm.material = mat; pipe.mesh = cm; pipe.position = Vector3(x, 1.4 + h * 0.5, base_z)
-		add_child(pipe)
-	add_child(box_mesh(Vector3(2.4, 0.5, 0.7), WOOD, Vector3(bx, 0.9, base_z + 0.7)))
-	_organ_node = box_mesh(Vector3(2.2, 0.08, 0.4), Color(0.92, 0.9, 0.85), Vector3(bx, 1.16, base_z + 0.75))
+	# thin key-strip that glows on the restored organ (the solved cue)
+	_organ_node = box_mesh(Vector3(1.6, 0.08, 0.3), Color(0.92, 0.9, 0.85), Vector3(bx, 1.2, (F1 + ORGAN).z + 0.95))
 	add_child(_organ_node)
+	_set_organ_phase(false)   # _restore() flips it if already repaired
+
+func _tint_prop(node: Node, col: Color, rough: float, metal: float) -> void:
+	if node == null:
+		return
+	var m := StandardMaterial3D.new()
+	m.albedo_color = col; m.roughness = rough; m.metallic = metal
+	for mi: Node in node.find_children("*", "MeshInstance3D"):
+		(mi as MeshInstance3D).material_override = m
+
+func _reveal_pipes() -> void:
+	if _organ_pipes != null: _organ_pipes.visible = true
+
+func _set_organ_phase(fixed: bool) -> void:
+	# base reads dusty/derelict until repaired, warm wood once restored
+	_tint_prop(_organ_base, Color(0.55, 0.40, 0.22) if fixed else Color(0.32, 0.29, 0.25), 0.7, 0.1)
+	if fixed:
+		_reveal_pipes()
+	if _organ_node != null:
+		_organ_node.visible = fixed
+		if fixed: _organ_node.material_override = _glow_mat()
 
 func _workshop_tools() -> void:
 	# Table saw — squares the plank, cuts the pipe to length
@@ -297,11 +320,12 @@ func _restore() -> void:
 	for part: String in ORGAN_PARTS:
 		if GameManager.get_level_flag(location_id, "organ_part_" + part, false):
 			_organ_station.call("restore_part", part)
+	if GameManager.get_level_flag(location_id, "organ_part_brass_organ_pipe", false):
+		_reveal_pipes()   # pipe bank stays installed across re-entry
 	if _erin_recruited:
 		_recruit_erin(false)
 		_storeroom_done = true
-	if _organ_repaired:
-		_organ_node.material_override = _glow_mat()
+	_set_organ_phase(_organ_repaired)
 	if _secret_revealed:
 		_secret_wall.position.y = -5.0; (_secret_wall as StaticBody3D).collision_layer = 0
 	if _gear_bonus_open: _dim(_gear_box)
@@ -353,7 +377,7 @@ func _key_given() -> bool:
 
 func _on_organ_complete() -> void:
 	_organ_repaired = true
-	_organ_node.material_override = _glow_mat()
+	_set_organ_phase(true)   # derelict organ → restored organ
 	GameManager.set_level_flag(location_id, "organ_repaired", true)
 	_hud_hint.text = "The organ breathes again!"
 	Audio.play("special")
