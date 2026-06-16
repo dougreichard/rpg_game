@@ -38,7 +38,9 @@ const INTERACT := 4.5
 const GROUND := Color(0.30, 0.42, 0.26)   # grassy town green
 const ROAD_COL := Color(0.22, 0.22, 0.25) # solid blacktop (no Synty road-tile lane lines)
 const LANE_COL := Color(0.85, 0.84, 0.72) # painted lane dashes
-const CURB_COL := Color(0.74, 0.74, 0.76)
+const SW_COL := Color(0.60, 0.60, 0.63)   # sidewalk
+const SW_W := 2.5                         # sidewalk width (was a full 5m Synty tile)
+const BLDG_SETBACK := 6.0                 # push buildings back so fronts clear the sidewalk
 
 # id, display name, 3D scene, unlock requirement, building glb
 const LOCS := [
@@ -153,11 +155,9 @@ func _streets() -> void:
 		_road_ns(cx, PLAY_Z_BACK + 1.0, PLAY_Z_FRONT - 1.0, 6.0, 0.04, 0.055)
 	for bz: float in BLVD_Z:
 		_road_ew(bz, -rx, rx, 7.0, 0.07, 0.10)
-		var x: float = -rx
-		while x <= rx:
-			_tile("sidewalk", Vector3(x, 0.05, bz - 6.5))   # building-side walk
-			_tile("sidewalk", Vector3(x, 0.05, bz + 6.5))   # far-side walk
-			x += 5.0
+		# narrow solid sidewalks flanking the boulevard (building-side + far-side)
+		add_child(box_mesh(Vector3(2.0 * rx, 0.08, SW_W), SW_COL, Vector3(0, 0.04, bz - 4.75)))
+		add_child(box_mesh(Vector3(2.0 * rx, 0.08, SW_W), SW_COL, Vector3(0, 0.04, bz + 5.5)))
 
 func _road_ew(z: float, x0: float, x1: float, w: float, top_y: float, dash_y: float) -> void:
 	add_child(box_mesh(Vector3(x1 - x0, 0.12, w), ROAD_COL, Vector3((x0 + x1) * 0.5, top_y - 0.06, z)))
@@ -190,28 +190,28 @@ func _buildings() -> void:
 		var x: float = base.x
 		var z: float = base.z
 		var bscale: float = BLD_SCALE.get(loc["glb"], 1.0)
-		prop(TOWN + loc["glb"] + ".glb", base, 0.0, bscale)
+		# push the building mesh back so its +Z front clears the sidewalk; the door,
+		# sidewalk, billboard and dressing stay keyed to the slot's front (z).
+		var place: Vector3 = base - Vector3(0, 0, BLDG_SETBACK)
+		prop(TOWN + loc["glb"] + ".glb", place, 0.0, bscale)
 		if loc["id"] == "clocktower":
-			_add_clock_tower(base, 0.0)
+			_add_clock_tower(place, 0.0)
 		_entry_plaza(x, z)
 		_entry_dressing(x, z)
 		_name_billboard(loc, Vector3(x, 0.0, z + 2.0))
 		_doors.append({"id": loc["id"], "name": loc["name"], "scene": loc["scene"], "req": loc["req"],
 			"pos": Vector3(x, 0.0, z + DOOR_INSET)})
 
-# A sidewalk plaza + crossing bridging the boulevard up to the building door (+Z).
+# An entrance plaza patch on the (continuous) building-side sidewalk + a crosswalk.
 func _entry_plaza(x: float, rz: float) -> void:
-	# a plaza tile at the door (clear of the road edge at rz+4.5), lifted above the
-	# boulevard's flanking sidewalk (0.05) to avoid a coplanar z-fight, + a crosswalk.
-	_tile("sidewalk", Vector3(x, 0.065, rz + 2.0))
+	add_child(box_mesh(Vector3(6.0, 0.09, SW_W + 1.0), SW_COL, Vector3(x, 0.05, rz + 3.25)))
 	_crosswalk(x, rz + 8.0)   # zebra crossing over the boulevard
 
 func _entry_dressing(x: float, rz: float) -> void:
-	# a flanking prop + a pair of planters/flowerbeds at the entrance
+	# a flanking prop + a planter/bush at the entrance (on the sidewalk band ~rz+3.25)
 	var props := ["bench", "planter", "hydrant", "trashcan", "mailbox", "potplant"]
-	prop(TOWN + props[int(abs(x) + abs(rz)) % props.size()] + ".glb", Vector3(x + 3.5, 0.0, rz + 3.5), PI, 1.0)
-	prop(TOWN + "flowerbed.glb", Vector3(x - 3.2, 0.0, rz + 3.2))
-	prop(TOWN + "bush.glb", Vector3(x + 4.4, 0.0, rz + 1.0))
+	prop(TOWN + props[int(abs(x) + abs(rz)) % props.size()] + ".glb", Vector3(x + 3.5, 0.0, rz + 3.3), PI, 1.0)
+	prop(TOWN + "flowerbed.glb", Vector3(x - 3.2, 0.0, rz + 3.3))
 
 # The Clocktower reuses the CityHall courthouse mesh (like the Library) and gets a
 # clock tower built on top from primitives: a taller central shaft (tinted to match
@@ -260,18 +260,22 @@ func _park() -> void:
 	for gx in [-5.0, 0.0, 5.0]:
 		for gz in [-10.0, -5.0, 0.0]:   # tiles are 5x5 with origin at a corner
 			prop(TOWN + "grass.glb", PARK_C + Vector3(gx, 0.02, gz), 0.0, 1.0)   # lift off the ground plane
+	# everything kept within x ±7 (clear of the cross-streets at ±11) and z north of
+	# the boulevard (road north edge ≈ -13.5), so nothing lands in the street.
 	prop(TOWN + "fountain.glb", PARK_C, 0.0)
-	prop(TOWN + "gazebo.glb", PARK_C + Vector3(-7.5, 0.0, -6.5), deg_to_rad(30))
-	prop(TOWN + "pond.glb", PARK_C + Vector3(7.0, 0.0, -6.0))
-	for a in 8:   # ring of trees around the park
+	prop(TOWN + "pond.glb", PARK_C + Vector3(0.0, 0.0, -7.0))           # behind the fountain
+	prop(TOWN + "gazebo.glb", PARK_C + Vector3(-5.5, 0.0, -3.0), deg_to_rad(30))
+	prop(TOWN + "tree_large.glb", PARK_C + Vector3(5.5, 0.0, -3.0))
+	for a in 8:   # ring of trees (centred north of the boulevard; skip any on a road)
 		var ang: float = float(a) * TAU / 8.0
-		prop(TOWN + "tree.glb", PARK_C + Vector3(sin(ang) * 10.0, 0.0, cos(ang) * 9.0), 0.0)
-	prop(TOWN + "tree_large.glb", PARK_C + Vector3(-9.0, 0.0, 2.0))
-	for bx in [-4.0, 4.0]:   # benches facing the fountain from the boulevard side
-		prop(TOWN + "bench.glb", PARK_C + Vector3(bx, 0.0, 4.5), PI)
-	for c in [Vector3(-10, 0, 4), Vector3(10, 0, 4), Vector3(-10, 0, -9), Vector3(10, 0, -9)]:
+		var tp: Vector3 = PARK_C + Vector3(sin(ang) * 6.5, 0.0, -3.0 + cos(ang) * 6.5)
+		if not _on_road(tp.x, tp.z):
+			prop(TOWN + "tree.glb", tp, 0.0)
+	for bx in [-3.0, 3.0]:   # benches facing the fountain
+		prop(TOWN + "bench.glb", PARK_C + Vector3(bx, 0.0, 3.0), PI)
+	for c in [Vector3(-6, 0, 2), Vector3(6, 0, 2), Vector3(-6, 0, -8), Vector3(6, 0, -8)]:
 		prop(TOWN + "park_lamp.glb", PARK_C + c)
-		prop(TOWN + "flowerbed.glb", PARK_C + c + Vector3(1.5, 0, 0))
+		prop(TOWN + "flowerbed.glb", PARK_C + c + Vector3(1.2, 0, 0))
 
 # --- foliage scatter on the green areas (never on roads/buildings/park) ------
 func _foliage() -> void:
@@ -308,10 +312,10 @@ func _outer_foliage(rng: RandomNumberGenerator) -> void:
 
 func _on_road(x: float, z: float) -> bool:
 	for bz: float in BLVD_Z:
-		if absf(z - bz) < 6.0 or absf(z - (bz - 6.5)) < 4.0 or absf(z - (bz + 6.5)) < 4.0:
-			return true   # boulevard + its flanking sidewalks
+		if absf(z - bz) < 7.0:   # boulevard (±3.5) + its flanking sidewalks
+			return true
 	for cx: float in CROSS_X:
-		if absf(x - cx) < 6.0:
+		if absf(x - cx) < 5.0:
 			return true
 	return false
 
