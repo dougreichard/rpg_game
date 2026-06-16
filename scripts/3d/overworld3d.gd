@@ -161,13 +161,16 @@ func _buildings() -> void:
 		_doors.append({"id": loc["id"], "name": loc["name"], "scene": loc["scene"], "req": loc["req"], "pos": door})
 
 # The Clocktower reuses the CityHall courthouse mesh (like the Library) and gets a
-# brick clock tower built on top from primitives: a taller central shaft, a cornice,
-# a roof + finial, and a clock face with hands on the front (+Z, toward the camera).
-const CT_BRICK := Color(0.62, 0.27, 0.22)
+# clock tower built on top from primitives: a taller central shaft (tinted to match
+# the courthouse stone), a cornice, a roof + finial, and a clock face with hands on
+# the front (+Z, toward the camera). The shaft is set back ~1/5 of the courthouse
+# depth from the front.
+const CT_BODY := Color(0.85, 0.76, 0.50)   # courthouse stone tone
 const CT_CREAM := Color(0.93, 0.91, 0.84)
 const CT_ROOF := Color(0.27, 0.25, 0.30)
 const CT_GOLD := Color(0.82, 0.66, 0.28)
 const CT_DARK := Color(0.12, 0.12, 0.14)
+const CT_DEPTH := 9.7   # CityHall footprint depth
 
 func _add_clock_tower(base: Vector3, yaw: float) -> void:
 	var t := Node3D.new()
@@ -176,13 +179,14 @@ func _add_clock_tower(base: Vector3, yaw: float) -> void:
 	add_child(t)
 	var bh: float = 4.6   # CityHall roof height; embed the shaft slightly into it
 	var top: float = bh + 6.4
-	t.add_child(box_mesh(Vector3(3.6, 6.8, 3.6), CT_BRICK, Vector3(0, bh + 3.0, 0)))         # shaft
-	t.add_child(box_mesh(Vector3(4.1, 0.5, 4.1), CT_CREAM, Vector3(0, top, 0)))               # cornice
-	t.add_child(box_mesh(Vector3(3.4, 1.3, 3.4), CT_ROOF, Vector3(0, top + 0.9, 0)))          # roof
-	t.add_child(box_mesh(Vector3(0.3, 1.4, 0.3), CT_GOLD, Vector3(0, top + 2.1, 0)))          # finial
-	# clock on the front (+Z) face, upper third of the shaft
+	var bz: float = -CT_DEPTH * 0.2   # set the shaft back ~1/5 of the courthouse depth
+	t.add_child(box_mesh(Vector3(3.6, 6.8, 3.6), CT_BODY, Vector3(0, bh + 3.0, bz)))          # shaft
+	t.add_child(box_mesh(Vector3(4.1, 0.5, 4.1), CT_CREAM, Vector3(0, top, bz)))              # cornice
+	t.add_child(box_mesh(Vector3(3.4, 1.3, 3.4), CT_ROOF, Vector3(0, top + 0.9, bz)))         # roof
+	t.add_child(box_mesh(Vector3(0.3, 1.4, 0.3), CT_GOLD, Vector3(0, top + 2.1, bz)))         # finial
+	# clock on the shaft's front (+Z) face, upper third
 	var cy: float = bh + 4.3
-	var cz: float = 1.85
+	var cz: float = bz + 1.85
 	t.add_child(box_mesh(Vector3(2.6, 2.6, 0.12), CT_DARK, Vector3(0, cy, cz)))               # bezel
 	t.add_child(box_mesh(Vector3(2.2, 2.2, 0.14), CT_CREAM, Vector3(0, cy, cz + 0.02)))       # face
 	for i in 4:   # 4 hour ticks (12/3/6/9)
