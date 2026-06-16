@@ -33,7 +33,7 @@ const LOCS := [
 	{"id": "old_parish_church", "name": "Old Parish Church", "scene": "res://scenes/3d/Church3D.tscn", "req": "pipe_organ_works", "glb": "church"},
 	{"id": "iron_strings_gym", "name": "Iron & Strings Gym", "scene": "res://scenes/3d/IronStringsGym3D.tscn", "req": "old_parish_church", "glb": "shop_02"},
 	{"id": "recording_studio", "name": "Recording Studio", "scene": "res://scenes/3d/RecordingStudio3D.tscn", "req": "iron_strings_gym", "glb": "shop_03"},
-	{"id": "clocktower", "name": "The Clocktower", "scene": "res://scenes/3d/Clocktower3D.tscn", "req": "recording_studio", "glb": "watertower"},
+	{"id": "clocktower", "name": "The Clocktower", "scene": "res://scenes/3d/Clocktower3D.tscn", "req": "recording_studio", "glb": "cityhall"},
 	{"id": "harbor_docks", "name": "Harbor & Docks", "scene": "res://scenes/3d/HarborDocks3D.tscn", "req": "recording_studio", "glb": "warehouse"},
 	{"id": "library", "name": "Library & Archive", "scene": "res://scenes/3d/LibraryArchive3D.tscn", "req": "recording_studio", "glb": "cityhall"},
 	{"id": "carnival", "name": "Carnival & Fairground", "scene": "res://scenes/3d/Carnival3D.tscn", "req": "recording_studio", "glb": "fairstall"},
@@ -153,10 +153,46 @@ func _buildings() -> void:
 		var door := Vector3(x, 0.0, z + (DOOR_INSET if north else -DOOR_INSET))
 		var bscale: float = BLD_SCALE.get(loc["glb"], 1.0)
 		prop(TOWN + loc["glb"] + ".glb", Vector3(x, 0.0, z), yaw, bscale)
+		if loc["id"] == "clocktower":
+			_add_clock_tower(Vector3(x, 0.0, z), yaw)
 		_crosswalk(x, north)
 		_street_dressing(x, north)
 		_name_billboard(loc, Vector3(x, 0.0, z + (2.0 if north else -2.0)))
 		_doors.append({"id": loc["id"], "name": loc["name"], "scene": loc["scene"], "req": loc["req"], "pos": door})
+
+# The Clocktower reuses the CityHall courthouse mesh (like the Library) and gets a
+# brick clock tower built on top from primitives: a taller central shaft, a cornice,
+# a roof + finial, and a clock face with hands on the front (+Z, toward the camera).
+const CT_BRICK := Color(0.62, 0.27, 0.22)
+const CT_CREAM := Color(0.93, 0.91, 0.84)
+const CT_ROOF := Color(0.27, 0.25, 0.30)
+const CT_GOLD := Color(0.82, 0.66, 0.28)
+const CT_DARK := Color(0.12, 0.12, 0.14)
+
+func _add_clock_tower(base: Vector3, yaw: float) -> void:
+	var t := Node3D.new()
+	t.position = base
+	t.rotation.y = yaw
+	add_child(t)
+	var bh: float = 4.6   # CityHall roof height; embed the shaft slightly into it
+	var top: float = bh + 6.4
+	t.add_child(box_mesh(Vector3(3.6, 6.8, 3.6), CT_BRICK, Vector3(0, bh + 3.0, 0)))         # shaft
+	t.add_child(box_mesh(Vector3(4.1, 0.5, 4.1), CT_CREAM, Vector3(0, top, 0)))               # cornice
+	t.add_child(box_mesh(Vector3(3.4, 1.3, 3.4), CT_ROOF, Vector3(0, top + 0.9, 0)))          # roof
+	t.add_child(box_mesh(Vector3(0.3, 1.4, 0.3), CT_GOLD, Vector3(0, top + 2.1, 0)))          # finial
+	# clock on the front (+Z) face, upper third of the shaft
+	var cy: float = bh + 4.3
+	var cz: float = 1.85
+	t.add_child(box_mesh(Vector3(2.6, 2.6, 0.12), CT_DARK, Vector3(0, cy, cz)))               # bezel
+	t.add_child(box_mesh(Vector3(2.2, 2.2, 0.14), CT_CREAM, Vector3(0, cy, cz + 0.02)))       # face
+	for i in 4:   # 4 hour ticks (12/3/6/9)
+		var a: float = float(i) * PI * 0.5
+		t.add_child(box_mesh(Vector3(0.16, 0.16, 0.16), CT_DARK,
+			Vector3(sin(a) * 0.9, cy + cos(a) * 0.9, cz + 0.12)))
+	var hour := Node3D.new(); hour.position = Vector3(0, cy, cz + 0.16); hour.rotation.z = deg_to_rad(-60); t.add_child(hour)
+	hour.add_child(box_mesh(Vector3(0.16, 0.85, 0.1), CT_DARK, Vector3(0, 0.42, 0)))
+	var minute := Node3D.new(); minute.position = Vector3(0, cy, cz + 0.18); minute.rotation.z = deg_to_rad(110); t.add_child(minute)
+	minute.add_child(box_mesh(Vector3(0.12, 1.15, 0.1), CT_DARK, Vector3(0, 0.57, 0)))
 
 func _crosswalk(x: float, north: bool) -> void:
 	# a crossing tile + plaza connecting the sidewalk all the way up to the (set-back)
