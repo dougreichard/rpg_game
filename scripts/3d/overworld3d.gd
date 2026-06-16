@@ -22,7 +22,7 @@ const CHARS := {
 const COL_X := [-44.0, -22.0, 0.0, 22.0, 44.0]   # 5 columns
 const ROW_Z := [-46.0, -18.0, 10.0]              # 3 building rows (back -> front)
 const BLVD_Z := [-38.0, -10.0, 18.0]             # boulevard in front (+Z) of each row
-const CROSS_X := [-33.0, -11.0, 11.0, 33.0]      # N-S cross-streets linking the boulevards
+const CROSS_X := [-11.0, 11.0]                   # N-S cross-streets (inner only; L/R are green)
 const PARK_SLOT := Vector2i(1, 2)                # middle row, centre column = the park
 # Building slots (row, col) in LOCS order — 14 buildings, the park slot skipped.
 const SLOTS := [
@@ -92,11 +92,12 @@ var _hud_title: Label = null
 func _build_level() -> void:
 	allow_overworld_exit = false   # we ARE the overworld
 	build_env(Color(0.55, 0.72, 0.92), Color(0.7, 0.74, 0.78), 0.75, 1.25)
-	floor_box(150.0, 120.0, GROUND)
+	floor_box(160.0, 130.0, GROUND)
 	_streets()
 	_park()
 	_buildings()
 	_foliage()
+	_boundary()
 	_spawn_town_npcs()
 	make_dialog()
 	_build_hud()
@@ -146,12 +147,14 @@ func _streets() -> void:
 	# Distinct, well-separated heights per layer avoid z-fighting: N-S cross-streets
 	# (top 0.04) sit below the E-W boulevards (top 0.07) so the boulevards read cleanly
 	# across the intersections; dashes/crosswalks float clearly above their road.
+	# roads stay inside the play area (±RX) so they never run under the outer tree border
+	var rx: float = PLAY_X - 2.0
 	for cx: float in CROSS_X:
-		_road_ns(cx, ZMIN, ZMAX, 6.0, 0.04, 0.055)
+		_road_ns(cx, PLAY_Z_BACK + 1.0, PLAY_Z_FRONT - 1.0, 6.0, 0.04, 0.055)
 	for bz: float in BLVD_Z:
-		_road_ew(bz, XMIN, XMAX, 7.0, 0.07, 0.10)
-		var x: float = XMIN
-		while x <= XMAX:
+		_road_ew(bz, -rx, rx, 7.0, 0.07, 0.10)
+		var x: float = -rx
+		while x <= rx:
 			_tile("sidewalk", Vector3(x, 0.05, bz - 6.5))   # building-side walk
 			_tile("sidewalk", Vector3(x, 0.05, bz + 6.5))   # far-side walk
 			x += 5.0
@@ -274,9 +277,10 @@ func _park() -> void:
 func _foliage() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 0x70A11   # deterministic
+	# inside the town: fill the green medians + the (now road-free) left/right strips
 	var placed := 0
-	for _n in 240:
-		if placed >= 90:
+	for _n in 400:
+		if placed >= 130:
 			break
 		var x: float = rng.randf_range(XMIN + 2.0, XMAX - 2.0)
 		var z: float = rng.randf_range(ZMIN + 2.0, ZMAX - 2.0)
@@ -285,13 +289,29 @@ func _foliage() -> void:
 		var kind: String = ["tree", "tree", "bush", "bush", "flowerbed", "tree_large"][rng.randi() % 6]
 		prop(TOWN + kind + ".glb", Vector3(x, 0.0, z), rng.randf() * TAU)
 		placed += 1
+	_outer_foliage(rng)
+
+# Dense tree/foliage border in the green ring OUTSIDE the town (beyond the boundary).
+func _outer_foliage(rng: RandomNumberGenerator) -> void:
+	var bands := [
+		[-76.0, -56.0, -62.0, 38.0],   # left  (beyond the boulevard ends at ±51)
+		[56.0, 76.0, -62.0, 38.0],     # right
+		[-76.0, 76.0, -64.0, -54.0],   # back
+		[-76.0, 76.0, 28.0, 40.0],     # front
+	]
+	for b: Array in bands:
+		for _n in 60:
+			var x: float = rng.randf_range(b[0], b[1])
+			var z: float = rng.randf_range(b[2], b[3])
+			var kind: String = ["tree", "tree_large", "tree", "bush"][rng.randi() % 4]
+			prop(TOWN + kind + ".glb", Vector3(x, 0.0, z), rng.randf() * TAU)
 
 func _on_road(x: float, z: float) -> bool:
 	for bz: float in BLVD_Z:
-		if absf(z - bz) < 5.0 or absf(z - (bz - 6.5)) < 3.0 or absf(z - (bz + 6.5)) < 3.0:
+		if absf(z - bz) < 6.0 or absf(z - (bz - 6.5)) < 4.0 or absf(z - (bz + 6.5)) < 4.0:
 			return true   # boulevard + its flanking sidewalks
 	for cx: float in CROSS_X:
-		if absf(x - cx) < 4.5:
+		if absf(x - cx) < 6.0:
 			return true
 	return false
 
@@ -304,6 +324,29 @@ func _near_building(x: float, z: float) -> bool:
 
 func _in_park(x: float, z: float) -> bool:
 	return Vector2(x - PARK_C.x, z - PARK_C.z).length() < 14.0
+
+# --- boundary: invisible walls keep the duo inside the town -------------------
+const PLAY_X := 53.0
+const PLAY_Z_BACK := -50.0
+const PLAY_Z_FRONT := 24.0
+
+func _boundary() -> void:
+	var h := 4.0
+	var midz: float = (PLAY_Z_BACK + PLAY_Z_FRONT) * 0.5
+	var dz: float = PLAY_Z_FRONT - PLAY_Z_BACK + 2.0
+	_barrier(Vector3(-PLAY_X, h * 0.5, midz), Vector3(1.0, h, dz))
+	_barrier(Vector3(PLAY_X, h * 0.5, midz), Vector3(1.0, h, dz))
+	_barrier(Vector3(0, h * 0.5, PLAY_Z_BACK), Vector3(PLAY_X * 2.0 + 2.0, h, 1.0))
+	_barrier(Vector3(0, h * 0.5, PLAY_Z_FRONT), Vector3(PLAY_X * 2.0 + 2.0, h, 1.0))
+
+func _barrier(center: Vector3, size: Vector3) -> void:
+	var sb := StaticBody3D.new()
+	sb.collision_layer = Combat3D.L_WORLD
+	var cs := CollisionShape3D.new()
+	var bs := BoxShape3D.new(); bs.size = size
+	cs.shape = bs; sb.add_child(cs)
+	sb.position = center
+	add_child(sb)
 
 func _name_billboard(loc: Dictionary, pos: Vector3) -> void:
 	var unlocked: bool = _is_unlocked(loc["req"])
