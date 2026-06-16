@@ -1,8 +1,9 @@
 extends Level3D
-## The Drop (3D) — Evan + Ethan. A wooded touchdown clearing: Evan clears the
-## landing-site wreckage blocking the way out, and Ethan hacks the parachute's
-## jammed chute release tangled in the snag grove to the north. Rio, ex-crew,
-## points to a marquee with Doug's name. Enemy mix: Grunt + Runner + a Brute.
+## The Drop (3D) — Evan + Ethan. Multi-room: a combat-free TOUCHDOWN CLEARING (ex-crew
+## Rio + exit), then the SNAG GROVE (Grunt + Runner + Brute) past Evan's wreckage gate.
+## Ethan frees the jammed chute; Evan (with the dogs) hauls the fallen mast beam off the
+## marquee signal dish; Ethan re-aims the dish → the endgame pointer + Doug's flyer. Two
+## optional Ethan hacks (lookout radio, supply drone). Grass/stone surfaces, olive trim.
 ## Win: enemies cleared + chute hacked + landing cleared.
 
 const EVAN := preload("res://data/characters/evan.tres")
@@ -10,24 +11,43 @@ const ETHAN := preload("res://data/characters/ethan.tres")
 const GRUNT := preload("res://data/enemies/grunt.tres")
 const RUNNER := preload("res://data/enemies/runner.tres")
 const BRUTE := preload("res://data/enemies/brute.tres")
+const TreatItem: ItemData = preload("res://data/items/animal_treat.tres")
+const BiesCharmItem: ItemData = preload("res://data/items/bies_charm.tres")
+const FlyerItem: ItemData = preload("res://data/items/doug_flyer.tres")
 
-const FLOOR_COL := Color(0.16, 0.20, 0.13)
-const WALL_COL := Color(0.14, 0.17, 0.11)
-const HALF_W := 7.5
-const HALF_D := 9.0
+# --- thematic surfaces (grass / dirt / stone, olive trim) ---
+const FLOOR_GRASS := "res://assets/art/tiles/synty_floor_grass.png"
+const FLOOR_DIRT := "res://assets/art/tiles/synty_floor_dirt.png"
+const WALL_STONE := "res://assets/art/tiles/synty_wall_stone.png"
+const FT_GROVE := Color(0.66, 0.74, 0.52)
+const WT_GROVE := Color(0.6, 0.6, 0.54)
+const FT_CLEAR := Color(0.7, 0.76, 0.56)
+const CORNER_COL := Color(0.30, 0.34, 0.16)   # solid olive trim
+
 const WALL_H := 3.0
-const WRECK_POS := Vector3(0.0, 0.0, 1.0)               # wreckage gating the clearing
-const CHUTE_POS := Vector3(2.5, 0.0, -HALF_D + 2.2)     # jammed chute release in the grove
-const RIO_POS := Vector3(-HALF_W + 2.0, 0.0, HALF_D - 3.0)
 const REACH := 2.4
+
+const CLEAR_C := Vector3(0, 0, 13.0)
+const RIO_POS := Vector3(3.5, 0, 14.0)
+const WRECK_POS := Vector3(0.0, 0.0, 8.5)              # gate: clearing → grove
+const CHUTE_POS := Vector3(3.0, 0.0, -6.0)
+const BEAM_POS := Vector3(-3.0, 0.0, -4.5)
+const DISH_POS := Vector3(-3.0, 0.0, -6.5)
+const LOOKOUT_POS := Vector3(-6.5, 0.0, -2.0)
+const DRONE_POS := Vector3(6.5, 0.0, -2.0)
 
 var _cleared := false
 var _enemies_cleared := false
 var _landing_cleared := false
 var _chute_hacked := false
+var _beam_done := false
+var _dish_aimed := false
+var _lookout_done := false
+var _drone_done := false
 var _spawned := 0
 var _rio = null
 var _wreck: Node3D = null
+var _beam: Node3D = null
 var _chute_lights: Array = []
 var _hud_goal: Label = null
 var _hud_hint: Label = null
@@ -35,33 +55,43 @@ var _hud_banner: Label = null
 
 func _build_level() -> void:
 	location_id = "the_drop"
+	multi_room = true
 	build_env(Color(0.05, 0.08, 0.06), Color(0.5, 0.55, 0.45), 0.6, 1.0)
 	point_light(Vector3(0, 4.0, 2.0), Color(0.7, 0.85, 0.7), 1.8, 18.0)
+	point_light(CLEAR_C + Vector3(0, 2.8, 0), Color(0.8, 0.9, 0.75), 1.8, 11.0)
 	point_light(CHUTE_POS + Vector3(0, 2.0, 0), Color(0.4, 0.8, 1.0), 1.4, 5.0)
-	floor_box(HALF_W * 2.0 + 1.0, HALF_D * 2.0 + 1.0, FLOOR_COL)
+	point_light(DISH_POS + Vector3(0, 2.0, 0), Color(1.0, 0.8, 0.5), 1.4, 6.0)
+	_rooms()
 	_tree_line()
-	_walls()
 	_parachute()
 	_wreckage()
 	_chute_release()
+	_beam_rig()
+	_dish()
+	_lookout()
+	_drone()
 	make_dialog()
 	_build_hud()
-	_rio = spawn_npc("bellows", RIO_POS, deg_to_rad(-60))
-	var p := spawn_duo([EVAN, ETHAN], Vector3(0.0, 0.1, HALF_D - 1.5))
+	_rio = spawn_npc("bellows", RIO_POS, PI)
+	add_exit_portal(CLEAR_C + Vector3(0, 0, 5.0), Vector3(3, 3, 1.4))
+	var p := spawn_duo([EVAN, ETHAN], CLEAR_C + Vector3(0.0, 0.1, 1.0))
 	p.special_used.connect(_on_special)
 	_spawn_enemies()
 	_restore()
 
-func _walls() -> void:
-	wall(Vector3(0, WALL_H * 0.5, -HALF_D), Vector3(HALF_W * 2.0, WALL_H, 0.4), WALL_COL)
-	wall(Vector3(-HALF_W, WALL_H * 0.5, 0), Vector3(0.4, WALL_H, HALF_D * 2.0), WALL_COL)
-	wall(Vector3(HALF_W, WALL_H * 0.5, 0), Vector3(0.4, WALL_H, HALF_D * 2.0), WALL_COL)
-	wall(Vector3(-HALF_W + 2.5, WALL_H * 0.5, HALF_D), Vector3(5.0, WALL_H, 0.4), WALL_COL)
-	wall(Vector3(HALF_W - 2.5, WALL_H * 0.5, HALF_D), Vector3(5.0, WALL_H, 0.4), WALL_COL)
+func _rooms() -> void:
+	# Snag grove — grass floor, stone walls. Combat. Opening south (clearing).
+	set_theme(FLOOR_GRASS, WALL_STONE)
+	room(Vector3.ZERO, 18, 16, FT_GROVE, WT_GROVE, WALL_H, ["s"], 3.0, true)
+	corridor(Vector3(0, 0, 8), "s", 1.0, FT_GROVE, WT_GROVE, 3.0, WALL_H, true, CORNER_COL)        # → clearing
+	# Touchdown clearing — combat-free. South vestibule = exit.
+	set_theme(FLOOR_DIRT, WALL_STONE)
+	room(CLEAR_C, 14, 8, FT_CLEAR, WT_GROVE, WALL_H, ["n", "s"], 3.0, true)
+	corridor(CLEAR_C + Vector3(0, 0, 4.0), "s", 2.0, FT_CLEAR, WT_GROVE, 3.0, WALL_H, true, CORNER_COL)
 
 func _tree_line() -> void:
-	for spot: Vector3 in [Vector3(-5.5, 0, -3.0), Vector3(-3.0, 0, -6.0), Vector3(5.0, 0, -5.0),
-			Vector3(-6.0, 0, 3.0), Vector3(6.0, 0, 2.0), Vector3(4.0, 0, 5.0)]:
+	for spot: Vector3 in [Vector3(-5.5, 0, -3.0), Vector3(-3.0, 0, -6.5), Vector3(5.0, 0, -5.0),
+			Vector3(-7.5, 0, 3.0), Vector3(7.5, 0, 2.0), Vector3(4.0, 0, 5.0)]:
 		_pine(spot)
 
 func _pine(pos: Vector3) -> void:
@@ -75,7 +105,6 @@ func _pine(pos: Vector3) -> void:
 		add_child(cone)
 
 func _parachute() -> void:
-	# a draped parachute canopy snagged in the grove (visual anchor for the chute)
 	var canopy := MeshInstance3D.new()
 	var sm := SphereMesh.new(); sm.radius = 1.6; sm.height = 1.6; sm.is_hemisphere = true
 	var mat := StandardMaterial3D.new(); mat.albedo_color = Color(0.85, 0.5, 0.2); mat.cull_mode = BaseMaterial3D.CULL_DISABLED
@@ -86,11 +115,11 @@ func _wreckage() -> void:
 	_wreck = StaticBody3D.new()
 	(_wreck as StaticBody3D).collision_layer = Combat3D.L_WORLD
 	var cs := CollisionShape3D.new(); var bs := BoxShape3D.new()
-	bs.size = Vector3(4.0, 1.6, 1.8); cs.shape = bs; cs.position = Vector3(0, 0.8, 0)
+	bs.size = Vector3(3.0, 1.8, 1.4); cs.shape = bs; cs.position = Vector3(0, 0.9, 0)
 	_wreck.add_child(cs)
-	for i: int in range(7):
-		var r := box_mesh(Vector3(0.9, 0.7, 0.8), Color(0.3, 0.3, 0.32).darkened(randf() * 0.2),
-			Vector3(randf_range(-1.6, 1.6), randf_range(0.3, 1.2), randf_range(-0.6, 0.6)))
+	for i: int in range(6):
+		var r := box_mesh(Vector3(0.8, 0.7, 0.7), Color(0.3, 0.3, 0.32).darkened(randf() * 0.2),
+			Vector3(randf_range(-1.1, 1.1), randf_range(0.3, 1.3), randf_range(-0.4, 0.4)))
 		r.rotation = Vector3(randf() * 0.5, randf(), randf() * 0.5)
 		_wreck.add_child(r)
 	_wreck.position = WRECK_POS
@@ -102,6 +131,29 @@ func _chute_release() -> void:
 		var pip := box_mesh(Vector3(0.16, 0.06, 0.1), Color(0.9, 0.3, 0.25), CHUTE_POS + Vector3(-0.3 + float(i) * 0.3, 1.0, 0.28), 1.2)
 		add_child(pip); _chute_lights.append(pip)
 
+# Fallen comms-mast beam pinning the dish — Evan (with the dogs) hauls it off.
+func _beam_rig() -> void:
+	_beam = box_mesh(Vector3(4.0, 0.4, 0.4), Color(0.35, 0.3, 0.22), BEAM_POS + Vector3(0, 0.6, 0))
+	_beam.rotation.y = deg_to_rad(20)
+	add_child(_beam)
+
+# Marquee signal dish — Ethan re-aims it (after the beam's off) → the endgame pointer.
+func _dish() -> void:
+	add_child(box_mesh(Vector3(0.3, 1.6, 0.3), Color(0.4, 0.42, 0.46), DISH_POS + Vector3(0, 0.8, 0)))
+	var dish := MeshInstance3D.new()
+	var cm := CylinderMesh.new(); cm.top_radius = 0.9; cm.bottom_radius = 0.2; cm.height = 0.4
+	var m := StandardMaterial3D.new(); m.albedo_color = Color(0.7, 0.72, 0.75); m.metallic = 0.4
+	cm.material = m; dish.mesh = cm; dish.rotation.x = deg_to_rad(50)
+	dish.position = DISH_POS + Vector3(0, 1.8, 0)
+	add_child(dish)
+
+func _lookout() -> void:
+	add_child(box_mesh(Vector3(0.6, 1.2, 0.6), Color(0.3, 0.32, 0.28), LOOKOUT_POS + Vector3(0, 0.6, 0)))
+	add_child(box_mesh(Vector3(0.1, 0.7, 0.1), Color(0.6, 0.2, 0.2), LOOKOUT_POS + Vector3(0, 1.5, 0), 1.0))  # antenna light
+
+func _drone() -> void:
+	add_child(box_mesh(Vector3(0.7, 0.5, 0.7), Color(0.4, 0.4, 0.45), DRONE_POS + Vector3(0, 0.3, 0)))
+
 func _spawn_enemies() -> void:
 	spawn_enemy(GRUNT, Vector3(-2.0, 0.1, -1.0), "res://assets/models/enemies/grunt.glb"); _spawned += 1
 	spawn_enemy(RUNNER, Vector3(2.5, 0.1, -1.5), "res://assets/models/enemies/runner.glb"); _spawned += 1
@@ -111,8 +163,13 @@ func _restore() -> void:
 	_enemies_cleared = GameManager.get_level_flag(location_id, "enemies_cleared", false)
 	_landing_cleared = GameManager.get_level_flag(location_id, "landing_cleared", false)
 	_chute_hacked = GameManager.get_level_flag(location_id, "chute_hacked", false)
+	_beam_done = GameManager.get_level_flag(location_id, "beam_done", false)
+	_dish_aimed = GameManager.get_level_flag(location_id, "dish_aimed", false)
+	_lookout_done = GameManager.get_level_flag(location_id, "lookout_done", false)
+	_drone_done = GameManager.get_level_flag(location_id, "drone_done", false)
 	if _landing_cleared: _clear_wreck(false)
 	if _chute_hacked: _set_chute_solved()
+	if _beam_done and _beam != null: _beam.position.y = -2.0
 	if _enemies_cleared and _landing_cleared and _chute_hacked:
 		_win(false)
 
@@ -122,31 +179,75 @@ func _on_special(char_name: String) -> void:
 		return
 	var pp: Vector3 = player.global_position
 	if near3(pp, RIO_POS, REACH): _talk_rio(char_name); return
-	if char_name == "Evan" and not _landing_cleared and near3(pp, WRECK_POS, REACH + 0.8):
-		_landing_cleared = true
-		GameManager.set_level_flag(location_id, "landing_cleared", true)
-		_clear_wreck(true)
-		_hud_hint.text = "Evan drags the wreckage clear — the way out opens."
-		Audio.play("special"); return
+	# wreckage gate (Evan)
+	if not _landing_cleared and near3(pp, WRECK_POS, REACH + 0.8):
+		if char_name == "Evan":
+			_landing_cleared = true
+			GameManager.set_level_flag(location_id, "landing_cleared", true)
+			_clear_wreck(true)
+			_hud_hint.text = "Evan drags the wreckage clear — the snag grove opens."
+			Audio.play("special")
+		else:
+			_hud_hint.text = "The wreckage is too heavy — Evan can shift it."
+		return
+	# chute release (Ethan)
 	if char_name == "Ethan" and not _chute_hacked and near3(pp, CHUTE_POS, REACH):
 		_chute_hacked = true
 		GameManager.set_level_flag(location_id, "chute_hacked", true)
 		_set_chute_solved()
 		_hud_hint.text = "Ethan frees the jammed chute release."
 		Audio.play("special"); return
-	if char_name != "Evan" and not _landing_cleared and near3(pp, WRECK_POS, REACH + 0.8):
-		_hud_hint.text = "The wreckage is too heavy — Evan can shift it."
-	elif char_name != "Ethan" and not _chute_hacked and near3(pp, CHUTE_POS, REACH):
-		_hud_hint.text = "The chute release needs Ethan's hacking."
+	# fallen beam over the dish (Evan + dogs)
+	if not _beam_done and near3(pp, BEAM_POS, REACH + 0.8):
+		if char_name == "Evan":
+			_beam_done = true
+			GameManager.set_level_flag(location_id, "beam_done", true)
+			if _beam != null: create_tween().tween_property(_beam, "position:y", -2.0, 0.6)
+			_hud_hint.text = "Evan whistles the dogs in and together they haul the mast beam off the dish."
+			Audio.play("special")
+		else:
+			_hud_hint.text = "A mast beam pins the dish — Evan and the dogs can haul it off."
+		return
+	# signal dish (Ethan, after the beam) → endgame pointer + Doug flyer
+	if not _dish_aimed and near3(pp, DISH_POS, REACH):
+		if not _beam_done:
+			_hud_hint.text = "The dish is pinned under the fallen beam — clear it first."
+		elif char_name == "Ethan":
+			_aim_dish(char_name)
+		else:
+			_hud_hint.text = "Re-aiming the signal dish needs Ethan's tech."
+		return
+	# lookout radio jam (Ethan, optional → animal treat)
+	if not _lookout_done and char_name == "Ethan" and near3(pp, LOOKOUT_POS, REACH):
+		_lookout_done = true; GameManager.set_level_flag(location_id, "lookout_done", true)
+		GameManager.grant_item(char_name, TreatItem.id)
+		_hud_hint.text = "Ethan jams the lookout's radio — no reinforcements, and a ration pack. (Found Animal Treat)"
+		Audio.play("special"); return
+	# supply drone crate (Ethan, optional → bies charm)
+	if not _drone_done and char_name == "Ethan" and near3(pp, DRONE_POS, REACH):
+		_drone_done = true; GameManager.set_level_flag(location_id, "drone_done", true)
+		GameManager.grant_item(char_name, BiesCharmItem.id)
+		_hud_hint.text = "Ethan cracks the crashed supply drone — a Bies charm inside. (Found Bies Charm)"
+		Audio.play("special"); return
+
+func _aim_dish(char_name: String) -> void:
+	_dish_aimed = true
+	GameManager.set_level_flag(location_id, "dish_aimed", true)
+	GameManager.grant_item(char_name, FlyerItem.id)
+	open_dialog("Signal Dish", Color(0.5, 0.5, 0.42),
+		{"start": {"lines": [
+			"Ethan swings the dish around until it locks onto the town's old broadcast tower.",
+			"A flyer's been pinned to the rim this whole time: \"THE GRAND MARQUEE -- ONE NIGHT ONLY.\"",
+			"Doug's hand in the margin: \"This is where it ends. Come find me.\"",
+			"Picked up: Marquee Flyer."]}}, char_name)
+	Audio.play("special")
 
 func _clear_wreck(animate: bool) -> void:
+	(_wreck as StaticBody3D).collision_layer = 0
 	if animate:
-		var tw := create_tween()
-		tw.tween_property(_wreck, "position:y", -2.0, 0.6)
-		tw.tween_callback(func() -> void: (_wreck as StaticBody3D).collision_layer = 0)
+		create_tween().tween_property(_wreck, "position:y", -2.0, 0.6)
 	else:
 		_wreck.position.y = -2.0
-		(_wreck as StaticBody3D).collision_layer = 0
 
 func _set_chute_solved() -> void:
 	for pip in _chute_lights:
@@ -156,13 +257,14 @@ func _set_chute_solved() -> void:
 func _talk_rio(char_name: String) -> void:
 	var tree: Dictionary
 	if _enemies_cleared and _landing_cleared and _chute_hacked:
-		tree = {"start": {"lines": ["\"That's our way out. The marquee sign I saw before the drop -- it had his name on it. Move.\""]}}
+		tree = {"start": {"lines": ["\"That dish you re-aimed -- it locked on the Grand Marquee. His name's on the bill. That's the end of the trail. Go.\""]}}
 	elif _landing_cleared or _chute_hacked:
-		tree = {"start": {"lines": ["\"Evan clears the wreckage, Ethan hacks the jammed chute release -- both needed.\""]}}
+		tree = {"start": {"lines": ["\"Evan clears the wreckage, Ethan frees the chute. And that signal dish under the beam -- re-aim it, it'll point the way.\""]}}
 	else:
 		tree = {"start": {"lines": [
 			"\"Rio. I was crew until I saw the manifest -- I'm not their problem anymore.\"",
-			"\"Evan: that wreckage has to move before we get out. Ethan: the chute release jammed on impact -- hack it in the snag grove north of here.\""]}}
+			"\"Evan: that wreckage blocks the grove. Ethan: the chute jammed on impact. And there's a signal dish in there, pinned under a mast beam -- worth a look.\""]}}
+	GameManager.set_level_flag(location_id, "rio_met", true)
 	open_dialog("Rio", Color(0.4, 0.42, 0.36), tree, char_name)
 
 func _unhandled_input(_e: InputEvent) -> void:
@@ -186,7 +288,7 @@ func _process(d: float) -> void:
 		bits.append("crew " + ("OK" if _enemies_cleared else "..."))
 		bits.append("wreckage " + ("OK" if _landing_cleared else "..."))
 		bits.append("chute " + ("OK" if _chute_hacked else "..."))
-		_hud_goal.text = "Clear the crew; Evan moves the wreckage, Ethan frees the chute. (G interact, Tab swap)\n[" + "  ".join(bits) + "]"
+		_hud_goal.text = "Evan clears the wreckage into the grove; clear the crew, Ethan frees the chute. (G interact, Tab swap)\n[" + "  ".join(bits) + "]"
 	if not _cleared and _enemies_cleared and _landing_cleared and _chute_hacked:
 		_win(true)
 

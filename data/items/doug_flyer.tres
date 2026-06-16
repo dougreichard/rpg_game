@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="ItemData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/systems/item_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "doug_flyer"
+display_name = "Marquee Flyer"
+description = "A weather-torn flyer pulled off the signal dish: 'THE GRAND MARQUEE — ONE NIGHT ONLY.' Doug's handwriting in the margin: 'This is where it ends. Come find me.'"
+icon_color = Color(0.8, 0.6, 0.35, 1)
+owner_character = ""
+is_junk = false

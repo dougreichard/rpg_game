@@ -1,9 +1,11 @@
 extends Level3D
-## The Grand Marquee Cinema (3D) — ENDGAME. Quinn + Ben. A cinema-guardian Boss and
-## grunts hold the aisle. Quinn repairs the projection booth; Ben plays the house
-## organ on the balcony. With the theatre cleared, both repaired, and all five
-## character movie tickets in hand, Uncle Doug is revealed in the projection booth.
-## Cecil the usher greets from the lobby. Win = enemies + projector + organ + 5 tickets.
+## The Grand Marquee Cinema (3D) — ENDGAME. Quinn + Ben. Multi-room: an ornate combat-free
+## GRAND LOBBY (usher Cecil + exit + Doug's clue-board), the AUDITORIUM (Grunts + the
+## cinema-guardian Boss; projector, house organ, house-lights), and the PROJECTION BOOTH
+## (Uncle Doug), behind a jammed door Quinn forces. Quinn restores the projector + forces
+## the booth; Ben plays the organ. With the theatre cleared, both repaired, the booth
+## forced, and all five movie tickets, Doug is revealed → Result3D. Carpet/brick, gold trim.
+## Win = enemies + projector + organ + booth forced + 5 tickets.
 
 const QUINN := preload("res://data/characters/quinn.tres")
 const BEN := preload("res://data/characters/ben.tres")
@@ -15,77 +17,115 @@ const TicketEvan: ItemData  = preload("res://data/items/ticket_evan.tres")
 const TicketBen: ItemData   = preload("res://data/items/ticket_ben.tres")
 const TicketEthan: ItemData = preload("res://data/items/ticket_ethan.tres")
 
-const FLOOR_COL := Color(0.18, 0.08, 0.10)
-const WALL_COL := Color(0.26, 0.12, 0.14)
+# --- thematic surfaces (red carpet / brick / gold trim) ---
+const FLOOR_CARPET := "res://assets/art/tiles/synty_floor_carpet.png"
+const WALL_BRICK := "res://assets/art/tiles/synty_wall_brick.png"
+const FT_HOUSE := Color(0.7, 0.3, 0.3)
+const WT_HOUSE := Color(0.72, 0.5, 0.45)
+const FT_LOBBY := Color(0.78, 0.4, 0.4)
 const CARPET := Color(0.45, 0.10, 0.12)
 const GOLD := Color(0.8, 0.65, 0.25)
-const HALF_W := 8.0
-const HALF_D := 9.5
 const WALL_H := 4.0
-const PROJECTOR_POS := Vector3(-5.0, 0.0, HALF_D - 2.2)   # booth at the back by the entrance
-const ORGAN_POS := Vector3(5.0, 0.0, -HALF_D + 2.2)       # organ down by the screen/balcony
-const DOUG_POS := Vector3(-5.0, 0.0, HALF_D - 3.4)
-const USHER_POS := Vector3(0.0, 0.0, HALF_D - 2.6)
 const REACH := 2.4
+
+# Uncle-Doug clue trail (assembled at the lobby board)
+const DOUG_CLUES := ["faded_photograph", "pressed_flower", "doug_locker_tag", "doug_recording",
+	"doug_pocketwatch", "doug_crate_tag", "doug_checkout_card", "doug_photo_strip",
+	"doug_flashlight", "doug_carabiner", "doug_vr_log", "doug_flyer"]
+
+const LOBBY_C := Vector3(0, 0, 14.0)
+const USHER_POS := Vector3(3.5, 0, 15.0)
+const BOARD_POS := Vector3(-5.0, 0, 15.5)
+const PROJECTOR_POS := Vector3(-5.0, 0.0, 5.0)
+const ORGAN_POS := Vector3(5.0, 0.0, -5.0)
+const LIGHTS_POS := Vector3(-6.0, 0.0, -4.0)
+const BOOTH_DOOR := Vector3(9.5, 0.0, 0.0)
+const BOOTH_C := Vector3(14.0, 0.0, 0.0)
+const DOUG_POS := Vector3(14.0, 0.0, 0.0)
 
 var _cleared := false
 var _enemies_cleared := false
 var _projector_repaired := false
 var _organ_played := false
+var _lights_on := false
+var _booth_forced := false
 var _doug_revealed := false
 var _spawned := 0
 var _usher = null
 var _doug = null
 var _projector_light: MeshInstance3D = null
 var _organ_node: MeshInstance3D = null
+var _booth_wall: Node3D = null
 var _hud_goal: Label = null
 var _hud_hint: Label = null
 var _hud_banner: Label = null
 
 func _build_level() -> void:
 	location_id = "grand_marquee"
+	multi_room = true
 	build_env(Color(0.04, 0.02, 0.03), Color(0.45, 0.30, 0.30), 0.5, 0.8)
 	point_light(Vector3(0, 4.2, 0), Color(1.0, 0.85, 0.7), 2.0, 18.0)
-	point_light(Vector3(0, 3.0, -HALF_D + 1.5), Color(0.9, 0.9, 1.0), 2.2, 9.0)   # screen wash
-	point_light(PROJECTOR_POS + Vector3(0, 2.0, 0), Color(1.0, 0.9, 0.6), 1.4, 5.0)
-	floor_box(HALF_W * 2.0 + 1.0, HALF_D * 2.0 + 1.0, FLOOR_COL)
-	add_child(box_mesh(Vector3(5.0, 0.04, HALF_D * 2.0), CARPET, Vector3(0, 0.04, 0)))  # aisle runner
-	_walls()
+	point_light(Vector3(0, 3.0, -9.0), Color(0.9, 0.9, 1.0), 2.2, 9.0)       # screen wash
+	point_light(LOBBY_C + Vector3(0, 3.0, 0), Color(1.0, 0.85, 0.6), 2.0, 12.0)
+	point_light(BOOTH_C + Vector3(0, 2.6, 0), Color(1.0, 0.9, 0.7), 1.6, 8.0)
+	_rooms()
 	_screen()
 	_seating()
 	_projector_booth()
 	_organ()
+	_lights_rig()
+	_clue_board()
 	make_dialog()
 	_build_hud()
 	_usher = spawn_npc("aldric", USHER_POS, PI)   # uniformed chief usher
-	_doug = spawn_npc("uncle_doug", DOUG_POS, PI)
+	_doug = spawn_npc("uncle_doug", DOUG_POS, deg_to_rad(-90))
 	_doug.visible = false
-	var p := spawn_duo([QUINN, BEN], Vector3(0.0, 0.1, HALF_D - 1.5))
+	add_exit_portal(LOBBY_C + Vector3(0, 0, 5.0), Vector3(3, 3, 1.4))
+	var p := spawn_duo([QUINN, BEN], LOBBY_C + Vector3(0.0, 0.1, 1.0))
 	p.special_used.connect(_on_special)
 	_spawn_enemies()
 	_restore()
 
-func _walls() -> void:
-	wall(Vector3(0, WALL_H * 0.5, -HALF_D), Vector3(HALF_W * 2.0, WALL_H, 0.4), WALL_COL)
-	wall(Vector3(0, WALL_H * 0.5, HALF_D), Vector3(HALF_W * 2.0, WALL_H, 0.4), WALL_COL)
-	wall(Vector3(-HALF_W, WALL_H * 0.5, 0), Vector3(0.4, WALL_H, HALF_D * 2.0), WALL_COL)
-	wall(Vector3(HALF_W, WALL_H * 0.5, 0), Vector3(0.4, WALL_H, HALF_D * 2.0), WALL_COL)
+func _rooms() -> void:
+	# Auditorium — red carpet, brick walls. Combat. Openings: south (lobby), east (booth).
+	set_theme(FLOOR_CARPET, WALL_BRICK)
+	room(Vector3.ZERO, 18, 18, FT_HOUSE, WT_HOUSE, WALL_H, ["s", "e"], 3.0, true)
+	add_child(box_mesh(Vector3(5.0, 0.04, 18.0), CARPET, Vector3(0, 0.05, 0)))     # aisle runner
+	corridor(Vector3(0, 0, 9), "s", 1.0, FT_HOUSE, WT_HOUSE, 3.0, WALL_H, true, GOLD)       # → lobby
+	corridor(Vector3(9, 0, 0), "e", 1.0, FT_HOUSE, WT_HOUSE, 3.0, WALL_H, true, GOLD)       # → booth
+	_booth_wall = _gate_panel(BOOTH_DOOR, WALL_H)
+	# Grand lobby — carpet, brick (combat-free). South vestibule = exit.
+	set_theme(FLOOR_CARPET, WALL_BRICK)
+	room(LOBBY_C, 14, 8, FT_LOBBY, WT_HOUSE, WALL_H, ["n", "s"], 3.0, true)
+	corridor(LOBBY_C + Vector3(0, 0, 4.0), "s", 2.0, FT_LOBBY, WT_HOUSE, 3.0, WALL_H, true, GOLD)
+	# Projection booth — where Doug is.
+	room(BOOTH_C, 8, 8, FT_HOUSE, WT_HOUSE, 3.2, ["w"], 3.0, true)
+
+func _gate_panel(pos: Vector3, h: float) -> Node3D:
+	var size := Vector3(0.4, h, 3.0)   # doorway runs along Z (panel thin in X)
+	var sb := StaticBody3D.new()
+	sb.collision_layer = Combat3D.L_WORLD
+	var cs := CollisionShape3D.new(); var bs := BoxShape3D.new()
+	bs.size = size; cs.shape = bs; cs.position = Vector3(0, h * 0.5, 0)
+	sb.add_child(cs); sb.add_child(box_mesh(size, GOLD.darkened(0.3), Vector3(0, h * 0.5, 0)))
+	sb.position = pos
+	add_child(sb)
+	return sb
 
 func _screen() -> void:
-	add_child(box_mesh(Vector3(7.0, 3.4, 0.2), Color(0.92, 0.92, 0.95), Vector3(0, 2.0, -HALF_D + 0.4), 0.5))
-	# proscenium curtains
-	add_child(box_mesh(Vector3(0.8, 3.8, 0.6), CARPET.darkened(0.1), Vector3(-3.8, 1.9, -HALF_D + 0.6)))
-	add_child(box_mesh(Vector3(0.8, 3.8, 0.6), CARPET.darkened(0.1), Vector3(3.8, 1.9, -HALF_D + 0.6)))
+	add_child(box_mesh(Vector3(7.0, 3.4, 0.2), Color(0.92, 0.92, 0.95), Vector3(0, 2.0, -8.6), 0.5))
+	add_child(box_mesh(Vector3(0.8, 3.8, 0.6), CARPET.darkened(0.1), Vector3(-3.8, 1.9, -8.4)))
+	add_child(box_mesh(Vector3(0.8, 3.8, 0.6), CARPET.darkened(0.1), Vector3(3.8, 1.9, -8.4)))
 
 func _seating() -> void:
 	for row: int in range(5):
-		var z: float = -4.5 + float(row) * 1.8
-		for sx: float in [-3.0, 3.0]:
+		var z: float = -3.5 + float(row) * 1.8
+		for sx: float in [-3.2, 3.2]:
 			add_child(box_mesh(Vector3(2.2, 0.5, 0.6), Color(0.35, 0.10, 0.12), Vector3(sx, 0.4, z)))
 			add_child(box_mesh(Vector3(2.2, 0.8, 0.2), Color(0.30, 0.08, 0.10), Vector3(sx, 0.7, z - 0.35)))
 
 func _projector_booth() -> void:
-	add_child(box_mesh(Vector3(2.6, 1.2, 1.4), Color(0.18, 0.10, 0.10), PROJECTOR_POS + Vector3(0, 0.6, 0)))
+	add_child(box_mesh(Vector3(2.0, 1.2, 1.2), Color(0.18, 0.10, 0.10), PROJECTOR_POS + Vector3(0, 0.6, 0)))
 	add_child(box_mesh(Vector3(0.8, 0.6, 1.0), Color(0.25, 0.25, 0.28), PROJECTOR_POS + Vector3(0, 1.4, 0)))
 	_projector_light = box_mesh(Vector3(0.2, 0.2, 0.2), Color(0.7, 0.2, 0.2), PROJECTOR_POS + Vector3(0, 1.4, -0.6), 1.2)
 	add_child(_projector_light)
@@ -104,6 +144,14 @@ func _organ() -> void:
 	_organ_node = box_mesh(Vector3(2.0, 0.08, 0.35), Color(0.9, 0.88, 0.82), ORGAN_POS + Vector3(0, 1.46, 0.3))
 	add_child(_organ_node)
 
+func _lights_rig() -> void:
+	add_child(box_mesh(Vector3(0.5, 1.4, 0.4), Color(0.2, 0.12, 0.12), LIGHTS_POS + Vector3(0, 0.7, 0)))
+	add_child(box_mesh(Vector3(0.16, 0.5, 0.1), Color(0.85, 0.25, 0.2), LIGHTS_POS + Vector3(0.28, 1.0, 0), 1.0))  # dead breaker
+
+func _clue_board() -> void:
+	add_child(box_mesh(Vector3(0.2, 2.2, 2.6), Color(0.2, 0.12, 0.12), BOARD_POS + Vector3(0, 1.3, 0)))
+	add_child(box_mesh(Vector3(0.1, 1.8, 2.2), Color(0.85, 0.8, 0.6), BOARD_POS + Vector3(0.12, 1.3, 0), 0.3))  # pinned papers
+
 func _spawn_enemies() -> void:
 	for spot: Vector3 in [Vector3(-2.0, 0.1, 2.0), Vector3(2.5, 0.1, 1.0)]:
 		spawn_enemy(GRUNT, spot, "res://assets/models/enemies/grunt.glb"); _spawned += 1
@@ -113,8 +161,11 @@ func _restore() -> void:
 	_enemies_cleared = GameManager.get_level_flag(location_id, "enemies_cleared", false)
 	_projector_repaired = GameManager.get_level_flag(location_id, "projector_repaired", false)
 	_organ_played = GameManager.get_level_flag(location_id, "organ_played", false)
+	_lights_on = GameManager.get_level_flag(location_id, "lights_on", false)
+	_booth_forced = GameManager.get_level_flag(location_id, "booth_forced", false)
 	if _projector_repaired: _set_projector_solved()
 	if _organ_played: _organ_node.material_override = _glow()
+	if _booth_forced: _open_booth(false)
 	_maybe_reveal_doug()
 	if _all_done():
 		_win(false)
@@ -131,7 +182,7 @@ func _has_all_tickets() -> bool:
 	return true
 
 func _all_done() -> bool:
-	return _enemies_cleared and _projector_repaired and _organ_played and _has_all_tickets()
+	return _enemies_cleared and _projector_repaired and _organ_played and _booth_forced and _has_all_tickets()
 
 # --- interaction -------------------------------------------------------------
 func _on_special(char_name: String) -> void:
@@ -140,31 +191,80 @@ func _on_special(char_name: String) -> void:
 	var pp: Vector3 = player.global_position
 	if _doug_revealed and near3(pp, DOUG_POS, REACH): _talk_doug(char_name); return
 	if near3(pp, USHER_POS, REACH): _talk_usher(char_name); return
+	if near3(pp, BOARD_POS, REACH): _read_board(char_name); return
+	# projector (Quinn)
 	if char_name == "Quinn" and not _projector_repaired and near3(pp, PROJECTOR_POS, REACH):
 		_projector_repaired = true
 		GameManager.set_level_flag(location_id, "projector_repaired", true)
 		_set_projector_solved()
 		_hud_hint.text = "Quinn restores the projector — the screen flickers to life."
 		Audio.play("special"); _maybe_reveal_doug(); return
+	# organ (Ben)
 	if char_name == "Ben" and not _organ_played and near3(pp, ORGAN_POS, REACH):
 		_organ_played = true
 		GameManager.set_level_flag(location_id, "organ_played", true)
 		_organ_node.material_override = _glow()
 		_hud_hint.text = "Ben plays the house organ — the theatre swells with sound."
 		Audio.play("special"); _maybe_reveal_doug(); return
+	# house-lights circuit (Quinn, optional flavour)
+	if char_name == "Quinn" and not _lights_on and near3(pp, LIGHTS_POS, REACH):
+		_lights_on = true
+		GameManager.set_level_flag(location_id, "lights_on", true)
+		point_light(Vector3(0, 4.4, 2.0), GOLD, 2.2, 20.0)
+		_hud_hint.text = "Quinn throws the house-lights breaker — the chandeliers blaze back on."
+		Audio.play("special"); return
+	# jammed booth door (Quinn forces it open → the way to Doug)
+	if not _booth_forced and near3(pp, BOOTH_DOOR, REACH + 0.6):
+		if char_name == "Quinn":
+			_booth_forced = true
+			GameManager.set_level_flag(location_id, "booth_forced", true)
+			_open_booth(true)
+			_hud_hint.text = "Quinn pries the jammed booth door open — a stairway up to the projection booth."
+			Audio.play("special"); _maybe_reveal_doug()
+		else:
+			_hud_hint.text = "The booth door's jammed solid — Quinn can force it."
+		return
+	# wrong-character hints
 	if char_name != "Quinn" and not _projector_repaired and near3(pp, PROJECTOR_POS, REACH):
 		_hud_hint.text = "The projector needs Quinn's tools."
 	elif char_name != "Ben" and not _organ_played and near3(pp, ORGAN_POS, REACH):
 		_hud_hint.text = "The house organ needs Ben."
 
+func _open_booth(animate: bool) -> void:
+	(_booth_wall as StaticBody3D).collision_layer = 0
+	if animate:
+		create_tween().tween_property(_booth_wall, "position:y", -WALL_H, 0.6)
+	else:
+		_booth_wall.position.y = -WALL_H
+
 func _maybe_reveal_doug() -> void:
 	if _doug_revealed:
 		return
-	if _enemies_cleared and _projector_repaired and _organ_played and _has_all_tickets():
+	if _all_done():
 		_doug_revealed = true
 		_doug.visible = true
 		_doug.call("say", "You found me!")
 		_hud_hint.text = "Uncle Doug is here — in the projection booth!"
+
+func _read_board(char_name: String) -> void:
+	var n := 0
+	for id: String in DOUG_CLUES:
+		for ch: String in ["Quinn", "Erin", "Evan", "Ben", "Ethan"]:
+			if GameManager.has_item(ch, id):
+				n += 1; break
+	var lines: Array
+	if n >= DOUG_CLUES.size():
+		lines = ["You pin the last clue to the board. Photo, flower, watch, reel, flyer -- every thread.",
+			"They all point to one place, one night: here, the Grand Marquee. He's behind that booth door.",
+			"Doug's trail: %d/%d clues -- complete." % [n, DOUG_CLUES.size()]]
+	elif n > 0:
+		lines = ["A cork board of pinned notes and photos -- the trail you've gathered chasing Uncle Doug.",
+			"Every clue you've found circles back to this theatre.",
+			"Doug's trail: %d/%d clues gathered." % [n, DOUG_CLUES.size()]]
+	else:
+		lines = ["An empty cork board by the door. \"PIN YOUR LEADS HERE,\" reads a faded card.",
+			"You haven't gathered any of Doug's clues yet -- they're scattered across town."]
+	open_dialog("Doug's Clue-Board", GOLD, {"start": {"lines": lines}}, char_name)
 
 func _set_projector_solved() -> void:
 	var m := (_projector_light.mesh as BoxMesh).material as StandardMaterial3D
@@ -180,23 +280,23 @@ func _talk_usher(char_name: String) -> void:
 	if _enemies_cleared:
 		tree = {"start": {"lines": [
 			"\"Quite a performance.\" Cecil straightens his pillbox hat.",
-			"\"West corridor for the booth, if you still need it. I hope you find whoever you're looking for.\""]}}
+			"\"The booth's through the east doors -- jammed, I'm afraid. And do pin your leads to the board.\""]}}
 	else:
 		tree = {
 			"start": {
 				"lines": [
-					"\"Welcome to the Grand Marquee. I'm Cecil -- chief usher.\" He sweeps his torch toward the lobby.",
-					"\"Rough night for a visit. Something's very wrong backstage.\""],
+					"\"Welcome to the Grand Marquee. I'm Cecil -- chief usher.\" He sweeps his torch toward the house.",
+					"\"Rough night for a visit. Something's very wrong in the auditorium.\""],
 				"choices": [
-					{"text": "\"What's blocking the backstage?\"", "next": "guardian_hint"},
-					{"text": "\"Is the projection booth still open?\"", "next": "booth_hint"}]},
+					{"text": "\"What's in the auditorium?\"", "next": "guardian_hint"},
+					{"text": "\"Where's the projection booth?\"", "next": "booth_hint"}]},
 			"guardian_hint": {"lines": [
-				"\"Machinery's gone haywire in the aisle. Whatever it is, it's been stopping everyone from getting through.\"",
-				"\"Clear that and the whole theatre's yours.\""],
+				"\"A guardian machine took the aisle. Clear it, fix the projector, and have Ben wake the organ.\"",
+				"\"You'll want all five tickets, too -- the booth won't open its secret otherwise.\""],
 				"effects": {"set_flag": "usher_met", "flag_value": true}},
 			"booth_hint": {"lines": [
-				"\"West corridor, up the stairs. Projector's untouched -- whoever was running it cleared out in a hurry.\"",
-				"\"Equipment's still in there if you need it.\""],
+				"\"East doors, up the stairs -- but they've jammed. Quinn could force them.\"",
+				"\"Whoever was up there left in a hurry.\""],
 				"effects": {"set_flag": "usher_met", "flag_value": true}},
 		}
 	open_dialog("Cecil", GOLD, tree, char_name)
@@ -239,8 +339,9 @@ func _process(d: float) -> void:
 		bits.append("guardian " + ("OK" if _enemies_cleared else "..."))
 		bits.append("projector " + ("OK" if _projector_repaired else "..."))
 		bits.append("organ " + ("OK" if _organ_played else "..."))
+		bits.append("booth " + ("OK" if _booth_forced else "..."))
 		bits.append("tickets " + ("5/5" if _has_all_tickets() else "?/5"))
-		_hud_goal.text = "Clear the guardian; Quinn fixes the projector, Ben plays the organ. All 5 tickets to find Doug. (G interact, Tab swap)\n[" + "  ".join(bits) + "]"
+		_hud_goal.text = "Clear the guardian; Quinn fixes the projector + forces the booth, Ben plays the organ. All 5 tickets to find Doug. (G interact, Tab swap)\n[" + "  ".join(bits) + "]"
 	if not _cleared and _all_done():
 		_win(true)
 

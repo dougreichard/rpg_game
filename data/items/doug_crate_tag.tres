@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="ItemData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/systems/item_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "doug_crate_tag"
+display_name = "Shipping Crate Tag"
+description = "A tag off the crate Doug shipped himself out on. Routing: HARBOR → the old picture house. He was running toward something, not away."
+icon_color = Color(0.7, 0.55, 0.35, 1)
+owner_character = ""
+is_junk = false

@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="ItemData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/systems/item_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "doug_pocketwatch"
+display_name = "Doug's Pocket-Watch"
+description = "Uncle Doug's pocket-watch, stopped at 11:54. The case-back is engraved: 'Time keeps. — the Marquee.'"
+icon_color = Color(0.72, 0.62, 0.3, 1)
+owner_character = ""
+is_junk = false

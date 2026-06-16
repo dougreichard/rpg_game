@@ -1,22 +1,49 @@
 extends Level3D
-## The Old Parish Church (3D) — dialogue-heavy, NO combat. A nave with Father Aldric
-## and four congregation members: two open up to QUINN, two to ERIN, so you must SWAP
-## the duo to talk to each. Talk to all four to win (unlocks Evan). Plus Aldric's
-## choice dialog and a secret passage. Reuses GameManager flags + DialogBox/DialogTree.
+## The Old Parish Church (3D) — dialogue-heavy, NO combat. Multi-room now: a NAVE
+## (lobby — Father Aldric + four congregation members + the choir leader + exit), a
+## VESTRY to the east (gated by Quinn's candle-sequence puzzle; holds the memorial
+## register — the Uncle Doug objective), and a CRYPT to the west (gated by Erin's
+## false-plaque observation puzzle; reuses `secret_revealed`). Two congregants open up
+## to QUINN, two to ERIN, so you must SWAP to talk to each. Win = all four (unlocks
+## Evan); the vestry/crypt are extra puzzle + Doug content, not required to clear.
+## Reuses GameManager flags + DialogBox/DialogTree.
 
 const LOCATION_ID := "old_parish_church"
 const QUINN := preload("res://data/characters/quinn.tres")
 const ERIN := preload("res://data/characters/erin.tres")
+const FlowerItem: ItemData = preload("res://data/items/pressed_flower.tres")
 # DialogBox is provided by Level3D (make_dialog/open_dialog/dialog_input).
 
+# --- thematic surfaces (church floor / stone walls / dark-wood corner trim) ---
+const FLOOR_CHURCH := "res://assets/art/tiles/synty_floor_church.png"
+const FLOOR_CARPET := "res://assets/art/tiles/synty_floor_carpet.png"
+const FLOOR_CONCRETE := "res://assets/art/tiles/synty_floor_concrete.png"
+const WALL_STONE := "res://assets/art/tiles/synty_wall_stone.png"
+const WALL_WOOD := "res://assets/art/tiles/synty_wall_wood.png"
+const NAVE_FT := Color(0.86, 0.80, 0.70)
+const NAVE_WT := Color(0.80, 0.78, 0.74)
+const VESTRY_FT := Color(0.74, 0.56, 0.50)
+const VESTRY_WT := Color(0.72, 0.58, 0.42)
+const CRYPT_FT := Color(0.62, 0.62, 0.64)
+const CRYPT_WT := Color(0.60, 0.60, 0.60)
+const CORNER_COL := Color(0.20, 0.15, 0.10)   # solid dark-wood trim
 const STONE := Color(0.52, 0.50, 0.47)
-const FLOOR_COL := Color(0.40, 0.35, 0.30)
+
 const HALF_W := 6.5
 const HALF_D := 8.5
 const WALL_H := 3.4
 const ALDRIC_POS := Vector3(0.0, 0.0, -HALF_D + 1.8)
-const LEVER_POS := Vector3(HALF_W - 0.6, 0.0, -HALF_D + 1.6)
 const REACH := 2.0
+
+# Candle-sequence puzzle (Quinn) — light 1→2→3 to open the vestry.
+const CANDLES := [Vector3(5.2, 0, -2.0), Vector3(5.2, 0, -3.5), Vector3(5.2, 0, -5.0)]
+const VESTRY_DOOR := Vector3(8.5, 0, 0.0)
+const REGISTER_POS := Vector3(12.0, 0, -2.0)
+# Crypt false-plaque puzzle (Erin) — find the forged plaque among three.
+const PLAQUES := [Vector3(-5.2, 0, -2.0), Vector3(-5.2, 0, -3.5), Vector3(-5.2, 0, -5.0)]
+const FALSE_PLAQUE := 1   # index into PLAQUES — the forged one
+const CRYPT_DOOR := Vector3(-8.5, 0, 0.0)
+const CRYPT_LORE := Vector3(-12.0, 0, -2.0)
 
 # id -> {pos, mesh, who, flag, name, ok, hint}. Wrong-character "hint" lines
 # give a breadcrumb toward a different NPC rather than a flat refusal.
@@ -72,7 +99,12 @@ const CL_QUIPS := ["Hands. Pockets. OUT. Am I clear?", "I can see you from here.
 
 var _secret_revealed := false
 var _cleared := false
-var _secret_wall: Node3D = null
+var _vestry_wall: Node3D = null
+var _crypt_wall: Node3D = null
+var _candles_lit := false
+var _candle_seq: Array = []
+var _candle_flames: Array = []
+var _register_read := false
 var _hud_goal: Label = null
 var _hud_hint: Label = null
 var _hud_banner: Label = null
@@ -87,12 +119,14 @@ var _cl_bubble_t: float = 0.0
 
 func _build_level() -> void:
 	location_id = LOCATION_ID
+	multi_room = true
 	build_env(Color(0.06, 0.06, 0.09), Color(0.5, 0.46, 0.42), 0.55, 0.8)
 	point_light(Vector3(0, 3.0, -6.0), Color(1.0, 0.85, 0.55), 2.5, 9.0)        # altar
 	point_light(Vector3(-HALF_W + 0.5, 2.6, -2.0), Color(0.5, 0.6, 1.0), 1.6, 6.0)  # stained glass
 	point_light(Vector3(HALF_W - 0.5, 2.6, 1.0), Color(1.0, 0.5, 0.5), 1.6, 6.0)
-	floor_box(HALF_W * 2.0 + 1.0, HALF_D * 2.0 + 1.0, FLOOR_COL)
-	_walls()
+	point_light(VESTRY_DOOR + Vector3(3.5, 2.6, 0), Color(1.0, 0.8, 0.5), 1.6, 7.0)  # vestry
+	point_light(CRYPT_DOOR + Vector3(-3.5, 2.6, 0), Color(0.6, 0.7, 0.9), 1.3, 7.0)  # crypt
+	_rooms()
 	_furnish()
 	make_dialog()
 	_build_hud()
@@ -103,23 +137,43 @@ func _build_level() -> void:
 		var r: Dictionary = RED_HERRINGS[id]
 		_npc_mesh(r["mesh"], r["pos"], deg_to_rad(180))
 	_create_choir_leader()
+	add_exit_portal(Vector3(0, 0, HALF_D + 1.6), Vector3(3, 3, 1.4))
 	var p := spawn_duo([QUINN, ERIN], Vector3(0.0, 0.1, HALF_D - 2.0))
 	p.special_used.connect(_on_special)
+	_restore()
 
-func _walls() -> void:
-	wall(Vector3(0, WALL_H * 0.5, -HALF_D), Vector3(HALF_W * 2.0, WALL_H, 0.4), STONE)
-	wall(Vector3(-HALF_W, WALL_H * 0.5, 0), Vector3(0.4, WALL_H, HALF_D * 2.0), STONE)
-	wall(Vector3(HALF_W, WALL_H * 0.5, 0), Vector3(0.4, WALL_H, HALF_D * 2.0), STONE)
-	wall(Vector3(-HALF_W + 2.0, WALL_H * 0.5, HALF_D), Vector3(4.0, WALL_H, 0.4), STONE)
-	wall(Vector3(HALF_W - 2.0, WALL_H * 0.5, HALF_D), Vector3(4.0, WALL_H, 0.4), STONE)
-	_secret_wall = StaticBody3D.new()
-	(_secret_wall as StaticBody3D).collision_layer = Combat3D.L_WORLD
+func _rooms() -> void:
+	# Nave — church floor, stone walls. Openings: south (entrance), east (vestry),
+	# west (crypt). Built as a room with its own floor (no global slab).
+	set_theme(FLOOR_CHURCH, WALL_STONE)
+	room(Vector3.ZERO, HALF_W * 2.0, HALF_D * 2.0, NAVE_FT, NAVE_WT, WALL_H, ["s", "e", "w"], 3.0, true)
+	# entrance vestibule (holds the exit portal)
+	set_theme(FLOOR_CHURCH, WALL_STONE)
+	corridor(Vector3(0, 0, HALF_D), "s", 2.0, NAVE_FT, NAVE_WT, 3.0, WALL_H, true, CORNER_COL)
+	# East corridor → vestry (warm wood sacristy). Threshold sealed by the candle gate.
+	corridor(Vector3(HALF_W, 0, 0), "e", 2.0, NAVE_FT, NAVE_WT, 3.0, WALL_H, true, CORNER_COL)
+	set_theme(FLOOR_CARPET, WALL_WOOD)
+	room(Vector3(12.0, 0, 0), 7, 8, VESTRY_FT, VESTRY_WT, 3.0, ["w"], 3.0, true)
+	_vestry_wall = _gate_panel(VESTRY_DOOR, 3.0, "x")
+	# West corridor → crypt (cold concrete + stone). Threshold sealed by the false-plaque gate.
+	set_theme(FLOOR_CHURCH, WALL_STONE)
+	corridor(Vector3(-HALF_W, 0, 0), "w", 2.0, NAVE_FT, NAVE_WT, 3.0, WALL_H, true, CORNER_COL)
+	set_theme(FLOOR_CONCRETE, WALL_STONE)
+	room(Vector3(-12.0, 0, 0), 7, 7, CRYPT_FT, CRYPT_WT, 2.8, ["e"], 3.0, true)
+	_crypt_wall = _gate_panel(CRYPT_DOOR, 2.8, "x")
+
+# A removable doorway panel (matches the wall texture) filling a `gap`-wide opening.
+# `axis` "x" = the doorway runs along Z (panel thin in X). Drops out of sight when opened.
+func _gate_panel(pos: Vector3, h: float, axis: String) -> Node3D:
+	var size := Vector3(0.4, h, 3.0) if axis == "x" else Vector3(3.0, h, 0.4)
+	var sb := StaticBody3D.new()
+	sb.collision_layer = Combat3D.L_WORLD
 	var cs := CollisionShape3D.new(); var bs := BoxShape3D.new()
-	bs.size = Vector3(2.4, WALL_H, 0.4); cs.shape = bs
-	_secret_wall.add_child(cs)
-	_secret_wall.add_child(box_mesh(Vector3(2.4, WALL_H, 0.4), STONE, Vector3.ZERO))
-	_secret_wall.position = Vector3(HALF_W - 1.2, WALL_H * 0.5, -HALF_D + 0.2)
-	add_child(_secret_wall)
+	bs.size = size; cs.shape = bs; cs.position = Vector3(0, h * 0.5, 0)
+	sb.add_child(cs); sb.add_child(box_mesh(size, NAVE_WT, Vector3(0, h * 0.5, 0), 0.0, wall_tex))
+	sb.position = pos
+	add_child(sb)
+	return sb
 
 func _furnish() -> void:
 	prop("res://assets/models/props/altar.glb", Vector3(0, 0, -HALF_D + 1.0))
@@ -127,10 +181,39 @@ func _furnish() -> void:
 	prop("res://assets/models/props/candles.glb", Vector3(1.5, 0, -HALF_D + 1.0))
 	for row: int in range(4):
 		var z: float = -1.0 + float(row) * 2.2
-		prop("res://assets/models/props/pew.glb", Vector3(-2.4, 0, z))
-		prop("res://assets/models/props/pew.glb", Vector3(2.4, 0, z))
-	# lever behind the altar
-	add_child(box_mesh(Vector3(0.1, 0.4, 0.1), Color(0.8, 0.2, 0.2), LEVER_POS + Vector3(0, 1.3, 0)))
+		prop("res://assets/models/props/pew.glb", Vector3(-2.4, 0, z), deg_to_rad(180))  # face the altar (north)
+		prop("res://assets/models/props/pew.glb", Vector3(2.4, 0, z), deg_to_rad(180))
+	# Candle sconces (Quinn's sequence puzzle) — numbered posts with a hideable flame.
+	for i: int in range(CANDLES.size()):
+		add_child(box_mesh(Vector3(0.18, 1.0, 0.18), Color(0.85, 0.82, 0.7), CANDLES[i] + Vector3(0, 0.5, 0)))
+		var flame := box_mesh(Vector3(0.14, 0.24, 0.14), Color(1.0, 0.7, 0.2), CANDLES[i] + Vector3(0, 1.12, 0), 3.0)
+		flame.visible = false
+		add_child(flame)
+		_candle_flames.append(flame)
+		_floating_label(str(i + 1), CANDLES[i] + Vector3(0, 1.6, 0), Color(1.0, 0.85, 0.4))
+	# Memorial register on its stand in the vestry (the Doug objective).
+	add_child(box_mesh(Vector3(0.9, 1.0, 0.6), Color(0.4, 0.28, 0.18), REGISTER_POS + Vector3(0, 0.5, 0)))
+	add_child(box_mesh(Vector3(0.7, 0.08, 0.45), Color(0.9, 0.86, 0.78), REGISTER_POS + Vector3(0, 1.04, 0)))
+	# Crypt plaques (Erin's observation puzzle) + a lore plaque deeper in.
+	for i: int in range(PLAQUES.size()):
+		var col: Color = Color(0.7, 0.72, 0.6) if i == FALSE_PLAQUE else Color(0.5, 0.5, 0.52)
+		add_child(box_mesh(Vector3(0.12, 0.9, 0.6), col, PLAQUES[i] + Vector3(0, 1.1, 0)))
+	add_child(box_mesh(Vector3(0.15, 1.0, 0.7), Color(0.45, 0.42, 0.4), CRYPT_LORE + Vector3(0, 1.1, 0)))
+
+func _floating_label(txt: String, pos: Vector3, col: Color) -> void:
+	var l := Label3D.new()
+	l.text = txt
+	l.font = UITheme.font()
+	l.font_size = 40
+	l.outline_size = 12
+	l.modulate = col
+	l.outline_modulate = Color(0, 0, 0, 0.95)
+	l.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	l.no_depth_test = true
+	l.fixed_size = true
+	l.pixel_size = 0.001
+	l.position = pos
+	add_child(l)
 
 func _npc_mesh(key: String, pos: Vector3, yaw: float) -> Node3D:
 	var ps: PackedScene = load("res://assets/models/characters/%s.glb" % key)
@@ -219,8 +302,21 @@ func _on_special(char_name: String) -> void:
 	if dialog.is_open():
 		return
 	var pp: Vector3 = player.global_position
-	if char_name == "Quinn" and not _secret_revealed and _near(pp, LEVER_POS):
-		_reveal_secret(); return
+	# Candle sequence (Quinn) — opens the vestry
+	if not _candles_lit:
+		for i: int in range(CANDLES.size()):
+			if _near(pp, CANDLES[i]):
+				_try_candle(char_name, i); return
+	# Crypt false-plaque (Erin) — opens the crypt
+	if not _secret_revealed:
+		for i: int in range(PLAQUES.size()):
+			if _near(pp, PLAQUES[i]):
+				_try_plaque(char_name, i); return
+	# Memorial register (Doug objective)
+	if _near(pp, REGISTER_POS):
+		_read_register(char_name); return
+	if _near(pp, CRYPT_LORE):
+		_read_crypt_lore(char_name); return
 	if _near(pp, ALDRIC_POS):
 		_talk_aldric(char_name); return
 	for id: String in CONGREGATION:
@@ -234,6 +330,74 @@ func _on_special(char_name: String) -> void:
 
 func _near(a: Vector3, b: Vector3) -> bool:
 	return Vector2(a.x - b.x, a.z - b.z).length() < REACH
+
+func _try_candle(char_name: String, i: int) -> void:
+	if char_name != "Quinn":
+		_hud_hint.text = "These altar candles want a careful, reverent hand — Quinn's touch."
+		return
+	if _candle_flames[i].visible:
+		return
+	if i == _candle_seq.size():           # correct next in the 1→2→3 order
+		_candle_seq.append(i)
+		_candle_flames[i].visible = true
+		Audio.play("special")
+		if _candle_seq.size() == CANDLES.size():
+			_open_vestry()
+		else:
+			_hud_hint.text = "Candle %d lit. Light them in order." % (i + 1)
+	else:                                  # wrong order — gutter them all out
+		_candle_seq.clear()
+		for f in _candle_flames:
+			f.visible = false
+		_hud_hint.text = "Out of order — the candles gutter out. Begin with the first."
+
+func _open_vestry() -> void:
+	GameManager.set_level_flag(LOCATION_ID, "candles_lit", true)
+	create_tween().tween_property(_vestry_wall, "position:y", -3.6, 0.6)
+	(_vestry_wall as StaticBody3D).collision_layer = 0
+	_hud_hint.text = "The candles hold. The vestry door unlatches to the east."
+	Audio.play("puzzle_complete")
+
+func _try_plaque(char_name: String, i: int) -> void:
+	if char_name != "Erin":
+		_hud_hint.text = "Something's off about these memorial plaques — Erin would spot it."
+		return
+	if i == FALSE_PLAQUE:
+		_reveal_crypt()
+	else:
+		open_dialog("Memorial Plaque", Color(0.5, 0.5, 0.55),
+			{"start": {"lines": ["Erin reads the worn dates and names. \"Genuine. Decades of grime in the lettering.\""]}}, char_name)
+
+func _reveal_crypt() -> void:
+	_secret_revealed = true
+	GameManager.set_level_flag(LOCATION_ID, "secret_revealed", true)
+	create_tween().tween_property(_crypt_wall, "position:y", -3.4, 0.6)
+	(_crypt_wall as StaticBody3D).collision_layer = 0
+	_hud_hint.text = "Erin: \"This plaque's fresh — the screws aren't even rusted.\" It swings aside; cold air, stairs down to the crypt."
+	Audio.play("special")
+
+func _read_register(char_name: String) -> void:
+	if _register_read:
+		open_dialog("Memorial Register", Color(0.5, 0.5, 0.55),
+			{"start": {"lines": ["The register lies open to the marked page — Doug's false name, and the pressed flower."]}}, char_name)
+		return
+	_register_read = true
+	GameManager.set_level_flag(LOCATION_ID, "register_read", true)
+	GameManager.grant_item(player.active_name(), FlowerItem.id)
+	open_dialog("Memorial Register", Color(0.55, 0.5, 0.42),
+		{"start": {"lines": [
+			"The vestry register is open on its stand. Most signatures are decades old.",
+			"One is fresh: a looping hand signing \"D. Hunkle\" — then crossed out, re-signed under a name that isn't his.",
+			"A flower is pressed flat against the page, marking it. You take it as a clue.",
+			"Picked up: Pressed Flower."]}}, char_name)
+	_hud_hint.text = "Doug was here — and didn't want to be found by name."
+	Audio.play("special")
+
+func _read_crypt_lore(char_name: String) -> void:
+	open_dialog("Crypt Dedication", Color(0.5, 0.5, 0.55),
+		{"start": {"lines": [
+			"A dedication slab, recently disturbed. Scratched into the dust beneath: an arrow, and a single word.",
+			"\"CLOCKTOWER.\" Doug's hand. He was pointing the way before he vanished."]}}, char_name)
 
 func _talk_congregant(id: String, char_name: String) -> void:
 	var d: Dictionary = CONGREGATION[id]
@@ -256,20 +420,29 @@ func _talk_aldric(char_name: String) -> void:
 			"choices": [
 				{"text": "Of course, Father. A kind word costs nothing.", "best_with": "Quinn", "next": "good", "next_alt": "good"},
 				{"text": "What aren't you telling us about him?", "best_with": "Erin", "next": "cool", "next_alt": "cool"}]},
-		"good": {"lines": ["\"A polite sort -- refreshing. They're scattered about the nave; I hope they'll open up.\""],
+		"good": {"lines": ["\"A polite sort -- refreshing. They're scattered about the nave; I hope they'll open up.\"",
+			"\"If you'd light the vestry candles in the old order, you're welcome to the records within.\""],
 			"effects": {"set_flag": "father_aldric_impression", "flag_value": "good"}},
-		"cool": {"lines": ["Aldric stiffens. \"...He asked after old parish records. My congregation saw more than I did. Ask them.\""],
+		"cool": {"lines": ["Aldric stiffens. \"...He asked after old parish records. My congregation saw more than I did. Ask them.\"",
+			"\"And mind the memorial plaques in the west aisle. One of them is... newer than it should be.\""],
 			"effects": {"set_flag": "father_aldric_impression", "flag_value": "cool"}},
 	}
 	GameManager.set_level_flag(LOCATION_ID, "manager_met", true)
 	open_dialog("Father Aldric", Color(0.55, 0.5, 0.42), tree, char_name)
 
-func _reveal_secret() -> void:
-	_secret_revealed = true
-	GameManager.set_level_flag(LOCATION_ID, "secret_revealed", true)
-	create_tween().tween_property(_secret_wall, "position:y", -WALL_H, 0.6)
-	_hud_hint.text = "Behind the altar, the sealed loft grinds open."
-	Audio.play("special")
+# --- restore (mid-level persistence) -----------------------------------------
+func _restore() -> void:
+	if GameManager.get_level_flag(LOCATION_ID, "candles_lit", false):
+		_candles_lit = true
+		for f in _candle_flames:
+			f.visible = true
+		_vestry_wall.position.y = -3.6
+		(_vestry_wall as StaticBody3D).collision_layer = 0
+	if GameManager.get_level_flag(LOCATION_ID, "secret_revealed", false):
+		_secret_revealed = true
+		_crypt_wall.position.y = -3.4
+		(_crypt_wall as StaticBody3D).collision_layer = 0
+	_register_read = GameManager.get_level_flag(LOCATION_ID, "register_read", false)
 
 # --- HUD + win ---------------------------------------------------------------
 func _build_hud() -> void:

@@ -31,6 +31,14 @@ var _floor_center: Vector3 = Vector3.ZERO
 var _returning: bool = false       # guard so the walk-out exit fires once
 var multi_room: bool = false       # multi-phase levels exit via a portal, not floor-edge
 
+# Thematic surfaces: a level may set these in _build_level (before building geometry)
+# so floors and walls get tiling textures (tinted by the col passed to each helper)
+# instead of flat colour — see set_theme(). Walls + floors use DIFFERENT textures so
+# they always read as distinct surfaces. Props (plain box_mesh) stay flat.
+var floor_tex: Texture2D = null
+var wall_tex: Texture2D = null
+var _mat_cache: Dictionary = {}    # keyed by texture path + tint, so boxes share materials
+
 func _ready() -> void:
 	_build_level()
 	# Levels get the shared pause/menu stack automatically; the overworld builds
@@ -141,7 +149,7 @@ func floor_box(w: float, d: float, col: Color, center := Vector3.ZERO) -> void:
 	cs.shape = bs
 	cs.position = Vector3(0, -0.5, 0)
 	sb.add_child(cs)
-	sb.add_child(box_mesh(Vector3(w, 1.0, d), col, Vector3(0, -0.5, 0)))
+	sb.add_child(box_mesh(Vector3(w, 1.0, d), col, Vector3(0, -0.5, 0), 0.0, floor_tex))
 	sb.position = center
 	add_child(sb)
 	_floor_hw = w * 0.5
@@ -157,25 +165,52 @@ func wall(center: Vector3, size: Vector3, col: Color) -> void:
 	bs.size = size
 	cs.shape = bs
 	sb.add_child(cs)
-	sb.add_child(box_mesh(size, col, Vector3.ZERO))
+	sb.add_child(box_mesh(size, col, Vector3.ZERO, 0.0, wall_tex))
 	sb.position = center
 	add_child(sb)
 
-func box_mesh(size: Vector3, col: Color, ofs: Vector3, emissive: float = 0.0) -> MeshInstance3D:
+# A box. With `tex` set, the surface gets a world-space TRIPLANAR tiling texture
+# (tinted by `col`) — triplanar so floors take the top projection and walls the side
+# projection automatically, at a consistent real-world scale, and patterns line up
+# across adjacent boxes (room walls ↔ corridor walls) with no UV seams. Default
+# (tex = null) is the original flat-colour material used by props.
+const TILES_PER_M := 0.5            # one texture tile every 2 m
+func box_mesh(size: Vector3, col: Color, ofs: Vector3, emissive: float = 0.0, tex: Texture2D = null) -> MeshInstance3D:
 	var mi := MeshInstance3D.new()
 	var bm := BoxMesh.new()
 	bm.size = size
+	bm.material = _surface_mat(col, emissive, tex)
+	mi.mesh = bm
+	mi.position = ofs
+	return mi
+
+# Builds (and caches) the StandardMaterial3D for a surface. Cached by colour + texture
+# so the many floor/wall boxes share one material each.
+func _surface_mat(col: Color, emissive: float, tex: Texture2D) -> StandardMaterial3D:
+	var key := "%s|%s|%.2f" % [col, (tex.resource_path if tex != null else "-"), emissive]
+	if _mat_cache.has(key):
+		return _mat_cache[key]
 	var mat := StandardMaterial3D.new()
 	mat.albedo_color = col
 	mat.roughness = 1.0
+	if tex != null:
+		mat.albedo_texture = tex
+		mat.uv1_triplanar = true
+		mat.uv1_world_triplanar = true
+		mat.uv1_scale = Vector3(TILES_PER_M, TILES_PER_M, TILES_PER_M)
 	if emissive > 0.0:
 		mat.emission_enabled = true
 		mat.emission = col
 		mat.emission_energy_multiplier = emissive
-	bm.material = mat
-	mi.mesh = bm
-	mi.position = ofs
-	return mi
+	_mat_cache[key] = mat
+	return mat
+
+# Assign this level's thematic floor + wall textures (call early in _build_level).
+# Pass a path or null for either; floors/walls then tile that texture, tinted by the
+# colour each geometry helper is given. Loads once.
+func set_theme(floor_path: String, wall_path: String) -> void:
+	floor_tex = (load(floor_path) as Texture2D) if floor_path != "" else null
+	wall_tex = (load(wall_path) as Texture2D) if wall_path != "" else null
 
 func prop(path: String, pos: Vector3, yaw: float = 0.0, scale: float = 1.0) -> Node3D:
 	var ps: PackedScene = load(path)
@@ -420,7 +455,7 @@ func room(center: Vector3, w: float, d: float, floor_col: Color, wall_col: Color
 		sb.collision_layer = Combat3D.L_WORLD
 		var cs := CollisionShape3D.new(); var bs := BoxShape3D.new()
 		bs.size = Vector3(w, 1.0, d); cs.shape = bs; cs.position = Vector3(0, -0.5, 0)
-		sb.add_child(cs); sb.add_child(box_mesh(Vector3(w, 1.0, d), floor_col, Vector3(0, -0.5, 0)))
+		sb.add_child(cs); sb.add_child(box_mesh(Vector3(w, 1.0, d), floor_col, Vector3(0, -0.5, 0), 0.0, floor_tex))
 		sb.position = center; add_child(sb)
 	# walls (split each side around a centred gap if that side is an opening)
 	_room_wall_side(center, "n", w, d, h, wall_col, "n" in openings, gap)
@@ -462,36 +497,56 @@ func _dir_vec(dir: String) -> Vector3:
 # (the centre of the near mouth) toward `dir` ("n"=-Z,"s"=+Z,"e"=+X,"w"=-X). Lays
 # its own floor strip + two side walls along the run; both ends stay open so the
 # rooms it joins cap them (leave `with_floor=false` when a region_floor already
-# covers the span). A SHORT corridor (≈1–2 m) cleanly fills a door gap; a LONG one
-# (8–16 m) is a room-like space you can dress with combat (`spawn_enemy`), puzzles
-# (`add_station`), hiding spots (`add_hiding_spot`), or props — keep it combat-free
-# if it opens off a lobby. Returns the centre of the FAR mouth so the next room or
-# corridor segment can dock onto it.
+# covers the span). The four corners get SOLID-colour posts (`corner_col`, default a
+# darkened wall tint) that frame each doorway and cleanly cap the junction where the
+# corridor walls meet the room-wall segments — they're a touch larger than the walls
+# so the wall ends tuck inside them, avoiding the coplanar overlap that z-fights.
+# A SHORT corridor (≈1–2 m) cleanly fills a door gap; a LONG one (8–16 m) is a
+# room-like space you can dress with combat (`spawn_enemy`), puzzles (`add_station`),
+# hiding spots (`add_hiding_spot`), or props — keep it combat-free if it opens off a
+# lobby. Returns the centre of the FAR mouth so the next room/segment can dock on.
 func corridor(start: Vector3, dir: String, length: float, floor_col: Color,
 		wall_col: Color, width: float = 3.0, h: float = 3.2,
-		with_floor: bool = true) -> Vector3:
+		with_floor: bool = true, corner_col: Color = Color(0, 0, 0, 0)) -> Vector3:
 	var step := _dir_vec(dir)
 	var mid := start + step * (length * 0.5)
 	var horiz: bool = dir == "e" or dir == "w"
-	var fw: float = length if horiz else width
-	var fd: float = width if horiz else length
+	const T := 0.4                       # wall thickness (matches room walls)
+	# Walls sit flush at the doorway edges and run exactly the gap — no overlap with
+	# the room walls (overlap caused z-fighting); the corner posts close the seam.
+	var off: float = width * 0.5
+	var cross: float = width + T * 2.0   # floor reaches under both side walls
+	var fw: float = length if horiz else cross
+	var fd: float = cross if horiz else length
 	if with_floor:
 		var sb := StaticBody3D.new()
 		sb.collision_layer = Combat3D.L_WORLD
 		sb.collision_mask = 0
 		var cs := CollisionShape3D.new(); var bs := BoxShape3D.new()
 		bs.size = Vector3(fw, 1.0, fd); cs.shape = bs; cs.position = Vector3(0, -0.5, 0)
-		sb.add_child(cs); sb.add_child(box_mesh(Vector3(fw, 1.0, fd), floor_col, Vector3(0, -0.5, 0)))
+		sb.add_child(cs); sb.add_child(box_mesh(Vector3(fw, 1.0, fd), floor_col, Vector3(0, -0.5, 0), 0.0, floor_tex))
 		sb.position = mid; add_child(sb)
-	# two side walls flanking the run (the run-length sides; the ends stay open)
+	# Side walls flank the run but stop a half-thickness short of EACH end, so they
+	# only butt the adjoining room walls' outer faces (touching, opposite normals)
+	# instead of overlapping them — that overlap is what z-fought. The corner posts
+	# bridge the small remaining seam.
+	var run: float = maxf(length - T, 0.1)
 	if horiz:
-		var hz: float = width * 0.5
-		wall(mid + Vector3(0, h * 0.5, -hz), Vector3(length, h, 0.4), wall_col)
-		wall(mid + Vector3(0, h * 0.5, hz), Vector3(length, h, 0.4), wall_col)
+		wall(mid + Vector3(0, h * 0.5, -off), Vector3(run, h, T), wall_col)
+		wall(mid + Vector3(0, h * 0.5, off), Vector3(run, h, T), wall_col)
 	else:
-		var hx: float = width * 0.5
-		wall(mid + Vector3(-hx, h * 0.5, 0), Vector3(0.4, h, length), wall_col)
-		wall(mid + Vector3(hx, h * 0.5, 0), Vector3(0.4, h, length), wall_col)
+		wall(mid + Vector3(-off, h * 0.5, 0), Vector3(T, h, run), wall_col)
+		wall(mid + Vector3(off, h * 0.5, 0), Vector3(T, h, run), wall_col)
+	# Solid-colour corner posts at the four corners (both ends × both sides). They are
+	# TALLER than the walls (ph), so where a post sits over a wall there is no coplanar
+	# top face — the wall tops pass under the post cap, leaving nothing to z-fight.
+	var cc: Color = corner_col if corner_col.a > 0.0 else wall_col.darkened(0.3)
+	var perp := Vector3(0, 0, off) if horiz else Vector3(off, 0, 0)
+	var ph: float = h + 0.5
+	var post := Vector3(T + 0.3, ph, T + 0.3)
+	for end_c: Vector3 in [start, start + step * length]:
+		for s: float in [-1.0, 1.0]:
+			add_child(box_mesh(post, cc, end_c + perp * s + Vector3(0, ph * 0.5, 0)))
 	return start + step * length
 
 func add_room_portal(pos: Vector3, size: Vector3, dist: float, elev: float) -> void:
@@ -569,7 +624,7 @@ func region_floor(center: Vector3, w: float, d: float, col: Color) -> void:
 	sb.collision_layer = Combat3D.L_WORLD
 	var cs := CollisionShape3D.new(); var bs := BoxShape3D.new()
 	bs.size = Vector3(w, 1.0, d); cs.shape = bs; cs.position = Vector3(0, -0.5, 0)
-	sb.add_child(cs); sb.add_child(box_mesh(Vector3(w, 1.0, d), col, Vector3(0, -0.5, 0)))
+	sb.add_child(cs); sb.add_child(box_mesh(Vector3(w, 1.0, d), col, Vector3(0, -0.5, 0), 0.0, floor_tex))
 	sb.position = center; add_child(sb)
 
 # A short flight of steps (visual cue for a stairwell). Climbs +Z, rising `rise`.

@@ -135,8 +135,10 @@ so they must all be created as direct children of the level root — done centra
 | Security badge | Auto-fills one pip of Ethan's Underground Tunnels hatch hack |
 | Crowbar | Lets Evan force a stuck Harbor & Docks crate without summoning Calvin & Coolidge |
 | Library card | Lets Erin/Ethan bypass the librarian dialogue gate at the Library & Archive |
-| Pocket lantern | **Entry gate** for the Underground Tunnels — found in a Harbor & Docks loot crate; you must carry it to descend (the overworld blocks the door without it) |
-| Faded photograph | Lore pickup — short Uncle Doug clue dialogue, no mechanical gate |
+| Pocket lantern | **Entry gate** for the Underground Tunnels — now in a Harbor & Docks **manifest locker** (Evan forces it, or Quinn dials it after the crane lifts the manifest); you must carry it to descend (the overworld blocks the door without it) |
+| Boiler key | Found by Quinn turning the **Iron & Strings Gym** boiler valve; opens the optional Harbor & Docks supply storeroom (bonus loot) |
+| Archive key | Wound from the **Clocktower** weight-crank cabinet (Quinn sequence); opens the optional Library & Archive locked stack (→ VR override chip) |
+| Faded photograph | Lore pickup (Underground Tunnels) — short Uncle Doug clue dialogue, no mechanical gate |
 | Spare clockwork gear | Speeds up Quinn's Clocktower mechanism repair |
 | Guard whistle | Shared one-shot noise distraction (`GameManager.emit_noise`) usable by any character |
 | Backstage pass | Lets Quinn/Erin skip the Carnival's backstage-guard talk-down gate |
@@ -148,6 +150,28 @@ so they must all be created as direct children of the level root — done centra
 | Animal treat | Reduces an animal companion's summon cooldown for the rest of the level |
 | Bies charm | Adds +10% starting Bies Mode charge at the start of a level |
 | Fanny's Bottle | Quest item for Fanny — a keepsake Doug gave her "the day before he disappeared" |
+
+### Uncle Doug clue trail (one per level — `doug_*` `ItemData`)
+Each location yields a tangible Uncle-Doug clue via a small themed objective; the clues
+converge on the Grand Marquee Cinema (the endgame). Granted by the level's `_on_special`
+ladder, persisted with a per-level flag. (See `docs/level_elaboration_plan.md` §3.)
+| Item | Where / how |
+|------|-------------|
+| Faded photograph | Underground — Depth-2 storeroom loot |
+| `pressed_flower` | Old Parish Church — vestry memorial register (after Quinn's candle sequence) |
+| `doug_locker_tag` | Iron & Strings Gym — Evan forces Doug's locker (lobby) → "HARBOR" |
+| `doug_recording` | Recording Studio — Ben plays Doug's reel (cut-off message) |
+| `doug_pocketwatch` | Clocktower — Quinn winds the watch (workshop) → "the Marquee" |
+| `doug_crate_tag` | Harbor & Docks — crane lifts the manifest crate → routing to the picture house |
+| `doug_checkout_card` | Library & Archive — Ethan hacks the archive → "Grand Marquee — projection schematics" |
+| `doug_photo_strip` | Carnival — Quinn fixes the photo booth → Doug holding a Grand Marquee ticket |
+| `doug_flashlight` | Underground — opening the sealed vault → "Find me at the pictures. — D." |
+| `doug_carabiner` | Zip Line Park — Ben times the snagged clue bag → map ringed on the Marquee |
+| `doug_vr_log` | VR Escape Room — Quinn+Ethan co-solve the firewall → Doug's avatar in a rendered cinema |
+| `doug_flyer` | The Drop — Ethan re-aims the signal dish → "THE GRAND MARQUEE… come find me" |
+
+The trail is **assembled at the Grand Marquee lobby clue-board** (level 13) — a collection
+check that tallies all twelve `doug_*`/lore clues for the final reveal beat.
 
 ### Junk / lore collectibles (look load-bearing, do nothing — comedic red herrings)
 | Item | Why it seems useful | What it actually does |
@@ -264,6 +288,16 @@ All 13 locations are fully implemented as native-3D scenes (`scenes/3d/*3D.tscn`
 progress persistence. The per-location design (puzzles/NPCs/flags/duo) is captured in the
 per-location subsections below.
 
+> **Elaboration pass (COMPLETE — all 13 levels; see `docs/level_elaboration_plan.md`):**
+> every level is multi-room with `corridor()`s, per-room thematic tiling surfaces +
+> solid-colour corner trim (VR keeps its emissive neon-grid look), extra theme-keyed
+> puzzles, and a per-level Uncle-Doug clue (the `doug_*` trail, paid off at the Grand
+> Marquee clue-board). Each level keeps its original win condition; new puzzles are mostly
+> optional/bonus, and each new puzzle is assigned to an ability **in that level's duo**
+> (so some plan-doc assignments were reassigned — e.g. Harbor's "Ethan/Erin" steps went to
+> Quinn/Evan). Cross-level keys are *mostly optional shortcuts + a few required gates*
+> (`pocket_lantern`, the 5 tickets, `rusty_key`).
+
 **Puzzle-gate variety:** Most locations use a **proximity gate** (in-range + press Special = instant success).
 Two diversify this:
 - **Zip Line Park** — **timing gate**: a pulsing HUD bar (`_update_pulse_hud`); press Special (Ben) while it reads OPEN (`abs(sin(_pulse)) > PULSE_OPEN`).
@@ -287,6 +321,7 @@ Loft. Still-single-room levels inherit this as they're converted to multi-room.)
 - **Floor 1:** Lobby (Bellows + organ console; combat-free) · Storeroom (grunts + hidden Erin + the warped plank) · **Workshop** (the table saw + tuning bench) · stair alcove. **Floor 2:** Pipe Loft (out-of-tune pipe + gear blank; runners) + secret spare-gear nook.
 - **Key puzzle(s):** A **gather → mill → assemble** crafting chain (uses the reusable `WorkStation3D` kit). Quinn collects three raw materials across both floors — `rough_plank` (Storeroom), `rough_organ_pipe` + `gear_blank` (Pipe Loft) — and processes them at the Workshop tools: **table saw** (`rough_plank`→`windchest_board`, `rough_organ_pipe`→`cut_organ_pipe`), **tuning bench** (`cut_organ_pipe`→`brass_organ_pipe`, `gear_blank`→`trued_gear`). The pipe needs **both** tools (saw *then* tune); each raw item's description hints which tool. Erin then fast-talks the `tuning_key` out of Bellows, which **unlocks the organ console** (ASSEMBLY) so Quinn can fit the three finished parts (`windchest_board` + `brass_organ_pipe` + `trued_gear`).
 - **Enemy types:** Grunts (Storeroom) + Runners (Pipe Loft)
+- **3D build:** reference for the multi-room kit — rooms joined by `corridor()`s with solid-colour corner posts; **per-room thematic surfaces** (marble lobby / wood workshop / concrete service corridors / tile-stone loft) via `set_theme`; Quinn also flips a breaker sequence to power the workshop tools. **Secret-nook fix:** the loft now has a real `"n"` doorway the removable panel fills (it used to "open" behind a second solid wall) — the spare-gear nook is reachable.
 - **Level progress flags:** `enemies_cleared` / `organ_repaired` / `secret_revealed` / `manager_met` / `tuning_key_given` / `erin_recruited` / `plank_taken` / `pipe_taken` / `gear_taken` / `organ_part_<id>` / `gear_bonus_open`
 - **NPCs:** Mr. Bellows (dialog-choice, at his desk in the Lobby) — his opening line sends Quinn after Erin ("punks chased her into the back storeroom"); the tuning-key fast-talk choice only appears after Erin is recruited.
 - **Notes:** **Erin recruit beat** — Quinn starts solo; clearing the Storeroom grunts makes Erin step out from behind the crates and *join the party* mid-level (`Duo3D.add_member` — Tab swap "wakes up" once there are two bodies). She explains she was tracking a lead on Uncle Doug. Secret lever in the loft reveals the bonus `spare_clockwork_gear`. Win = enemies cleared (Storeroom + Loft) + organ repaired.
@@ -298,7 +333,8 @@ Loft. Still-single-room levels inherit this as they're converted to multi-room.)
 - **Unlocks:** Evan
 - **Key puzzle(s):** Quinn's respectful demeanor earns the congregation's trust; Erin's skepticism lets her see through deception — neither can solve it alone
 - **Enemy types:** None (dialogue-heavy)
-- **Level progress flags:** `quinn_done` / `erin_done` / `secret_revealed` / `father_aldric_impression`
+- **3D build:** multi-room — NAVE (lobby: Aldric + 4 congregants + choir leader + exit) → corridor → **VESTRY** (Quinn lights the candle sconces 1→2→3 → opens it; holds the memorial register = Doug objective) and → **CRYPT** (Erin spots the forged plaque among three → opens it). Church/marble + stone surfaces, dark-wood trim. Doug clue: `pressed_flower` from the register.
+- **Level progress flags:** `quinn_done` / `erin_done` / `secret_revealed` / `father_aldric_impression` / `manager_met` / `candles_lit` / `register_read`
 - **NPCs:** Father Aldric (dialog-choice NPC at the altar; `father_aldric_impression` → `"good"` / `"cool"`)
 
 ---
@@ -307,8 +343,10 @@ Loft. Still-single-room levels inherit this as they're converted to multi-room.)
 - **Unlock condition:** Complete The Old Parish Church
 - **Unlocks:** Ben
 - **Key puzzle(s):** Evan's strength moves the barbell sealing Ben's cage alcove
-- **Enemy types:** Grunts + Brutes
-- **Level progress flags:** `enemies_cleared` / `barbell_moved`
+- **3D build:** multi-room — combat-free LOBBY (clerk Marv + exit + Doug's locker) → WEIGHT FLOOR (combat + barbell/Ben) → BOILER ROOM (east). Evan jams the **pressure plate** to hold the boiler gate open; Quinn turns the **boiler valve** → `boiler_key`; Evan forces **Doug's locker** → `doug_locker_tag`. Concrete/steel surfaces.
+- **Enemy types:** Grunts + Brute (weight floor only)
+- **Level progress flags:** `enemies_cleared` / `barbell_moved` / `boiler_gate_open` / `boiler_key_taken` / `locker_opened` / `marv_met`
+- **NPCs:** Marv (front-desk clerk, lobby)
 
 ---
 
@@ -316,42 +354,50 @@ Loft. Still-single-room levels inherit this as they're converted to multi-room.)
 - **Unlock condition:** Complete Iron & Strings Gym
 - **Unlocks:** Ethan
 - **Key puzzle(s):** Ben tunes the soundboard console, sliding open the glass BoothDoor and revealing Ethan
-- **Enemy types:** Grunts + Runners
-- **Level progress flags:** `enemies_cleared` / `console_tuned`
+- **3D build:** multi-room — combat-free LOBBY (producer Sasha + exit) → LIVE ROOM (combat + Doug's reel + feedback panel) → CONTROL ROOM (booth + console + patch bay). Quinn **repairs the patch bay** to power the dead console (gate before Ben tunes); Ben **plays Doug's reel** → `doug_recording`; Ben **silences the feedback** → `backstage_pass` (optional). Freeing Ethan also grants `sheet_music_page`. Carpet/concrete surfaces.
+- **Enemy types:** Grunts + Runners (live room only)
+- **Level progress flags:** `enemies_cleared` / `console_tuned` / `patch_repaired` / `reel_played` / `feedback_silenced` / `sasha_met`
+- **NPCs:** Sasha (producer, lobby)
 
 ---
 
 ### 5. The Clocktower — `Clocktower.tscn`
 - **Unlock condition:** All five characters unlocked
-- **Key puzzle(s):** Quinn repairs the gear floor escapement; Ben plays the correct belfry bell sequence (tuning fork item helps); clockwork-guardian Boss guards the stairs
+- **Key puzzle(s):** Quinn repairs the gear floor escapement (unbars the belfry stair); Ben plays the correct belfry bell sequence; clockwork-guardian Boss guards the belfry
+- **3D build:** 3 floors. New: Ben **times the swinging pendulum** in the antechamber to still it + lift a gate to the belfry (timing gate, live HUD); Quinn winds the **weight cranks 1→2→3** → optional `archive_key`; Quinn winds **Doug's pocket-watch** → `doug_pocketwatch`. Bells now also grant `tuning_fork`. Tile/stone surfaces, brass accents.
 - **Enemy types:** Grunts + Boss (clockwork guardian)
-- **Level progress flags:** `enemies_cleared` / `gear_repaired` / `bells_played`
-- **NPCs:** Hieronymus (stationary on landing floor)
+- **Level progress flags:** `enemies_cleared` / `gear_repaired` / `bells_played` / `gear_loot_open` / `pendulum_stilled` / `archive_open` / `watch_taken`
+- **NPCs:** Hieronymus (stationary in the F1 lobby)
 
 ---
 
 ### 6. The Harbor & Docks — `HarborDocks.tscn`
 - **Unlock condition:** All five characters unlocked (opens alongside Clocktower)
-- **Key puzzle(s):** Evan (or crowbar item) moves the cargo container blocking the crane platform; Calvin & Coolidge combat assist; Viktor's manifest confirms Doug's name on the shipment
-- **Enemy types:** Grunts (dock workers) + Runners (smugglers)
-- **Level progress flags:** `enemies_cleared` / `container_moved`
-- **NPCs:** Viktor (harbourmaster, stationary near pier entrance)
+- **Key puzzle(s):** Evan (or crowbar) moves the cargo container off the crane platform; Quinn powers the dock; the crane lifts Doug's manifest crate
+- **3D build:** multi-room — combat-free OFFICE (Viktor + exit) → DOCK YARD (combat + crane chain) → optional STOREROOM (east, `boiler_key`). Chain: Evan **container** → Quinn **dock-power** → run the **crane** (needs `crane_crank_handle` from the yard) → lifts the manifest crate (`doug_crate_tag`). The **`pocket_lantern`** is now in the manifest locker (Evan force / Quinn dial). Concrete/dirt surfaces, rust trim.
+- **Enemy types:** Grunts + Runners (yard only)
+- **Level progress flags:** `enemies_cleared` / `container_moved` / `power_on` / `crane_run` / `lantern_taken` / `store_open` / `store_loot` / `viktor_met`
+- **NPCs:** Viktor (harbourmaster, in the office lobby)
 
 ---
 
 ### 7. The Public Library & Archive — `LibraryArchive.tscn`
 - **Unlock condition:** TBD
-- **Key puzzle(s):** Erin talks her way past the librarian (or library card item bypasses the desk); Ethan hacks the restricted archive terminal
-- **Enemy types:** Grunts + Sentry (ranged)
-- **Level progress flags:** `enemies_cleared` / `librarian_talked` / `archive_hacked`
+- **Key puzzle(s):** Erin talks past Ms. Priswick (or library card) to drop the checkpoint gate; Ethan hacks the restricted archive terminal
+- **3D build:** multi-room — combat-free READING ROOM (Priswick checkpoint + exit) → checkpoint gate → STACKS (combat + hiding spots). Archive hack reveals Doug's file → `doug_checkout_card`; the **locked stack** opens via the Clocktower `archive_key` OR Ethan's **catalog cipher** → `vr_override_chip`. Carpet/wood surfaces, deep-green trim.
+- **Enemy types:** Grunts + Sentry (ranged) — stacks only
+- **Level progress flags:** `enemies_cleared` / `librarian_talked` / `archive_hacked` / `catalog_done` / `stack_open` / `priswick_impression`
+- **NPCs:** Ms. Priswick (checkpoint desk, reading room)
 
 ---
 
 ### 8. The Carnival & Fairground — `Carnival.tscn`
 - **Unlock condition:** TBD
-- **Key puzzle(s):** Quinn repairs the broken ride; Erin talks down the backstage gate (or backstage pass item skips the guard conversation)
-- **Enemy types:** Grunts ×2 + Brute
-- **Level progress flags:** `enemies_cleared` / `ride_repaired` / `backstage_talked`
+- **Key puzzle(s):** Quinn repairs the carousel; Erin talks down Marco at the backstage gate (or backstage pass)
+- **3D build:** multi-room — combat-free ENTRANCE PLAZA (barker Pearl + exit) → MIDWAY (combat + carousel + photo booth) → BACKSTAGE (Doug poster, behind Marco's gate) + a side FUNHOUSE. Quinn **fixes the photo booth** → `doug_photo_strip`; the **funhouse lever-sequence 1→2→3** → `library_card` (optional). Dirt/bright-wood surfaces, candy-red trim.
+- **Enemy types:** Grunts ×2 + Brute (midway only)
+- **Level progress flags:** `enemies_cleared` / `ride_repaired` / `backstage_talked` / `photo_taken` / `fun_open` / `marco_impression` / `pearl_met`
+- **NPCs:** Pearl (plaza barker) · Marco (backstage gatekeeper)
 
 ---
 
@@ -362,11 +408,12 @@ Loft. Still-single-room levels inherit this as they're converted to multi-room.)
 - **Depths (each its own world region, like Clocktower/Pipe Organ):**
   - **Depth 1 — Maintenance:** the LOBBY (Cyrus + overworld exit, combat-free) + a Pump Room holding the **security badge**. Stairs down to Depth 2.
   - **Depth 2 — The Junction:** the patrol (2 Grunts + Runner) + 2 dark-alcove hiding spots. **West** passage blocked by Evan's **rubble** → Storeroom (`rusty_key` + a `faded_photograph` lore pickup). **East** Hatch Bay: Ethan's **3-pip hatch hack** (carrying the security badge auto-fills one pip) → unlocks the stairs **down to Depth 3** (`add_floor_link(..., locked=true)`, unlocked when `hatch_progress >= 3`).
-  - **Depth 3 — The Sealed Vault:** Evan forces the seized wheel (`vault_forced`) **and** Ethan hacks the lock panel (`vault_hacked`) → the blast door grinds open (Uncle-Doug clue dialogue). The **rusty key** opens a maintenance-ladder **shortcut** (a locked `add_stairwell`) straight back up to Depth 1.
-- **Key puzzle(s):** Evan rubble (proximity) · Ethan hatch (multi-step, badge-assisted) · Evan+Ethan combined vault finale · rusty-key shortcut. (Twinkle bark distraction is still design-only.)
+  - **Depth 3 — The Sealed Vault:** Ethan **drains the flooded passage** (reroutes the pump valves → lifts a gate) to reach the vault room; then Evan forces the seized wheel (`vault_forced`) **and** Ethan hacks the lock panel (`vault_hacked`) → the blast door grinds open (Uncle-Doug clue dialogue + `doug_flashlight`). The **rusty key** opens a maintenance-ladder **shortcut** (a locked `add_stairwell`) straight back up to Depth 1.
+- **Key puzzle(s):** Evan rubble · Ethan hatch (multi-step, badge-assisted) · Ethan drain gate · Evan+Ethan combined vault finale · rusty-key shortcut. (Twinkle bark distraction is still design-only.)
+- **3D build:** concrete/dirt/stone surfaces per depth (kept dim — lantern-lit). Opening the vault grants `doug_flashlight`.
 - **Enemy types:** Grunts ×2 + Runner (Depth 2 patrol). Lobby + vault are combat-free.
 - **Win:** `enemies_cleared` + `rubble_cleared` + `hatch_progress >= 3` + `vault_opened`.
-- **Level progress flags:** `enemies_cleared` / `rubble_cleared` / `hatch_progress` (int 0–3) / `badge_taken` / `badge_used` / `key_taken` / `photo_taken` / `vault_forced` / `vault_hacked` / `vault_opened` / `shortcut_open`
+- **Level progress flags:** `enemies_cleared` / `rubble_cleared` / `hatch_progress` (int 0–3) / `badge_taken` / `badge_used` / `key_taken` / `photo_taken` / `drain_done` / `vault_forced` / `vault_hacked` / `vault_opened` / `shortcut_open`
 - **NPCs:** Cyrus (tunnel maintainer, in the Depth 1 lobby; briefs the descent)
 - **Notes:** It's lit because you're carrying the lantern (no in-level lantern pickup anymore). The lantern is purely the **entry gate** now; extra loot is found by exploration (behind Evan's rubble), not lantern-revealed.
 
@@ -553,11 +600,32 @@ Works — persist with an `erin_recruited` flag and re-recruit silently in `_res
 ### Building level geometry (3D)
 Levels subclass `Level3D` and build their space in `_build_level()` from helpers:
 `build_env(bg, ambient, …)` (sun + WorldEnvironment), `floor_box(w, d, col)`,
-`wall(center, size, col)`, `box_mesh(size, col, ofs, emissive)` for primitive props,
-and `prop(path, pos, yaw, scale)` for committed GLBs. Theme per location with light
-colours + a small palette; dress with primitives and the prop GLBs. Collision uses 3D
+`wall(center, size, col)`, `room(center, w, d, floor_col, wall_col, h, openings, gap, with_floor)`,
+`box_mesh(size, col, ofs, emissive, tex)` for primitive props,
+and `prop(path, pos, yaw, scale)` for committed GLBs. Collision uses 3D
 layers from `Combat3D` (`L_WORLD=1`, `L_PLAYER=2`, `L_ENEMY=4`). See the existing
 `scripts/3d/*3d.gd` for patterns (e.g. the organ/gear/carousel built from cylinders+boxes).
+
+**Multi-room layout kit** (used by levels 1–9; see `docs/level_elaboration_plan.md`):
+- **`corridor(start, dir, length, floor_col, wall_col, width, h, with_floor, corner_col)`**
+  — a walkable hallway joining two room doorways (`dir` = `"n"/"s"/"e"/"w"`). Lays a floor
+  strip + two side walls (inset a half-thickness so they butt, never overlap, the room
+  walls) + four **solid-colour corner posts** (taller than the walls so no coplanar tops
+  → no z-fighting). Returns the far-mouth centre. Short = fill a door gap; long = a
+  room-like combat/puzzle space. Corridor length **must equal the gap** between the two
+  rooms' edges (mismatched lengths overlap floors → z-fight).
+- **Thematic surfaces:** `set_theme(floor_tex_path, wall_tex_path)` (call early, and again
+  before each room to vary per space) makes floors/walls tile a texture from
+  `assets/art/tiles/synty_*.png` (mipmaps on), **tinted** by the colour each helper is
+  given (so brighten the tint colours toward white). Walls + floors use *different*
+  textures so they read distinct; **corner posts are flat solid colour** as accent/trim.
+  `box_mesh(..., tex)` uses world-space triplanar tiling (cached per colour+texture).
+- **Removable gates** (a puzzle opens a passage): a `StaticBody3D` panel filling a doorway
+  gap; on solve set `collision_layer = 0` and tween its `position:y` down out of sight.
+  **Verify every such reveal** with a physics ray (blocked before → open after, floor
+  present behind) — the Pipe Organ secret nook once "opened" behind a second solid wall.
+- **Lobby convention:** first room is a textured, combat-free lobby (dialog NPC + exit
+  portal via `add_exit_portal`); enemies spawn only in later rooms. `multi_room = true`.
 
 ### Stealth & awareness
 Enemy FSM opens with `PATROL → INVESTIGATE` before the combat loop. Key rules:

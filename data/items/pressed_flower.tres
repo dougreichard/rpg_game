@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="ItemData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/systems/item_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "pressed_flower"
+display_name = "Pressed Flower"
+description = "A flower pressed flat inside the parish register, marking the page where Uncle Doug signed a false name."
+icon_color = Color(0.72, 0.58, 0.66, 1)
+owner_character = ""
+is_junk = false

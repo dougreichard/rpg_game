@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="ItemData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/systems/item_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "doug_checkout_card"
+display_name = "Doug's Checkout Card"
+description = "Uncle Doug's library card, pulled from the sealed archive. His last borrowed file: 'Grand Marquee — projection schematics.'"
+icon_color = Color(0.45, 0.62, 0.5, 1)
+owner_character = ""
+is_junk = false

@@ -26,8 +26,24 @@ const TuningKeyItem: ItemData = preload("res://data/items/tuning_key.tres")
 const SpareGearItem: ItemData = preload("res://data/items/spare_clockwork_gear.tres")
 const Station := preload("res://scripts/3d/work_station3d.gd")
 
-const FLOOR_COL := Color(0.30, 0.27, 0.24)
-const WALL_COL := Color(0.40, 0.37, 0.34)
+# Per-room thematic surfaces — each space gets its own floor + wall texture so the
+# building reads as a sequence of different rooms (grand entry → service passages →
+# storeroom → workshop → pipe loft). Textures are tinted by the FT_/WT_ colours below.
+const TILE_FLOOR := "res://assets/art/tiles/synty_floor_tile.png"
+const MARBLE_FLOOR := "res://assets/art/tiles/synty_floor_marble.png"
+const WOOD_FLOOR := "res://assets/art/tiles/synty_floor_workshop.png"
+const CONCRETE_FLOOR := "res://assets/art/tiles/synty_floor_concrete.png"
+const BRICK_WALL := "res://assets/art/tiles/synty_wall_brick.png"
+const WOOD_WALL := "res://assets/art/tiles/synty_wall_wood.png"
+const CONCRETE_WALL := "res://assets/art/tiles/synty_wall_concrete.png"
+const STONE_WALL := "res://assets/art/tiles/synty_wall_stone.png"
+# tints (multiply the texture): warm for finished rooms, cooler/greyer for service areas
+const FT_WARM := Color(0.88, 0.80, 0.68)
+const WT_WARM := Color(0.82, 0.76, 0.70)
+const FT_COOL := Color(0.80, 0.81, 0.82)
+const WT_COOL := Color(0.76, 0.77, 0.78)
+const WALL_COL := Color(0.80, 0.74, 0.70)   # secret-wall tint (brick)
+const CORNER_COL := Color(0.20, 0.17, 0.14) # solid dark-iron trim on corridor corner posts
 const WOOD := Color(0.34, 0.22, 0.14)
 const BRASS := Color(0.72, 0.6, 0.32)
 const STEEL := Color(0.55, 0.57, 0.62)
@@ -78,6 +94,7 @@ func _build_level() -> void:
 	location_id = "pipe_organ_works"
 	multi_room = true
 	build_env(Color(0.10, 0.10, 0.12), Color(0.55, 0.50, 0.44), 0.5, 1.0)
+	set_theme("res://assets/art/tiles/synty_floor_workshop.png", "res://assets/art/tiles/synty_wall_brick.png")
 	_floor1()
 	_floor2()
 	_links()
@@ -92,16 +109,23 @@ func _build_level() -> void:
 
 # --- Floor 1: Lobby + Storeroom + Workshop + stair alcove --------------------
 func _floor1() -> void:
-	region_floor(F1 + Vector3(0, 0, -4), 34, 24, FLOOR_COL)
-	room(F1, 12, 12, FLOOR_COL, WALL_COL, 3.2, ["s", "e", "w", "n"], 3.0, false)        # lobby
-	room(F1 + Vector3(13, 0, 0), 8, 10, FLOOR_COL, WALL_COL, 3.2, ["w"], 3.0, false)    # storeroom
-	room(F1 + Vector3(-13, 0, 0), 8, 10, FLOOR_COL, WALL_COL, 3.2, ["e"], 3.0, false)   # workshop
-	room(F1 + Vector3(0, 0, -12.5), 5, 7, FLOOR_COL, WALL_COL, 3.2, ["s"], 3.0, false)  # stair alcove
-	# corridors join the lobby doorways to the side rooms + stair alcove (the side
-	# rooms sit 3 m out so each threshold is a real walled hallway, not a 1 m gap)
-	corridor(F1 + Vector3(6, 0, 0), "e", 3.0, FLOOR_COL, WALL_COL, 3.0, 3.2, false)     # → storeroom
-	corridor(F1 + Vector3(-6, 0, 0), "w", 3.0, FLOOR_COL, WALL_COL, 3.0, 3.2, false)    # → workshop
-	corridor(F1 + Vector3(0, 0, -6), "n", 3.0, FLOOR_COL, WALL_COL, 3.0, 3.2, false)    # → stair alcove
+	# Lobby — marble-floored entry hall with brick walls (the grand first room)
+	set_theme(MARBLE_FLOOR, BRICK_WALL)
+	room(F1, 12, 12, FT_WARM, WT_WARM, 3.2, ["s", "e", "w", "n"], 3.0, true)            # lobby
+	# Service passages — plain concrete floor + walls, so the corridors read as
+	# connectors rather than rooms. Each carries its own floor (no global slab now).
+	set_theme(CONCRETE_FLOOR, CONCRETE_WALL)
+	corridor(F1 + Vector3(0, 0, 6), "s", 2.5, FT_COOL, WT_COOL, 3.0, 3.2, true, CORNER_COL)   # entrance vestibule (exit portal)
+	corridor(F1 + Vector3(6, 0, 0), "e", 3.0, FT_COOL, WT_COOL, 3.0, 3.2, true, CORNER_COL)   # → storeroom
+	corridor(F1 + Vector3(-6, 0, 0), "w", 3.0, FT_COOL, WT_COOL, 3.0, 3.2, true, CORNER_COL)  # → workshop
+	corridor(F1 + Vector3(0, 0, -6), "n", 3.0, FT_COOL, WT_COOL, 3.0, 3.2, true, CORNER_COL)  # → stair alcove
+	room(F1 + Vector3(0, 0, -12.5), 5, 7, FT_COOL, WT_COOL, 3.2, ["s"], 3.0, true)      # stair alcove
+	# Storeroom — utilitarian concrete floor, brick walls
+	set_theme(CONCRETE_FLOOR, BRICK_WALL)
+	room(F1 + Vector3(13, 0, 0), 8, 10, FT_COOL, WT_WARM, 3.2, ["w"], 3.0, true)        # storeroom
+	# Workshop — wood-plank floor + wood-panel walls (the working room)
+	set_theme(WOOD_FLOOR, WOOD_WALL)
+	room(F1 + Vector3(-13, 0, 0), 8, 10, FT_WARM, WT_WARM, 3.2, ["e"], 3.0, true)       # workshop
 	point_light(F1 + Vector3(0, 3.0, -2), Color(1.0, 0.85, 0.6), 2.6, 12.0)
 	point_light(F1 + Vector3(13, 2.8, 0), Color(0.9, 0.85, 0.7), 1.8, 8.0)
 	point_light(F1 + Vector3(-13, 2.8, 0), Color(0.8, 0.9, 1.0), 1.8, 8.0)
@@ -183,10 +207,15 @@ func _on_station_message(text: String) -> void:
 
 # --- Floor 2: Pipe Loft + secret nook ---------------------------------------
 func _floor2() -> void:
-	region_floor(F2 + Vector3(0, 0, -9), 18, 30, FLOOR_COL)
-	room(F2, 6, 8, FLOOR_COL, WALL_COL, 3.0, ["n"], 3.0, false)                    # landing
-	room(F2 + Vector3(0, 0, -11), 14, 12, FLOOR_COL, WALL_COL, 4.0, ["s"], 3.0, false)  # pipe hall
-	corridor(F2 + Vector3(0, 0, -4), "n", 1.0, FLOOR_COL, WALL_COL, 3.0, 3.0, false)    # landing → pipe hall
+	# Landing — wood floor + wood walls (top of the stairs)
+	set_theme(WOOD_FLOOR, WOOD_WALL)
+	room(F2, 6, 8, FT_WARM, WT_WARM, 3.0, ["n"], 3.0, true)                        # landing
+	corridor(F2 + Vector3(0, 0, -4), "n", 1.0, FT_WARM, WT_WARM, 3.0, 3.0, true, CORNER_COL)  # landing → pipe hall
+	# Pipe loft — grand tiled floor + stone walls (the showpiece room)
+	set_theme(TILE_FLOOR, STONE_WALL)
+	# "n" opening (gap 3) is the doorway to the secret nook — the removable _secret_wall
+	# fills exactly that gap, so dropping it actually opens a passage (see _reveal_secret).
+	room(F2 + Vector3(0, 0, -11), 14, 12, FT_WARM, WT_WARM, 4.0, ["s", "n"], 3.0, true)  # pipe hall
 	point_light(F2 + Vector3(0, 3.4, -11), Color(1.0, 0.85, 0.6), 2.6, 13.0)
 	# tall organ pipes rising through the loft
 	for i: int in range(9):
@@ -216,14 +245,21 @@ func _floor2() -> void:
 	# secret lever + hidden nook with the spare gear (bonus)
 	add_child(box_mesh(Vector3(0.2, 0.7, 0.2), Color(0.3, 0.3, 0.34), F2 + LEVER + Vector3(0, 0.9, 0)))
 	add_child(box_mesh(Vector3(0.1, 0.4, 0.1), Color(0.8, 0.2, 0.2), F2 + LEVER + Vector3(0, 1.3, 0)))
-	room(F2 + Vector3(0, 0, -20), 6, 6, FLOOR_COL, WALL_COL, 2.8, ["s"], 2.5, false)  # nook
+	# secret nook — concrete floor + stone walls. Its south side is FULLY open (gap =
+	# width) so it builds no south wall to overlap/z-fight the pipe-hall north wall;
+	# the pipe hall's "n" segments + the removable _secret_wall are the only walls at z=-17.
+	set_theme(CONCRETE_FLOOR, STONE_WALL)
+	room(F2 + Vector3(0, 0, -20), 6, 6, FT_COOL, WT_WARM, 2.8, ["s"], 6.0, true)  # nook
 	_gear_box = box_mesh(Vector3(0.7, 0.7, 0.7), Color(0.45, 0.32, 0.18), F2 + GEAR_BONUS + Vector3(0, 0.35, 0))
 	add_child(_gear_box)
+	# the removable panel — fills the pipe-hall "n" gap (3 wide), full pipe-hall height
+	# (4), abutting the wall segments (touching, not overlapping). Drops out of sight
+	# when the lever is pulled.
 	_secret_wall = StaticBody3D.new()
 	(_secret_wall as StaticBody3D).collision_layer = Combat3D.L_WORLD
 	var cs := CollisionShape3D.new(); var bs := BoxShape3D.new()
-	bs.size = Vector3(6.0, 2.8, 0.4); cs.shape = bs; cs.position = Vector3(0, 1.4, 0)
-	_secret_wall.add_child(cs); _secret_wall.add_child(box_mesh(Vector3(6.0, 2.8, 0.4), WALL_COL, Vector3(0, 1.4, 0)))
+	bs.size = Vector3(3.0, 4.0, 0.4); cs.shape = bs; cs.position = Vector3(0, 2.0, 0)
+	_secret_wall.add_child(cs); _secret_wall.add_child(box_mesh(Vector3(3.0, 4.0, 0.4), WALL_COL, Vector3(0, 2.0, 0), 0.0, wall_tex))
 	_secret_wall.position = F2 + Vector3(0, 0, -17)
 	add_child(_secret_wall)
 
@@ -265,7 +301,7 @@ func _restore() -> void:
 	if _organ_repaired:
 		_organ_node.material_override = _glow_mat()
 	if _secret_revealed:
-		_secret_wall.position.y = -3.0; (_secret_wall as StaticBody3D).collision_layer = 0
+		_secret_wall.position.y = -5.0; (_secret_wall as StaticBody3D).collision_layer = 0
 	if _gear_bonus_open: _dim(_gear_box)
 	if _enemies_cleared and _organ_repaired:
 		_win(false)
@@ -326,7 +362,7 @@ func _dim(box: Node3D) -> void:
 func _reveal_secret() -> void:
 	_secret_revealed = true
 	GameManager.set_level_flag(location_id, "secret_revealed", true)
-	create_tween().tween_property(_secret_wall, "position:y", -3.0, 0.6)
+	create_tween().tween_property(_secret_wall, "position:y", -5.0, 0.6)
 	(_secret_wall as StaticBody3D).collision_layer = 0
 	_hud_hint.text = "A hidden parts closet opens at the back of the loft."
 	Audio.play("special")

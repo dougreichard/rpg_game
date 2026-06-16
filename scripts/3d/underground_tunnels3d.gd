@@ -22,11 +22,18 @@ const BadgeItem: ItemData = preload("res://data/items/security_badge.tres")
 const KeyItem: ItemData = preload("res://data/items/rusty_key.tres")
 const PhotoItem: ItemData = preload("res://data/items/faded_photograph.tres")
 
+const FlashlightItem: ItemData = preload("res://data/items/doug_flashlight.tres")
+
 const HATCH_PRESSES_REQUIRED := 3
 const REACH := 2.2
 
-const FLOOR_COL := Color(0.16, 0.15, 0.14)
-const WALL_COL := Color(0.22, 0.21, 0.19)
+# --- thematic surfaces (concrete / dirt / stone, rust trim) ---
+const FLOOR_CONCRETE := "res://assets/art/tiles/synty_floor_concrete.png"
+const FLOOR_DIRT := "res://assets/art/tiles/synty_floor_dirt.png"
+const WALL_CONCRETE := "res://assets/art/tiles/synty_wall_concrete.png"
+const WALL_STONE := "res://assets/art/tiles/synty_wall_stone.png"
+const FLOOR_COL := Color(0.6, 0.58, 0.54)   # texture tint (kept dim — lantern-lit)
+const WALL_COL := Color(0.58, 0.56, 0.5)
 const STONE := Color(0.28, 0.26, 0.22)
 const STEEL := Color(0.4, 0.42, 0.46)
 
@@ -50,6 +57,8 @@ const PHOTO_LOOT := Vector3(-11.0, 0, -7.5)
 const WHEEL := Vector3(-2.0, 0, -12.0)
 const PANEL := Vector3(2.0, 0, -12.0)
 const SHORTCUT := Vector3(2.5, 0, 2.0)
+const DRAIN := Vector3(3.0, 0, -1.0)         # Depth 3: Ethan drains the flooded passage
+const DRAIN_GATE := Vector3(0.0, 0, -3.5)    # flooded-passage gate (antechamber → vault)
 
 var _cleared := false
 var _enemies_cleared := false
@@ -62,8 +71,10 @@ var _photo_taken := false
 var _vault_forced := false
 var _vault_hacked := false
 var _vault_opened := false
+var _drain_done := false
 var _shortcut_open := false
 var _spawned := 0
+var _drain_wall: Node3D = null
 
 var _cyrus = null
 var _rubble: Node3D = null
@@ -97,6 +108,7 @@ func _build_level() -> void:
 
 # --- Depth 1: Maintenance (lobby + pump room) -------------------------------
 func _depth1() -> void:
+	set_theme(FLOOR_CONCRETE, WALL_CONCRETE)
 	region_floor(F1 + Vector3(1, 0, -3), 32, 22, FLOOR_COL)
 	room(F1, 12, 12, FLOOR_COL, WALL_COL, 2.9, ["s", "e", "n"], 3.0, false)            # lobby
 	room(F1 + Vector3(11, 0, 0), 8, 10, FLOOR_COL, WALL_COL, 2.9, ["w"], 3.0, false)   # pump room
@@ -113,6 +125,7 @@ func _depth1() -> void:
 
 # --- Depth 2: Junction (combat + the two gates) -----------------------------
 func _depth2() -> void:
+	set_theme(FLOOR_DIRT, WALL_STONE)
 	region_floor(F2 + Vector3(0, 0, -4), 36, 24, FLOOR_COL)
 	room(F2 + Vector3(0, 0, 1), 6, 8, FLOOR_COL, WALL_COL, 2.9, ["n"], 3.0, false)          # landing
 	room(F2 + Vector3(0, 0, -9), 14, 10, FLOOR_COL, WALL_COL, 3.0, ["s", "w", "e"], 3.0, false)  # junction
@@ -135,9 +148,24 @@ func _depth2() -> void:
 
 # --- Depth 3: The Sealed Vault ----------------------------------------------
 func _depth3() -> void:
+	set_theme(FLOOR_CONCRETE, WALL_STONE)
 	region_floor(F3 + Vector3(0, 0, -4), 18, 24, FLOOR_COL)
 	room(F3 + Vector3(0, 0, 1), 8, 8, FLOOR_COL, WALL_COL, 2.9, ["n"], 3.0, false)          # antechamber
 	room(F3 + Vector3(0, 0, -9), 12, 10, FLOOR_COL, WALL_COL, 3.2, ["s"], 3.0, false)       # vault room
+	# Ethan's drain: a flooded passage gate between antechamber and vault room, with a
+	# valve wheel + a pool of "water" the player can't cross until it's pumped out.
+	add_child(box_mesh(Vector3(3.0, 0.08, 2.0), Color(0.1, 0.22, 0.3), F3 + Vector3(0, 0.04, -3.5), 0.3))   # water pool
+	add_child(box_mesh(Vector3(0.3, 1.1, 0.3), Color(0.45, 0.46, 0.5), F3 + DRAIN + Vector3(0, 0.55, 0)))    # valve post
+	add_child(box_mesh(Vector3(0.5, 0.18, 0.5), Color(0.5, 0.7, 0.9), F3 + DRAIN + Vector3(0, 1.2, 0), 0.8))  # valve wheel
+	_drain_wall = StaticBody3D.new()
+	(_drain_wall as StaticBody3D).collision_layer = Combat3D.L_WORLD
+	var dcs := CollisionShape3D.new(); var dbs := BoxShape3D.new()
+	dbs.size = Vector3(3.0, 2.6, 0.4); dcs.shape = dbs; dcs.position = Vector3(0, 1.3, 0)
+	_drain_wall.add_child(dcs)
+	for i: int in range(4):
+		_drain_wall.add_child(box_mesh(Vector3(0.1, 2.4, 0.1), STEEL, Vector3(-1.1 + float(i) * 0.73, 1.2, 0)))
+	_drain_wall.position = F3 + DRAIN_GATE
+	add_child(_drain_wall)
 	point_light(F3 + Vector3(0, 3.0, -9), Color(1.0, 0.7, 0.45), 1.8, 13.0)
 	point_light(F3 + Vector3(0, 2.4, 1), Color(0.7, 0.8, 1.0), 1.2, 7.0)
 	# the sealed blast door at the north wall of the vault room
@@ -230,8 +258,10 @@ func _restore() -> void:
 	_vault_forced = GameManager.get_level_flag(location_id, "vault_forced", false)
 	_vault_hacked = GameManager.get_level_flag(location_id, "vault_hacked", false)
 	_vault_opened = GameManager.get_level_flag(location_id, "vault_opened", false)
+	_drain_done = GameManager.get_level_flag(location_id, "drain_done", false)
 	_shortcut_open = GameManager.get_level_flag(location_id, "shortcut_open", false)
 	if _rubble_cleared: _clear_rubble(false)
+	if _drain_done: _open_drain(false)
 	_refresh_pips()
 	if _hatch_progress >= HATCH_PRESSES_REQUIRED and _vault_stair != null: _vault_stair.locked = false
 	if _badge_taken and _badge_box != null: _badge_box.queue_free(); _badge_box = null
@@ -273,6 +303,17 @@ func _on_special(char_name: String) -> void:
 			_hack_hatch()
 		else:
 			_hud_hint.text = "The hatch needs Ethan's hacking passes."
+		return
+	# D3 flooded-passage drain — Ethan (gates the vault room)
+	if not _drain_done and near3(pp, F3 + DRAIN, REACH):
+		if char_name == "Ethan":
+			_drain_done = true
+			GameManager.set_level_flag(location_id, "drain_done", true)
+			_open_drain(true)
+			_hud_hint.text = "Ethan reroutes the pump valves -- the passage drains and the gate lifts to the vault."
+			Audio.play("special")
+		else:
+			_hud_hint.text = "The passage is flooded -- Ethan can reroute the pumps to drain it."
 		return
 	# D3 vault — Evan wheel + Ethan panel
 	if not _vault_opened and near3(pp, F3 + WHEEL, REACH):
@@ -328,10 +369,18 @@ func _hack_hatch() -> void:
 		_hud_hint.text = "Hatch hack: pass %d of %d." % [_hatch_progress, HATCH_PRESSES_REQUIRED]
 	Audio.play("special")
 
+func _open_drain(animate: bool) -> void:
+	(_drain_wall as StaticBody3D).collision_layer = 0
+	if animate:
+		create_tween().tween_property(_drain_wall, "position:y", F3.y - 3.0, 0.6)
+	else:
+		_drain_wall.position.y = F3.y - 3.0
+
 func _check_vault() -> void:
 	if _vault_forced and _vault_hacked and not _vault_opened:
 		_vault_opened = true
 		GameManager.set_level_flag(location_id, "vault_opened", true)
+		GameManager.grant_item(player.active_name(), FlashlightItem.id)
 		_open_vault(true)
 
 func _open_vault(animate: bool) -> void:
