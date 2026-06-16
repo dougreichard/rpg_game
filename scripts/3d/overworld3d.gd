@@ -36,7 +36,9 @@ const BLD_SCALE := {"bld_round": 0.7, "bld_round3": 0.7, "bld_octagon": 0.7,
 const DOOR_INSET := 5.0     # interaction point pulled toward the boulevard
 const INTERACT := 4.5
 const GROUND := Color(0.30, 0.42, 0.26)   # grassy town green
-const ROAD_COL := Color(0.32, 0.32, 0.34)
+const ROAD_COL := Color(0.22, 0.22, 0.25) # solid blacktop (no Synty road-tile lane lines)
+const LANE_COL := Color(0.85, 0.84, 0.72) # painted lane dashes
+const CURB_COL := Color(0.74, 0.74, 0.76)
 
 # id, display name, 3D scene, unlock requirement, building glb
 const LOCS := [
@@ -98,9 +100,9 @@ func _build_level() -> void:
 	_spawn_town_npcs()
 	make_dialog()
 	_build_hud()
-	# Returning from a level drops the duo back outside that building's door;
-	# a fresh arrival (title) starts on the front boulevard, centre.
-	var start := Vector3(0.0, 0.1, BLVD_Z[2] + 8.0)
+	# Returning from a level drops the duo back outside the building they just exited;
+	# a fresh arrival (title) starts near — but not on — the first level (Pipe Organ Works).
+	var start := _slot_pos(SLOTS[0]) + Vector3(5.0, 0.1, DOOR_INSET + 3.0)
 	var ret: String = GameManager.last_location_id
 	if ret != "":
 		for d2 in _doors:
@@ -140,20 +142,37 @@ const ZMIN := -52.0
 const ZMAX := 26.0
 
 func _streets() -> void:
+	# Solid blacktop strips (box_mesh) so there are no mis-oriented Synty lane lines;
+	# center dashes are painted in the strip's own direction. N-S cross-streets sit a
+	# touch lower so the E-W boulevards read cleanly across the intersections.
+	for cx: float in CROSS_X:
+		_road_ns(cx, ZMIN, ZMAX, 6.0, 0.03)
 	for bz: float in BLVD_Z:
+		_road_ew(bz, XMIN, XMAX, 7.0, 0.05)
 		var x: float = XMIN
 		while x <= XMAX:
-			_tile("road", Vector3(x, 0.06, bz - 2.5))
-			_tile("road", Vector3(x, 0.06, bz + 2.5))
-			_tile("sidewalk", Vector3(x, 0.04, bz - 6.5))   # building-side walk
-			_tile("sidewalk", Vector3(x, 0.04, bz + 6.5))   # far-side walk
+			_tile("sidewalk", Vector3(x, 0.045, bz - 6.5))   # building-side walk
+			_tile("sidewalk", Vector3(x, 0.045, bz + 6.5))   # far-side walk
 			x += 5.0
-	for cx: float in CROSS_X:
-		var z: float = ZMIN
-		while z <= ZMAX:
-			_tile("road", Vector3(cx - 2.5, 0.065, z))
-			_tile("road", Vector3(cx + 2.5, 0.065, z))
-			z += 5.0
+
+func _road_ew(z: float, x0: float, x1: float, w: float, y: float) -> void:
+	add_child(box_mesh(Vector3(x1 - x0, 0.06, w), ROAD_COL, Vector3((x0 + x1) * 0.5, y, z)))
+	var x: float = x0 + 2.5
+	while x < x1:
+		add_child(box_mesh(Vector3(1.6, 0.02, 0.18), LANE_COL, Vector3(x, y + 0.04, z)))
+		x += 4.0
+
+func _road_ns(x: float, z0: float, z1: float, w: float, y: float) -> void:
+	add_child(box_mesh(Vector3(w, 0.06, z1 - z0), ROAD_COL, Vector3(x, y, (z0 + z1) * 0.5)))
+	var z: float = z0 + 2.5
+	while z < z1:
+		add_child(box_mesh(Vector3(0.18, 0.02, 1.6), LANE_COL, Vector3(x, y + 0.04, z)))
+		z += 4.0
+
+# A zebra crosswalk (white bars) across the E-W boulevard in front of a building door.
+func _crosswalk(x: float, z: float) -> void:
+	for i in 4:
+		add_child(box_mesh(Vector3(0.4, 0.02, 2.6), LANE_COL, Vector3(x - 1.2 + float(i) * 0.8, 0.11, z)))
 
 func _tile(key: String, pos: Vector3) -> void:
 	prop(TOWN + key + ".glb", pos, 0.0, 1.0)
@@ -180,7 +199,7 @@ func _buildings() -> void:
 func _entry_plaza(x: float, rz: float) -> void:
 	_tile("sidewalk", Vector3(x, 0.05, rz + 3.0))
 	_tile("sidewalk", Vector3(x, 0.05, rz + 7.0))
-	_tile("road_crossing", Vector3(x, 0.08, rz + 8.0))   # crossing over the boulevard
+	_crosswalk(x, rz + 8.0)   # zebra crossing over the boulevard
 
 func _entry_dressing(x: float, rz: float) -> void:
 	# a flanking prop + a pair of planters/flowerbeds at the entrance
