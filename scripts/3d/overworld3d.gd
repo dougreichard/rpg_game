@@ -155,9 +155,21 @@ func _streets() -> void:
 		_road_ns(cx, PLAY_Z_BACK + 1.0, PLAY_Z_FRONT - 1.0, 6.0, 0.04, 0.055)
 	for bz: float in BLVD_Z:
 		_road_ew(bz, -rx, rx, 7.0, 0.07, 0.10)
-		# narrow solid sidewalks flanking the boulevard (building-side + far-side)
-		add_child(box_mesh(Vector3(2.0 * rx, 0.08, SW_W), SW_COL, Vector3(0, 0.04, bz - 4.75)))
-		add_child(box_mesh(Vector3(2.0 * rx, 0.08, SW_W), SW_COL, Vector3(0, 0.04, bz + 5.5)))
+		# narrow solid sidewalks flanking the boulevard, broken where the cross-streets cross
+		_sidewalk_ew(bz - 4.75, -rx, rx)   # building-side walk
+		_sidewalk_ew(bz + 5.5, -rx, rx)    # far-side walk
+
+# Draw an E-W sidewalk strip in segments, leaving a gap where each N-S cross-street runs.
+func _sidewalk_ew(z: float, x0: float, x1: float) -> void:
+	var cur: float = x0
+	for cx: float in CROSS_X:   # CROSS_X is left-to-right
+		var gap0: float = cx - 4.0
+		var gap1: float = cx + 4.0
+		if gap0 > cur:
+			add_child(box_mesh(Vector3(gap0 - cur, 0.08, SW_W), SW_COL, Vector3((cur + gap0) * 0.5, 0.04, z)))
+		cur = maxf(cur, gap1)
+	if cur < x1:
+		add_child(box_mesh(Vector3(x1 - cur, 0.08, SW_W), SW_COL, Vector3((cur + x1) * 0.5, 0.04, z)))
 
 func _road_ew(z: float, x0: float, x1: float, w: float, top_y: float, dash_y: float) -> void:
 	add_child(box_mesh(Vector3(x1 - x0, 0.12, w), ROAD_COL, Vector3((x0 + x1) * 0.5, top_y - 0.06, z)))
