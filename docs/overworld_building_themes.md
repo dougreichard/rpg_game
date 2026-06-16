@@ -65,10 +65,20 @@ Baked + wired into `LOCS` (`overworld3d.gd`), GLBs in `assets/models/town/`:
   the_drop→Chopshop (`chopshop.glb`), carnival→market Stall (`fairstall.glb`, `--scale 0.018`).
   All others used `--scale 0.01` (these packs' FBX are cm; `export_prop.py` clobbers the
   import unit-scale, so cm packs need `--scale 0.01` — Casino is the exception at metres).
-- **Modular showpieces:** arcade→`arcade_demo.glb`, cinema→`cinema.glb`, both assembled from
-  Casino parts via `assemble_building.py` (`--variant facade|cinema`).
+- **Arcade / cinema:** now **whole-mesh** too — arcade→`arcade.glb` (SciFiCity FoodHole, a
+  neon storefront), cinema→`cinema_bld.glb` (City OfficeOld_Large, a grand façade).
 
-Remaining polish (not done): **neon/marquee emission** — the signs currently take the main
-albedo atlas, not the emissive one, so they're shaped but not lit. A per-part-atlas pass on
-`assemble_building.py` + an emission material would light them. Per-building `yaw`/`BLD_SCALE`
-overrides are supported in `LOCS` if any façade needs re-facing.
+### Modular kit-bash — attempted, shelved
+`assemble_building.py` can assemble + bake a building from modular parts (axis/orientation,
+solid core, placement all work). BUT the **Casino pack's parts use external *tiling* textures**
+(wall UVs run 0–3), which our single-atlas pipeline can't reproduce: the palette atlas tiles
+across each face ("whole texture"), and the FBX's own texture refs are empty placeholders
+(`size (0,0)`) that don't resolve headless. To do modular casino/cinema properly you'd map each
+part to its specific Casino texture (HotelWall/glass/palette) — real work for marginal payoff at
+the steep overworld camera. Whole-mesh is the reliable path; kit-bash kept for packs with a
+single shared atlas.
+
+### Facing note
+The overworld follow-camera always looks **−Z**, so a building's front must face **+Z**. Each
+Synty mesh's native front differs, so `LOCS` entries take an optional `yaw` override (e.g. the
+arcade uses `yaw: 0.0`). `BLD_SCALE` overrides footprint if needed.

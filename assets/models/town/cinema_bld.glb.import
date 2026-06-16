@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://cyqtqvysmfcmi"
-path="res://.godot/imported/cinema.glb-2bd50654d17af85147ad36ef2695ae4e.scn"
+uid="uid://bapii32mfle1o"
+path="res://.godot/imported/cinema_bld.glb-b44b59f6e638047256bc7bf5bc989abd.scn"
 
 [deps]
 
-source_file="res://assets/models/town/cinema.glb"
-dest_files=["res://.godot/imported/cinema.glb-2bd50654d17af85147ad36ef2695ae4e.scn"]
+source_file="res://assets/models/town/cinema_bld.glb"
+dest_files=["res://.godot/imported/cinema_bld.glb-b44b59f6e638047256bc7bf5bc989abd.scn"]
 
 [params]
 

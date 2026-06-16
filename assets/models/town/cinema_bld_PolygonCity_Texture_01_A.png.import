@@ -2,19 +2,19 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bx01cuqkbxayy"
-path="res://.godot/imported/arcade_demo_PolygonCasino_Texture_01_A.png-53430f91d38eb1ef9dc25b5f95fa471b.ctex"
+uid="uid://d1t5akjr6bhjd"
+path="res://.godot/imported/cinema_bld_PolygonCity_Texture_01_A.png-27859bbd19f600e9684f22ce8ee0aa04.ctex"
 metadata={
 "vram_texture": false
 }
 generator_parameters={
-"md5": "0f83ac40eb4290a89d122fb578e890e8"
+"md5": "d2594bbbf8e98b5c2597408ee3297f1c"
 }
 
 [deps]
 
-source_file="res://assets/models/town/arcade_demo_PolygonCasino_Texture_01_A.png"
-dest_files=["res://.godot/imported/arcade_demo_PolygonCasino_Texture_01_A.png-53430f91d38eb1ef9dc25b5f95fa471b.ctex"]
+source_file="res://assets/models/town/cinema_bld_PolygonCity_Texture_01_A.png"
+dest_files=["res://.godot/imported/cinema_bld_PolygonCity_Texture_01_A.png-27859bbd19f600e9684f22ce8ee0aa04.ctex"]
 
 [params]
 
