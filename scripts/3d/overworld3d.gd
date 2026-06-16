@@ -30,19 +30,19 @@ const GROUND := Color(0.28, 0.30, 0.26)
 # id, display name, 3D scene, unlock requirement, building glb
 const LOCS := [
 	{"id": "pipe_organ_works", "name": "Pipe Organ Works", "scene": "res://scenes/3d/PipeOrganWorks3D.tscn", "req": "", "glb": "shop_01"},
-	{"id": "old_parish_church", "name": "Old Parish Church", "scene": "res://scenes/3d/Church3D.tscn", "req": "pipe_organ_works", "glb": "bld_octagon"},
+	{"id": "old_parish_church", "name": "Old Parish Church", "scene": "res://scenes/3d/Church3D.tscn", "req": "pipe_organ_works", "glb": "church"},
 	{"id": "iron_strings_gym", "name": "Iron & Strings Gym", "scene": "res://scenes/3d/IronStringsGym3D.tscn", "req": "old_parish_church", "glb": "shop_02"},
 	{"id": "recording_studio", "name": "Recording Studio", "scene": "res://scenes/3d/RecordingStudio3D.tscn", "req": "iron_strings_gym", "glb": "shop_03"},
-	{"id": "clocktower", "name": "The Clocktower", "scene": "res://scenes/3d/Clocktower3D.tscn", "req": "recording_studio", "glb": "bld_square"},
-	{"id": "harbor_docks", "name": "Harbor & Docks", "scene": "res://scenes/3d/HarborDocks3D.tscn", "req": "recording_studio", "glb": "shop_04"},
-	{"id": "library", "name": "Library & Archive", "scene": "res://scenes/3d/LibraryArchive3D.tscn", "req": "recording_studio", "glb": "bld_office_small"},
-	{"id": "carnival", "name": "Carnival & Fairground", "scene": "res://scenes/3d/Carnival3D.tscn", "req": "recording_studio", "glb": "shop_05"},
+	{"id": "clocktower", "name": "The Clocktower", "scene": "res://scenes/3d/Clocktower3D.tscn", "req": "recording_studio", "glb": "watertower"},
+	{"id": "harbor_docks", "name": "Harbor & Docks", "scene": "res://scenes/3d/HarborDocks3D.tscn", "req": "recording_studio", "glb": "warehouse"},
+	{"id": "library", "name": "Library & Archive", "scene": "res://scenes/3d/LibraryArchive3D.tscn", "req": "recording_studio", "glb": "cityhall"},
+	{"id": "carnival", "name": "Carnival & Fairground", "scene": "res://scenes/3d/Carnival3D.tscn", "req": "recording_studio", "glb": "fairstall"},
 	{"id": "underground", "name": "Underground Tunnels", "scene": "res://scenes/3d/UndergroundTunnels3D.tscn", "req": "recording_studio", "glb": "shop_06"},
 	{"id": "zip_line", "name": "Zip Line Park", "scene": "res://scenes/3d/ZipLinePark3D.tscn", "req": "recording_studio", "glb": "bld_round"},
 	{"id": "vr_room", "name": "VR Escape Room", "scene": "res://scenes/3d/VrEscapeRoom3D.tscn", "req": "recording_studio", "glb": "bld_square3"},
-	{"id": "the_drop", "name": "The Drop", "scene": "res://scenes/3d/TheDrop3D.tscn", "req": "vr_room", "glb": "shop_corner"},
-	{"id": "grand_marquee", "name": "Grand Marquee Cinema", "scene": "res://scenes/3d/GrandMarqueeCinema3D.tscn", "req": "the_drop", "glb": "bld_office_large"},
-	{"id": "gimme_dat_spoon", "name": "Gimme Dat Spoon", "scene": "res://scenes/3d/Spoon3D.tscn", "req": "grand_marquee", "glb": "bld_round3"},
+	{"id": "the_drop", "name": "The Drop", "scene": "res://scenes/3d/TheDrop3D.tscn", "req": "vr_room", "glb": "chopshop"},
+	{"id": "grand_marquee", "name": "Grand Marquee Cinema", "scene": "res://scenes/3d/GrandMarqueeCinema3D.tscn", "req": "the_drop", "glb": "cinema"},
+	{"id": "gimme_dat_spoon", "name": "Gimme Dat Spoon", "scene": "res://scenes/3d/Spoon3D.tscn", "req": "grand_marquee", "glb": "arcade_demo"},
 ]
 
 # Some locations also need an item in hand, not just an unlock. The Underground
@@ -148,7 +148,8 @@ func _buildings() -> void:
 		var north: bool = (i % 2) == 0
 		var x: float = _col_x(col)
 		var z: float = -ZOFF if north else ZOFF
-		var yaw: float = 0.0 if north else PI         # face the avenue
+		# each mesh's native front differs; loc "yaw" overrides the default row-facing.
+		var yaw: float = loc.get("yaw", 0.0 if north else PI)
 		var door := Vector3(x, 0.0, z + (DOOR_INSET if north else -DOOR_INSET))
 		var bscale: float = BLD_SCALE.get(loc["glb"], 1.0)
 		prop(TOWN + loc["glb"] + ".glb", Vector3(x, 0.0, z), yaw, bscale)

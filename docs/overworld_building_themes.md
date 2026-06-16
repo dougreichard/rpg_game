@@ -58,5 +58,17 @@ cinema marquee.
 `harbor_docks` (Warehouse), `the_drop` (Chopshop), `carnival` (Stall). These are clean
 whole-mesh swaps. The arcade/cinema signage + carnival dressing are a second pass.
 
-> **Status:** nothing baked. Pick the rows you want and I'll bake + wire them, then capture
-> each for a look before committing.
+## Status — IMPLEMENTED (mixed approach)
+Baked + wired into `LOCS` (`overworld3d.gd`), GLBs in `assets/models/town/`:
+- **Whole-mesh swaps:** church (`church.glb`), library→CityHall (`cityhall.glb`, `--scale 0.55`),
+  clocktower→WaterTower (`watertower.glb`), harbor→Warehouse (`warehouse.glb`),
+  the_drop→Chopshop (`chopshop.glb`), carnival→market Stall (`fairstall.glb`, `--scale 0.018`).
+  All others used `--scale 0.01` (these packs' FBX are cm; `export_prop.py` clobbers the
+  import unit-scale, so cm packs need `--scale 0.01` — Casino is the exception at metres).
+- **Modular showpieces:** arcade→`arcade_demo.glb`, cinema→`cinema.glb`, both assembled from
+  Casino parts via `assemble_building.py` (`--variant facade|cinema`).
+
+Remaining polish (not done): **neon/marquee emission** — the signs currently take the main
+albedo atlas, not the emissive one, so they're shaped but not lit. A per-part-atlas pass on
+`assemble_building.py` + an emission material would light them. Per-building `yaw`/`BLD_SCALE`
+overrides are supported in `LOCS` if any façade needs re-facing.
