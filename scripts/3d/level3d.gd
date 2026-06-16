@@ -25,6 +25,12 @@ var allow_overworld_exit := true   # the overworld itself disables this
 var _shot_frames: int = -1
 var _bies_fill: ColorRect = null   # Bies charge bar (levels only)
 var _bies_pulse: float = 0.0
+var _hp_layer: CanvasLayer = null  # per-character + boss health bars (levels only)
+var _hp_rows: Array = []           # one {bg, fill, label} per duo body
+var _boss_bg: ColorRect = null
+var _boss_fill: ColorRect = null
+var _boss_label: Label = null
+var _boss_enemy: Node = null
 var _floor_hw: float = 0.0         # floor half-extents (for walk-out detection)
 var _floor_hd: float = 0.0
 var _floor_center: Vector3 = Vector3.ZERO
@@ -85,6 +91,7 @@ func build_ui_stack(in_overworld: bool) -> void:
 	add_child(pm)
 	if not in_overworld:
 		_build_bies_bar()
+		_build_health_bars()
 
 func _build_bies_bar() -> void:
 	var cl := CanvasLayer.new(); cl.layer = 6; add_child(cl)
@@ -402,6 +409,7 @@ func hud_label(cl: CanvasLayer, y: float, size: int = 22, from_bottom: bool = fa
 # --- capture (windowed --capture) --------------------------------------------
 func _process(d: float) -> void:
 	_update_bies_bar(d)
+	_update_health_bars()
 	_check_walk_out()
 	if _shot_frames < 0:
 		return
@@ -645,3 +653,94 @@ func _update_bies_bar(d: float) -> void:
 		_bies_fill.color = UITheme.GOLD.lerp(Color(1, 1, 0.7), t)
 	else:
 		_bies_fill.color = UITheme.GOLD_DIM
+
+# --- health bars (per-character, top-left; boss, top-centre) -----------------
+const HP_W := 150.0
+
+func _build_health_bars() -> void:
+	_hp_layer = CanvasLayer.new(); _hp_layer.layer = 6; add_child(_hp_layer)
+	# boss bar — top-centre, hidden until a boss is alive
+	_boss_bg = ColorRect.new()
+	_boss_bg.color = Color(0.10, 0.05, 0.05, 0.85)
+	_boss_bg.anchor_left = 0.5; _boss_bg.anchor_right = 0.5
+	_boss_bg.offset_left = -184; _boss_bg.offset_right = 184; _boss_bg.offset_top = 64; _boss_bg.offset_bottom = 86
+	_boss_bg.visible = false
+	_hp_layer.add_child(_boss_bg)
+	_boss_fill = ColorRect.new()
+	_boss_fill.color = Color(0.85, 0.2, 0.22)
+	_boss_fill.anchor_left = 0.5; _boss_fill.anchor_right = 0.5
+	_boss_fill.offset_left = -180; _boss_fill.offset_right = 180; _boss_fill.offset_top = 67; _boss_fill.offset_bottom = 83
+	_boss_fill.visible = false
+	_hp_layer.add_child(_boss_fill)
+	_boss_label = Label.new()
+	_boss_label.text = "GUARDIAN"
+	_boss_label.anchor_left = 0.5; _boss_label.anchor_right = 0.5
+	_boss_label.offset_left = -184; _boss_label.offset_right = 184; _boss_label.offset_top = 64; _boss_label.offset_bottom = 86
+	_boss_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_boss_label.add_theme_font_override("font", UITheme.font())
+	_boss_label.add_theme_font_size_override("font_size", 14)
+	_boss_label.add_theme_color_override("font_color", UITheme.CREAM)
+	_boss_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
+	_boss_label.add_theme_constant_override("outline_size", 4)
+	_boss_label.visible = false
+	_hp_layer.add_child(_boss_label)
+
+func _make_hp_row(i: int) -> Dictionary:
+	var y := 12.0 + float(i) * 22.0
+	var bg := ColorRect.new()
+	bg.color = Color(0.12, 0.09, 0.07, 0.85)
+	bg.offset_left = 12; bg.offset_top = y; bg.offset_right = 12 + HP_W + 4; bg.offset_bottom = y + 18
+	_hp_layer.add_child(bg)
+	var fill := ColorRect.new()
+	fill.offset_left = 14; fill.offset_top = y + 2; fill.offset_right = 14 + HP_W; fill.offset_bottom = y + 16
+	_hp_layer.add_child(fill)
+	var label := Label.new()
+	label.offset_left = 18; label.offset_top = y; label.offset_right = 18 + HP_W; label.offset_bottom = y + 18
+	label.add_theme_font_override("font", UITheme.font())
+	label.add_theme_font_size_override("font_size", 12)
+	label.add_theme_color_override("font_color", UITheme.CREAM)
+	label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.9))
+	label.add_theme_constant_override("outline_size", 3)
+	_hp_layer.add_child(label)
+	return {"bg": bg, "fill": fill, "label": label}
+
+func _update_health_bars() -> void:
+	if _hp_layer == null or player == null:
+		return
+	var bodies: Array = player.get("bodies") if player.get("bodies") != null else [player]
+	var active: int = int(player.get("active")) if player.get("active") != null else 0
+	for i: int in range(bodies.size()):
+		var body: Node = bodies[i]
+		if not is_instance_valid(body):
+			continue
+		if i >= _hp_rows.size():
+			_hp_rows.append(_make_hp_row(i))
+		var row: Dictionary = _hp_rows[i]
+		var data: Resource = body.get("data")
+		var maxhp: float = float(data.get("max_hp")) if data != null else 100.0
+		var hp: float = float(body.get("hp"))
+		var ratio: float = clampf(hp / maxf(maxhp, 1.0), 0.0, 1.0)
+		(row["fill"] as ColorRect).offset_right = (row["fill"] as ColorRect).offset_left + HP_W * ratio
+		var downed: bool = bool(body.get("is_downed"))
+		var nm: String = String(data.get("character_name")) if data != null else "?"
+		(row["label"] as Label).text = ("%s  DOWN" % nm) if downed else "%s  %d" % [nm, int(round(hp))]
+		var fill := row["fill"] as ColorRect
+		if downed:
+			fill.color = Color(0.4, 0.4, 0.42)
+		else:
+			fill.color = Color(0.85, 0.25, 0.2).lerp(Color(0.35, 0.85, 0.35), ratio)
+		(row["bg"] as ColorRect).color = Color(0.30, 0.24, 0.10, 0.9) if i == active else Color(0.12, 0.09, 0.07, 0.85)
+	# boss bar
+	if _boss_enemy == null or not is_instance_valid(_boss_enemy):
+		_boss_enemy = null
+		for e in get_tree().get_nodes_in_group("enemy3d"):
+			var ed: Resource = e.get("data")
+			if ed != null and bool(ed.get("is_boss")):
+				_boss_enemy = e; break
+	var show_boss: bool = _boss_enemy != null and is_instance_valid(_boss_enemy)
+	_boss_bg.visible = show_boss; _boss_fill.visible = show_boss; _boss_label.visible = show_boss
+	if show_boss:
+		var bd: Resource = _boss_enemy.get("data")
+		var bmax: float = float(bd.get("max_hp")) if bd != null else 400.0
+		var br: float = clampf(float(_boss_enemy.get("hp")) / maxf(bmax, 1.0), 0.0, 1.0)
+		_boss_fill.offset_right = _boss_fill.offset_left + 360.0 * br

@@ -402,6 +402,7 @@ func take_damage(amount: float, from_dir: Vector3) -> void:
 		return
 	hp = maxf(hp - amount, 0.0)
 	CombatFX.shake(0.3)
+	Combat3D.spark(self, global_position + Vector3(0, 1.0, 0), Color(1.0, 0.95, 0.6))
 	_set_tint(Color(3, 3, 3))
 	get_tree().create_timer(0.09, false).timeout.connect(_clear_tint)
 	if hp == 0.0:

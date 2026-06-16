@@ -209,6 +209,7 @@ func take_damage(amount: float, _from: Vector3) -> void:
 		return
 	hp = maxf(hp - amount, 0.0)
 	Audio.play("hurt")
+	Combat3D.spark(self, global_position + Vector3(0, 1.0, 0), Color(1.0, 0.4, 0.35))
 	if hp <= 0.0:
 		_go_down()
 
