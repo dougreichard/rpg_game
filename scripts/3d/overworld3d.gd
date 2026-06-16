@@ -17,15 +17,26 @@ const CHARS := {
 	"ben": preload("res://data/characters/ben.tres"),
 	"ethan": preload("res://data/characters/ethan.tres"),
 }
-const SPACING := 20.0
-const ZOFF := 15.0          # building rows at z = ±ZOFF (set back so façades clear the
-                            # ±7.5 street-prop / ±9 sidewalk band; door plaza bridges the gap)
+# Stacked-boulevard grid: 3 rows of buildings ALL facing +Z (the camera looks -Z),
+# each with an E-W boulevard on its +Z front; a central park fills the middle slot.
+const COL_X := [-44.0, -22.0, 0.0, 22.0, 44.0]   # 5 columns
+const ROW_Z := [-46.0, -18.0, 10.0]              # 3 building rows (back -> front)
+const BLVD_Z := [-38.0, -10.0, 18.0]             # boulevard in front (+Z) of each row
+const CROSS_X := [-33.0, -11.0, 11.0, 33.0]      # N-S cross-streets linking the boulevards
+const PARK_SLOT := Vector2i(1, 2)                # middle row, centre column = the park
+# Building slots (row, col) in LOCS order — 14 buildings, the park slot skipped.
+const SLOTS := [
+	Vector2i(0, 0), Vector2i(0, 1), Vector2i(0, 2), Vector2i(0, 3), Vector2i(0, 4),
+	Vector2i(1, 0), Vector2i(1, 1), Vector2i(1, 3), Vector2i(1, 4),
+	Vector2i(2, 0), Vector2i(2, 1), Vector2i(2, 2), Vector2i(2, 3), Vector2i(2, 4),
+]
 # big office towers scaled down so footprints fit the block; shops stay 1.0
 const BLD_SCALE := {"bld_round": 0.7, "bld_round3": 0.7, "bld_octagon": 0.7,
 	"bld_office_large": 0.75, "bld_square": 0.8, "bld_square3": 0.8, "bld_office_small": 0.85}
-const DOOR_INSET := 4.0     # interaction point pulled toward the avenue
+const DOOR_INSET := 5.0     # interaction point pulled toward the boulevard
 const INTERACT := 4.5
-const GROUND := Color(0.28, 0.30, 0.26)
+const GROUND := Color(0.30, 0.42, 0.26)   # grassy town green
+const ROAD_COL := Color(0.32, 0.32, 0.34)
 
 # id, display name, 3D scene, unlock requirement, building glb
 const LOCS := [
@@ -79,28 +90,30 @@ var _hud_title: Label = null
 func _build_level() -> void:
 	allow_overworld_exit = false   # we ARE the overworld
 	build_env(Color(0.55, 0.72, 0.92), Color(0.7, 0.74, 0.78), 0.75, 1.25)
-	floor_box(180.0, 90.0, GROUND)
-	_avenue()
+	floor_box(150.0, 120.0, GROUND)
+	_streets()
+	_park()
 	_buildings()
+	_foliage()
 	_spawn_town_npcs()
 	make_dialog()
 	_build_hud()
 	# Returning from a level drops the duo back outside that building's door;
-	# a fresh arrival (title) starts at the west end of the avenue.
-	var start := Vector3(_col_x(0) - SPACING, 0.1, 0.0)
+	# a fresh arrival (title) starts on the front boulevard, centre.
+	var start := Vector3(0.0, 0.1, BLVD_Z[2] + 8.0)
 	var ret: String = GameManager.last_location_id
 	if ret != "":
 		for d2 in _doors:
 			if d2["id"] == ret:
-				start = d2["pos"] + Vector3(0.0, 0.1, 0.0)
+				start = d2["pos"] + Vector3(0.0, 0.1, 2.0)
 				break
 		GameManager.last_location_id = ""
 	var p := spawn_duo(_overworld_duo(), start)
 	p.special_used.connect(_on_special)
-	# pull the follow camera back for a town overview
+	# pull the follow camera back for the wider grid town overview
 	for c in get_children():
 		if c is Camera3D and c.has_method("reframe"):
-			c.call("reframe", 11.0, 50.0)   # closer to the duo (was 16, 46 — felt distant)
+			c.call("reframe", 13.5, 52.0)
 	build_ui_stack(true)   # pause menu + overlays (Esc opens it)
 
 # The strolling duo = the first (up to two) unlocked characters, in unlock order.
@@ -116,49 +129,65 @@ func _overworld_duo() -> Array:
 		duo.append(QUINN)
 	return duo
 
-func _num_cols() -> int:
-	return (LOCS.size() + 1) / 2
+func _slot_pos(slot: Vector2i) -> Vector3:
+	return Vector3(COL_X[slot.y], 0.0, ROW_Z[slot.x])
 
-func _col_x(c: int) -> float:
-	return (float(c) - float(_num_cols() - 1) / 2.0) * SPACING
+# --- streets: 3 E-W boulevards + N-S cross-streets ---------------------------
+# Tile heights stagger so layers never z-fight: ground 0 < sidewalk .04 < road .06.
+const XMIN := -56.0
+const XMAX := 56.0
+const ZMIN := -52.0
+const ZMAX := 26.0
 
-# --- city dressing -----------------------------------------------------------
-func _avenue() -> void:
-	var x0: float = _col_x(0) - SPACING
-	var x1: float = _col_x(_num_cols() - 1) + SPACING
-	var x: float = x0
-	while x <= x1:
-		# Stagger tile heights so overlapping layers never share a plane (z-fight):
-		# ground 0 < sidewalk 0.04 < road 0.06 < crossing 0.08.
-		# two-lane road down the avenue (z = ±2.5)
-		_tile("road", Vector3(x, 0.06, -2.5))
-		_tile("road", Vector3(x, 0.06, 2.5))
-		# sidewalks flanking the road
-		_tile("sidewalk", Vector3(x, 0.04, -7.5))
-		_tile("sidewalk", Vector3(x, 0.04, 7.5))
-		x += 5.0
+func _streets() -> void:
+	for bz: float in BLVD_Z:
+		var x: float = XMIN
+		while x <= XMAX:
+			_tile("road", Vector3(x, 0.06, bz - 2.5))
+			_tile("road", Vector3(x, 0.06, bz + 2.5))
+			_tile("sidewalk", Vector3(x, 0.04, bz - 6.5))   # building-side walk
+			_tile("sidewalk", Vector3(x, 0.04, bz + 6.5))   # far-side walk
+			x += 5.0
+	for cx: float in CROSS_X:
+		var z: float = ZMIN
+		while z <= ZMAX:
+			_tile("road", Vector3(cx - 2.5, 0.065, z))
+			_tile("road", Vector3(cx + 2.5, 0.065, z))
+			z += 5.0
 
 func _tile(key: String, pos: Vector3) -> void:
 	prop(TOWN + key + ".glb", pos, 0.0, 1.0)
 
 func _buildings() -> void:
+	# Every building faces +Z (yaw 0) toward the locked −Z camera. Each sits at its grid
+	# slot; its door + plaza + name billboard go on the +Z front, toward its boulevard.
 	for i in LOCS.size():
 		var loc: Dictionary = LOCS[i]
-		var col: int = i / 2
-		var north: bool = (i % 2) == 0
-		var x: float = _col_x(col)
-		var z: float = -ZOFF if north else ZOFF
-		# each mesh's native front differs; loc "yaw" overrides the default row-facing.
-		var yaw: float = loc.get("yaw", 0.0 if north else PI)
-		var door := Vector3(x, 0.0, z + (DOOR_INSET if north else -DOOR_INSET))
+		var base: Vector3 = _slot_pos(SLOTS[i])
+		var x: float = base.x
+		var z: float = base.z
 		var bscale: float = BLD_SCALE.get(loc["glb"], 1.0)
-		prop(TOWN + loc["glb"] + ".glb", Vector3(x, 0.0, z), yaw, bscale)
+		prop(TOWN + loc["glb"] + ".glb", base, 0.0, bscale)
 		if loc["id"] == "clocktower":
-			_add_clock_tower(Vector3(x, 0.0, z), yaw)
-		_crosswalk(x, north)
-		_street_dressing(x, north)
-		_name_billboard(loc, Vector3(x, 0.0, z + (2.0 if north else -2.0)))
-		_doors.append({"id": loc["id"], "name": loc["name"], "scene": loc["scene"], "req": loc["req"], "pos": door})
+			_add_clock_tower(base, 0.0)
+		_entry_plaza(x, z)
+		_entry_dressing(x, z)
+		_name_billboard(loc, Vector3(x, 0.0, z + 2.0))
+		_doors.append({"id": loc["id"], "name": loc["name"], "scene": loc["scene"], "req": loc["req"],
+			"pos": Vector3(x, 0.0, z + DOOR_INSET)})
+
+# A sidewalk plaza + crossing bridging the boulevard up to the building door (+Z).
+func _entry_plaza(x: float, rz: float) -> void:
+	_tile("sidewalk", Vector3(x, 0.05, rz + 3.0))
+	_tile("sidewalk", Vector3(x, 0.05, rz + 7.0))
+	_tile("road_crossing", Vector3(x, 0.08, rz + 8.0))   # crossing over the boulevard
+
+func _entry_dressing(x: float, rz: float) -> void:
+	# a flanking prop + a pair of planters/flowerbeds at the entrance
+	var props := ["bench", "planter", "hydrant", "trashcan", "mailbox", "potplant"]
+	prop(TOWN + props[int(abs(x) + abs(rz)) % props.size()] + ".glb", Vector3(x + 3.5, 0.0, rz + 3.5), PI, 1.0)
+	prop(TOWN + "flowerbed.glb", Vector3(x - 3.2, 0.0, rz + 3.2))
+	prop(TOWN + "bush.glb", Vector3(x + 4.4, 0.0, rz + 1.0))
 
 # The Clocktower reuses the CityHall courthouse mesh (like the Library) and gets a
 # clock tower built on top from primitives: a taller central shaft (tinted to match
@@ -198,19 +227,45 @@ func _add_clock_tower(base: Vector3, yaw: float) -> void:
 	var minute := Node3D.new(); minute.position = Vector3(0, cy, cz + 0.18); minute.rotation.z = deg_to_rad(110); t.add_child(minute)
 	minute.add_child(box_mesh(Vector3(0.12, 1.15, 0.1), CT_DARK, Vector3(0, 0.57, 0)))
 
-func _crosswalk(x: float, north: bool) -> void:
-	# a crossing tile + plaza connecting the sidewalk all the way up to the (set-back)
-	# door (crossing sits highest so it reads cleanly over the road lane it overlaps)
-	var s: float = -1.0 if north else 1.0
-	_tile("road_crossing", Vector3(x, 0.08, 5.0 * s))
-	_tile("sidewalk", Vector3(x, 0.05, 9.0 * s))
-	_tile("sidewalk", Vector3(x, 0.05, 13.0 * s))   # plaza in front of the building door
+# --- central park (middle-row centre slot, fronting boulevard B) -------------
+const PARK_C := Vector3(0.0, 0.0, -18.0)   # park centre (= ROW_Z[1], COL_X[2])
 
-func _street_dressing(x: float, north: bool) -> void:
-	var zs: float = -7.5 if north else 7.5
-	var props := ["bench", "planter", "hydrant", "trashcan", "mailbox", "potplant"]
-	var key: String = props[int(abs(x)) % props.size()]
-	prop(TOWN + key + ".glb", Vector3(x + 2.5, 0.0, zs), 0.0 if north else PI, 1.0)
+func _park() -> void:
+	# grass lawn (3x3 tiles), fountain centre, gazebo + pond to the back, a ring of
+	# trees, benches facing the fountain, park lamps + flower beds.
+	for gx in [-5.0, 0.0, 5.0]:
+		for gz in [-10.0, -5.0, 0.0]:   # tiles are 5x5 with origin at a corner
+			prop(TOWN + "grass.glb", PARK_C + Vector3(gx, 0.0, gz), 0.0, 1.0)
+	prop(TOWN + "fountain.glb", PARK_C, 0.0)
+	prop(TOWN + "gazebo.glb", PARK_C + Vector3(-7.5, 0.0, -6.5), deg_to_rad(30))
+	prop(TOWN + "pond.glb", PARK_C + Vector3(7.0, 0.0, -6.0))
+	for a in 8:   # ring of trees around the park
+		var ang: float = float(a) * TAU / 8.0
+		prop(TOWN + "tree.glb", PARK_C + Vector3(sin(ang) * 10.0, 0.0, cos(ang) * 9.0), 0.0)
+	prop(TOWN + "tree_large.glb", PARK_C + Vector3(-9.0, 0.0, 2.0))
+	for bx in [-4.0, 4.0]:   # benches facing the fountain from the boulevard side
+		prop(TOWN + "bench.glb", PARK_C + Vector3(bx, 0.0, 4.5), PI)
+	for c in [Vector3(-10, 0, 4), Vector3(10, 0, 4), Vector3(-10, 0, -9), Vector3(10, 0, -9)]:
+		prop(TOWN + "park_lamp.glb", PARK_C + c)
+		prop(TOWN + "flowerbed.glb", PARK_C + c + Vector3(1.5, 0, 0))
+
+# --- foliage scatter along the medians between rows --------------------------
+func _foliage() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 0x70A11   # deterministic
+	# green medians between each boulevard's far side and the next row
+	for mz: float in [BLVD_Z[0] + 10.0, BLVD_Z[1] + 9.0]:
+		var x: float = XMIN + 6.0
+		while x <= XMAX - 6.0:
+			if absf(x) > 13.0 or mz < -20.0:   # keep the park frontage clear-ish
+				var kind: String = ["tree", "bush", "tree", "flowerbed"][rng.randi() % 4]
+				prop(TOWN + kind + ".glb", Vector3(x + rng.randf_range(-1.5, 1.5), 0.0,
+					mz + rng.randf_range(-1.5, 1.5)), rng.randf() * TAU)
+			x += rng.randf_range(7.0, 10.0)
+	# street trees + lamps along the front boulevard edges
+	for cx: float in CROSS_X:
+		prop(TOWN + "park_lamp.glb", Vector3(cx + 3.0, 0.0, BLVD_Z[2] + 6.0))
+		prop(TOWN + "bush.glb", Vector3(cx - 3.0, 0.0, BLVD_Z[2] + 6.0))
 
 func _name_billboard(loc: Dictionary, pos: Vector3) -> void:
 	var unlocked: bool = _is_unlocked(loc["req"])
@@ -239,10 +294,11 @@ func _spawn_town_npcs() -> void:
 		if not req.is_empty() and not GameManager.get_level_flag(req["location"], req["flag"], false):
 			i += 1
 			continue
-		var x: float = -55.0 + float(i) * 10.0
-		var z: float = 6.0 if i % 2 == 0 else -6.0
+		# cluster the quest-givers across the central park frontage (facing +Z / camera)
+		var x: float = -40.0 + float(i) * 7.3
+		var z: float = -6.0 if i % 2 == 0 else -14.0
 		var pos := Vector3(x, 0.0, z)
-		var node := spawn_npc(NPC_MESHES[i % NPC_MESHES.size()], pos, 0.0 if z > 0.0 else PI,
+		var node := spawn_npc(NPC_MESHES[i % NPC_MESHES.size()], pos, 0.0,
 			TOWN_QUIPS, _npc_waypoints(pos, z))
 		_npcs.append({"quest_id": data["quest_id"], "name": data["name"], "color": data["color"], "pos": pos, "node": node})
 		i += 1
