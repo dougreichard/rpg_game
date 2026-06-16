@@ -315,7 +315,7 @@ Loft. Still-single-room levels inherit this as they're converted to multi-room.)
 
 ---
 
-### 1. Bellows & Sons Pipe Organ Works — `PipeOrganWorks.tscn` (opening level)
+### 1. Bellows & Sons Pipe Organ Works — `PipeOrganWorks3D.tscn` (opening level)
 - **Unlock condition:** Available from the start
 - **Entering duo:** **Quinn ALONE.** Erin is *found* here, not pre-paired (see Notes).
 - **Floor 1:** Lobby (Bellows + organ console; combat-free) · Storeroom (grunts + hidden Erin + the warped plank) · **Workshop** (the table saw + tuning bench) · stair alcove. **Floor 2:** Pipe Loft (out-of-tune pipe + gear blank; runners) + secret spare-gear nook.
@@ -328,7 +328,7 @@ Loft. Still-single-room levels inherit this as they're converted to multi-room.)
 
 ---
 
-### 2. The Old Parish Church — `OldParishChurch.tscn`
+### 2. The Old Parish Church — `Church3D.tscn`
 - **Unlock condition:** Complete Bellows & Sons
 - **Unlocks:** Evan
 - **Key puzzle(s):** Quinn's respectful demeanor earns the congregation's trust; Erin's skepticism lets her see through deception — neither can solve it alone
@@ -339,7 +339,7 @@ Loft. Still-single-room levels inherit this as they're converted to multi-room.)
 
 ---
 
-### 3. Iron & Strings Gym — `IronStringsGym.tscn`
+### 3. Iron & Strings Gym — `IronStringsGym3D.tscn`
 - **Unlock condition:** Complete The Old Parish Church
 - **Unlocks:** Ben
 - **Key puzzle(s):** Evan's strength moves the barbell sealing Ben's cage alcove
@@ -350,7 +350,7 @@ Loft. Still-single-room levels inherit this as they're converted to multi-room.)
 
 ---
 
-### 4. The Recording Studio — `RecordingStudio.tscn`
+### 4. The Recording Studio — `RecordingStudio3D.tscn`
 - **Unlock condition:** Complete Iron & Strings Gym
 - **Unlocks:** Ethan
 - **Key puzzle(s):** Ben tunes the soundboard console, sliding open the glass BoothDoor and revealing Ethan
@@ -361,7 +361,7 @@ Loft. Still-single-room levels inherit this as they're converted to multi-room.)
 
 ---
 
-### 5. The Clocktower — `Clocktower.tscn`
+### 5. The Clocktower — `Clocktower3D.tscn`
 - **Unlock condition:** All five characters unlocked
 - **Key puzzle(s):** Quinn repairs the gear floor escapement (unbars the belfry stair); Ben plays the correct belfry bell sequence; clockwork-guardian Boss guards the belfry
 - **3D build:** 3 floors. New: Ben **times the swinging pendulum** in the antechamber to still it + lift a gate to the belfry (timing gate, live HUD); Quinn winds the **weight cranks 1→2→3** → optional `archive_key`; Quinn winds **Doug's pocket-watch** → `doug_pocketwatch`. Bells now also grant `tuning_fork`. Tile/stone surfaces, brass accents.
@@ -371,7 +371,7 @@ Loft. Still-single-room levels inherit this as they're converted to multi-room.)
 
 ---
 
-### 6. The Harbor & Docks — `HarborDocks.tscn`
+### 6. The Harbor & Docks — `HarborDocks3D.tscn`
 - **Unlock condition:** All five characters unlocked (opens alongside Clocktower)
 - **Key puzzle(s):** Evan (or crowbar) moves the cargo container off the crane platform; Quinn powers the dock; the crane lifts Doug's manifest crate
 - **3D build:** multi-room — combat-free OFFICE (Viktor + exit) → DOCK YARD (combat + crane chain) → optional STOREROOM (east, `boiler_key`). Chain: Evan **container** → Quinn **dock-power** → run the **crane** (needs `crane_crank_handle` from the yard) → lifts the manifest crate (`doug_crate_tag`). The **`pocket_lantern`** is now in the manifest locker (Evan force / Quinn dial). Concrete/dirt surfaces, rust trim.
@@ -381,7 +381,7 @@ Loft. Still-single-room levels inherit this as they're converted to multi-room.)
 
 ---
 
-### 7. The Public Library & Archive — `LibraryArchive.tscn`
+### 7. The Public Library & Archive — `LibraryArchive3D.tscn`
 - **Unlock condition:** TBD
 - **Key puzzle(s):** Erin talks past Ms. Priswick (or library card) to drop the checkpoint gate; Ethan hacks the restricted archive terminal
 - **3D build:** multi-room — combat-free READING ROOM (Priswick checkpoint + exit) → checkpoint gate → STACKS (combat + hiding spots). Archive hack reveals Doug's file → `doug_checkout_card`; the **locked stack** opens via the Clocktower `archive_key` OR Ethan's **catalog cipher** → `vr_override_chip`. Carpet/wood surfaces, deep-green trim.
@@ -391,7 +391,7 @@ Loft. Still-single-room levels inherit this as they're converted to multi-room.)
 
 ---
 
-### 8. The Carnival & Fairground — `Carnival.tscn`
+### 8. The Carnival & Fairground — `Carnival3D.tscn`
 - **Unlock condition:** TBD
 - **Key puzzle(s):** Quinn repairs the carousel; Erin talks down Marco at the backstage gate (or backstage pass)
 - **3D build:** multi-room — combat-free ENTRANCE PLAZA (barker Pearl + exit) → MIDWAY (combat + carousel + photo booth) → BACKSTAGE (Doug poster, behind Marco's gate) + a side FUNHOUSE. Quinn **fixes the photo booth** → `doug_photo_strip`; the **funhouse lever-sequence 1→2→3** → `library_card` (optional). Dirt/bright-wood surfaces, candy-red trim.
@@ -419,7 +419,7 @@ Loft. Still-single-room levels inherit this as they're converted to multi-room.)
 
 ---
 
-### 10. Zip Line Park — `ZipLinePark.tscn`
+### 10. Zip Line Park — `ZipLinePark3D.tscn`
 - **Unlock condition:** TBD
 - **Key puzzle(s):** Ethan hacks the Mid Platform control panel (proximity); Ben catches the timed High Platform release window (timing gate)
 - **Enemy types:** Grunt + Runners ×2
@@ -428,7 +428,7 @@ Loft. Still-single-room levels inherit this as they're converted to multi-room.)
 
 ---
 
-### 11. VR Escape Room — `VrEscapeRoom.tscn`
+### 11. VR Escape Room — `VrEscapeRoom3D.tscn`
 - **Unlock condition:** TBD
 - **Key puzzle(s):** Quinn repairs physics-glitch node in Stage Alpha; Ethan hacks system console in Stage Beta; Lizard companion offers an alternate bypass route
 - **Enemy types:** Grunts ×2 + Sentry (glitchy/corrupted)
@@ -437,7 +437,7 @@ Loft. Still-single-room levels inherit this as they're converted to multi-room.)
 
 ---
 
-### 12. The Drop — `TheDrop.tscn`
+### 12. The Drop — `TheDrop3D.tscn`
 - **Unlock condition:** Late-game, after a credible lead on Uncle Doug's location
 - **Key puzzle(s):** Evan clears landing-site wreckage (or William & Mary two-point puzzle); Ethan hacks jammed chute release in Snag Grove; Rio confirms the marquee sign points to the endgame
 - **Enemy types:** Grunt + Runner + Brute (hostile ground crew)
@@ -446,7 +446,7 @@ Loft. Still-single-room levels inherit this as they're converted to multi-room.)
 
 ---
 
-### 13. The Grand Marquee Cinema — `GrandMarqueeCinema.tscn` (endgame)
+### 13. The Grand Marquee Cinema — `GrandMarqueeCinema3D.tscn` (endgame)
 - **Unlock condition:** Complete The Drop; all five characters + all five movie tickets required
 - **Key puzzle(s):** Quinn repairs the projection booth; Ben plays the house organ on the Balcony; Boss guards the Backstage aisle; Uncle Doug found in the projection booth
 - **Enemy types:** Grunts ×2 + Boss (cinema guardian)

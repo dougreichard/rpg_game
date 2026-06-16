@@ -63,3 +63,25 @@ func test_every_ticket_is_obtainable_outside_the_cinema() -> void:
 	for t: String in TICKETS:
 		assert_true(src.find(t + ".tres") != -1,
 			"%s is never referenced in a non-cinema level — endgame soft-lock" % t)
+
+func _file_has(fname: String, needle: String) -> bool:
+	var fa := FileAccess.open(SCRIPT_DIR + fname, FileAccess.READ)
+	return fa != null and fa.get_as_text().find(needle) != -1
+
+# The pocket lantern is the REQUIRED entry gate for the Underground Tunnels — it must be
+# obtainable (granted at the Harbor & Docks), or that level is unreachable.
+func test_pocket_lantern_is_obtainable() -> void:
+	assert_true(_file_has("harbor_docks3d.gd", "pocket_lantern.tres"),
+		"pocket_lantern must be obtainable at the Harbor — it gates the Underground Tunnels")
+
+# Cross-level shortcut keys must have BOTH a source level (grants it) and a use level
+# (references it), so they're meaningful and not orphaned.
+func test_cross_level_keys_have_source_and_use() -> void:
+	var pairs := {
+		"boiler_key": ["iron_strings_gym3d.gd", "harbor_docks3d.gd"],   # Gym → Harbor
+		"archive_key": ["clocktower3d.gd", "library_archive3d.gd"],     # Clocktower → Library
+	}
+	for key: String in pairs:
+		for fname: String in pairs[key]:
+			assert_true(_file_has(fname, key + ".tres"),
+				"%s should be referenced in %s (source + use sites)" % [key, fname])
