@@ -38,10 +38,10 @@ const F2 := Vector3(60, 0, 0)            # pipe loft
 const ORGAN := Vector3(-3.5, 0, -4.8)    # F1 lobby: console visual anchor
 const ORGAN_HIT := Vector3(-3.5, 0, -3.6)  # F1 lobby: organ interaction point
 const BELLOWS := Vector3(3.5, 0, -3.5)   # F1 lobby
-const PLANK_SRC := Vector3(13.5, 0, 3.0) # F1 storeroom: warped plank
-const ERIN_HIDE := Vector3(13.5, 0, -3.0)  # F1 storeroom: Erin behind crates
-const SAW := Vector3(-11.0, 0, -2.5)     # F1 workshop: table saw
-const BENCH := Vector3(-11.0, 0, 2.5)    # F1 workshop: tuning bench
+const PLANK_SRC := Vector3(15.5, 0, 3.0) # F1 storeroom: warped plank
+const ERIN_HIDE := Vector3(15.5, 0, -3.0)  # F1 storeroom: Erin behind crates
+const SAW := Vector3(-13.0, 0, -2.5)     # F1 workshop: table saw
+const BENCH := Vector3(-13.0, 0, 2.5)    # F1 workshop: tuning bench
 const PIPE_SRC := Vector3(-3.0, 0, -11.0)  # F2 loft: out-of-tune pipe
 const GEAR_SRC := Vector3(3.0, 0, -13.0)   # F2 loft: gear blank
 const LEVER := Vector3(5.5, 0, -11.0)    # F2 loft: secret lever
@@ -92,23 +92,28 @@ func _build_level() -> void:
 
 # --- Floor 1: Lobby + Storeroom + Workshop + stair alcove --------------------
 func _floor1() -> void:
-	region_floor(F1 + Vector3(0, 0, -3), 30, 22, FLOOR_COL)
+	region_floor(F1 + Vector3(0, 0, -4), 34, 24, FLOOR_COL)
 	room(F1, 12, 12, FLOOR_COL, WALL_COL, 3.2, ["s", "e", "w", "n"], 3.0, false)        # lobby
-	room(F1 + Vector3(11, 0, 0), 8, 10, FLOOR_COL, WALL_COL, 3.2, ["w"], 3.0, false)    # storeroom
-	room(F1 + Vector3(-11, 0, 0), 8, 10, FLOOR_COL, WALL_COL, 3.2, ["e"], 3.0, false)   # workshop
-	room(F1 + Vector3(0, 0, -9.5), 5, 7, FLOOR_COL, WALL_COL, 3.2, ["s"], 3.0, false)   # stair alcove
+	room(F1 + Vector3(13, 0, 0), 8, 10, FLOOR_COL, WALL_COL, 3.2, ["w"], 3.0, false)    # storeroom
+	room(F1 + Vector3(-13, 0, 0), 8, 10, FLOOR_COL, WALL_COL, 3.2, ["e"], 3.0, false)   # workshop
+	room(F1 + Vector3(0, 0, -12.5), 5, 7, FLOOR_COL, WALL_COL, 3.2, ["s"], 3.0, false)  # stair alcove
+	# corridors join the lobby doorways to the side rooms + stair alcove (the side
+	# rooms sit 3 m out so each threshold is a real walled hallway, not a 1 m gap)
+	corridor(F1 + Vector3(6, 0, 0), "e", 3.0, FLOOR_COL, WALL_COL, 3.0, 3.2, false)     # → storeroom
+	corridor(F1 + Vector3(-6, 0, 0), "w", 3.0, FLOOR_COL, WALL_COL, 3.0, 3.2, false)    # → workshop
+	corridor(F1 + Vector3(0, 0, -6), "n", 3.0, FLOOR_COL, WALL_COL, 3.0, 3.2, false)    # → stair alcove
 	point_light(F1 + Vector3(0, 3.0, -2), Color(1.0, 0.85, 0.6), 2.6, 12.0)
-	point_light(F1 + Vector3(11, 2.8, 0), Color(0.9, 0.85, 0.7), 1.8, 8.0)
-	point_light(F1 + Vector3(-11, 2.8, 0), Color(0.8, 0.9, 1.0), 1.8, 8.0)
+	point_light(F1 + Vector3(13, 2.8, 0), Color(0.9, 0.85, 0.7), 1.8, 8.0)
+	point_light(F1 + Vector3(-13, 2.8, 0), Color(0.8, 0.9, 1.0), 1.8, 8.0)
 	_organ()
 	_workshop_tools()
 	prop("res://assets/models/props/desk.glb", F1 + BELLOWS + Vector3(0, 0, -0.9), deg_to_rad(180))
 	prop("res://assets/models/props/shelf.glb", F1 + Vector3(5.5, 0, -5.6), 0.0)
 	# Storeroom: crates Erin hides behind + a barrel cluster
-	prop("res://assets/models/props/barrel.glb", F1 + Vector3(12.3, 0, -3.0))
-	prop("res://assets/models/props/barrel.glb", F1 + Vector3(12.6, 0, -3.7))
-	add_child(box_mesh(Vector3(1.2, 1.4, 1.2), WOOD, F1 + Vector3(12.4, 0.7, -2.4)))
-	add_child(box_mesh(Vector3(1.0, 1.0, 1.0), WOOD.lightened(0.05), F1 + Vector3(14.0, 0.5, -3.2)))
+	prop("res://assets/models/props/barrel.glb", F1 + Vector3(14.3, 0, -3.0))
+	prop("res://assets/models/props/barrel.glb", F1 + Vector3(14.6, 0, -3.7))
+	add_child(box_mesh(Vector3(1.2, 1.4, 1.2), WOOD, F1 + Vector3(14.4, 0.7, -2.4)))
+	add_child(box_mesh(Vector3(1.0, 1.0, 1.0), WOOD.lightened(0.05), F1 + Vector3(16.0, 0.5, -3.2)))
 	# Erin hiding behind the crates (non-combat NPC until recruited)
 	_erin_npc = spawn_npc("erin", F1 + ERIN_HIDE, deg_to_rad(180))
 	# raw material: warped plank (storeroom)
@@ -181,6 +186,7 @@ func _floor2() -> void:
 	region_floor(F2 + Vector3(0, 0, -9), 18, 30, FLOOR_COL)
 	room(F2, 6, 8, FLOOR_COL, WALL_COL, 3.0, ["n"], 3.0, false)                    # landing
 	room(F2 + Vector3(0, 0, -11), 14, 12, FLOOR_COL, WALL_COL, 4.0, ["s"], 3.0, false)  # pipe hall
+	corridor(F2 + Vector3(0, 0, -4), "n", 1.0, FLOOR_COL, WALL_COL, 3.0, 3.0, false)    # landing → pipe hall
 	point_light(F2 + Vector3(0, 3.4, -11), Color(1.0, 0.85, 0.6), 2.6, 13.0)
 	# tall organ pipes rising through the loft
 	for i: int in range(9):
@@ -223,7 +229,7 @@ func _floor2() -> void:
 
 func _links() -> void:
 	add_floor_link(
-		F1 + Vector3(0, 0, -12.0), F1 + Vector3(0, 0.1, -9.0), F_WORK,
+		F1 + Vector3(0, 0, -15.0), F1 + Vector3(0, 0.1, -12.0), F_WORK,
 		F2 + Vector3(0, 0, 3.5), F2 + Vector3(0, 0.1, 0.0), F_LOFT,
 		WOOD.lightened(0.1))
 
@@ -233,8 +239,8 @@ func _spawn_enemies() -> void:
 	if GameManager.get_level_flag(location_id, "enemies_cleared", false):
 		return
 	if not GameManager.get_level_flag(location_id, "erin_recruited", false):
-		_store_grunts.append(spawn_enemy(GRUNT, F1 + Vector3(9.5, 0.1, -2.0), "res://assets/models/enemies/grunt.glb"))
-		_store_grunts.append(spawn_enemy(GRUNT, F1 + Vector3(12.5, 0.1, 2.0), "res://assets/models/enemies/grunt.glb"))
+		_store_grunts.append(spawn_enemy(GRUNT, F1 + Vector3(11.5, 0.1, -2.0), "res://assets/models/enemies/grunt.glb"))
+		_store_grunts.append(spawn_enemy(GRUNT, F1 + Vector3(14.5, 0.1, 2.0), "res://assets/models/enemies/grunt.glb"))
 		_spawned += 2
 	spawn_enemy(RUNNER, F2 + Vector3(-1.0, 0.1, -9.0), "res://assets/models/enemies/runner.glb"); _spawned += 1
 	spawn_enemy(RUNNER, F2 + Vector3(4.0, 0.1, -12.0), "res://assets/models/enemies/runner.glb"); _spawned += 1

@@ -448,6 +448,52 @@ func _room_wall_side(center: Vector3, side: String, w: float, d: float, h: float
 		else:
 			wall(center + Vector3(nx, h * 0.5, off), Vector3(0.4, h, seg), col)
 
+# Unit step toward a doorway side ("n"=-Z, "s"=+Z, "e"=+X, "w"=-X) — matches the
+# `room()` opening convention so corridors dock onto the same named sides.
+func _dir_vec(dir: String) -> Vector3:
+	match dir:
+		"n": return Vector3(0, 0, -1)
+		"s": return Vector3(0, 0, 1)
+		"e": return Vector3(1, 0, 0)
+		"w": return Vector3(-1, 0, 0)
+	return Vector3.ZERO
+
+# A walkable hallway connecting two room doorways. Runs `length` m from `start`
+# (the centre of the near mouth) toward `dir` ("n"=-Z,"s"=+Z,"e"=+X,"w"=-X). Lays
+# its own floor strip + two side walls along the run; both ends stay open so the
+# rooms it joins cap them (leave `with_floor=false` when a region_floor already
+# covers the span). A SHORT corridor (≈1–2 m) cleanly fills a door gap; a LONG one
+# (8–16 m) is a room-like space you can dress with combat (`spawn_enemy`), puzzles
+# (`add_station`), hiding spots (`add_hiding_spot`), or props — keep it combat-free
+# if it opens off a lobby. Returns the centre of the FAR mouth so the next room or
+# corridor segment can dock onto it.
+func corridor(start: Vector3, dir: String, length: float, floor_col: Color,
+		wall_col: Color, width: float = 3.0, h: float = 3.2,
+		with_floor: bool = true) -> Vector3:
+	var step := _dir_vec(dir)
+	var mid := start + step * (length * 0.5)
+	var horiz: bool = dir == "e" or dir == "w"
+	var fw: float = length if horiz else width
+	var fd: float = width if horiz else length
+	if with_floor:
+		var sb := StaticBody3D.new()
+		sb.collision_layer = Combat3D.L_WORLD
+		sb.collision_mask = 0
+		var cs := CollisionShape3D.new(); var bs := BoxShape3D.new()
+		bs.size = Vector3(fw, 1.0, fd); cs.shape = bs; cs.position = Vector3(0, -0.5, 0)
+		sb.add_child(cs); sb.add_child(box_mesh(Vector3(fw, 1.0, fd), floor_col, Vector3(0, -0.5, 0)))
+		sb.position = mid; add_child(sb)
+	# two side walls flanking the run (the run-length sides; the ends stay open)
+	if horiz:
+		var hz: float = width * 0.5
+		wall(mid + Vector3(0, h * 0.5, -hz), Vector3(length, h, 0.4), wall_col)
+		wall(mid + Vector3(0, h * 0.5, hz), Vector3(length, h, 0.4), wall_col)
+	else:
+		var hx: float = width * 0.5
+		wall(mid + Vector3(-hx, h * 0.5, 0), Vector3(0.4, h, length), wall_col)
+		wall(mid + Vector3(hx, h * 0.5, 0), Vector3(0.4, h, length), wall_col)
+	return start + step * length
+
 func add_room_portal(pos: Vector3, size: Vector3, dist: float, elev: float) -> void:
 	var p: Area3D = Portal3DScript.new()
 	p.set("kind", 0)  # REFRAME
