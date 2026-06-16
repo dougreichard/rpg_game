@@ -12,6 +12,7 @@ const LOCATION_ID := "old_parish_church"
 const QUINN := preload("res://data/characters/quinn.tres")
 const ERIN := preload("res://data/characters/erin.tres")
 const FlowerItem: ItemData = preload("res://data/items/pressed_flower.tres")
+const EvanTicketItem: ItemData = preload("res://data/items/ticket_evan.tres")
 # DialogBox is provided by Level3D (make_dialog/open_dialog/dialog_input).
 
 # --- thematic surfaces (church floor / stone walls / dark-wood corner trim) ---
@@ -483,6 +484,7 @@ func _process(_d: float) -> void:
 		_cleared = true
 		GameManager.set_level_flag(LOCATION_ID, "quinn_done", true)
 		GameManager.set_level_flag(LOCATION_ID, "erin_done", true)
+		GameManager.grant_item("Evan", EvanTicketItem.id)   # Evan joins → his Grand Marquee ticket
 		GameManager.complete_location(LOCATION_ID)
 		_hud_goal.text = ""
 		_hud_banner.text = "The congregation opens up.\nEvan joins the search!"

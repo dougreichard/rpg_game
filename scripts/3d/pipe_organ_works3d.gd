@@ -24,6 +24,8 @@ const GRUNT := preload("res://data/enemies/grunt.tres")
 const RUNNER := preload("res://data/enemies/runner.tres")
 const TuningKeyItem: ItemData = preload("res://data/items/tuning_key.tres")
 const SpareGearItem: ItemData = preload("res://data/items/spare_clockwork_gear.tres")
+const TicketQuinn: ItemData = preload("res://data/items/ticket_quinn.tres")
+const TicketErin: ItemData = preload("res://data/items/ticket_erin.tres")
 const Station := preload("res://scripts/3d/work_station3d.gd")
 
 # Per-room thematic surfaces — each space gets its own floor + wall texture so the
@@ -384,6 +386,9 @@ func _recruit_erin(show_line: bool) -> void:
 	if player.has_method("add_member"):
 		player.call("add_member", ERIN, at)
 	refresh_duo_inventory_names()   # so Erin's bag now shows a tab in the inventory
+	# Quinn's + Erin's Grand Marquee tickets — Erin was carrying both (the lead she chased)
+	GameManager.grant_item("Quinn", TicketQuinn.id)
+	GameManager.grant_item("Erin", TicketErin.id)
 	if show_line:
 		Audio.play("swap")
 		var tree := {"start": {"lines": [
