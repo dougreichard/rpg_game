@@ -17,8 +17,15 @@ object — so prompt one object, not a scatter; the service also auto-retries ti
 renders at portrait to dodge SDXL grids).
 
 **Typical timings (3090, resident workers, perf-tuned: FlashVDM + TF32):** flat ~1 min, painted
-~3–4 min per prop — batched reference ~17s, shape ~39s, paint ~190s (@2.5k-tri budget), finalize +
-render a few seconds. (Editing a worker needs a process restart; see `prop_farm/README.md`.)
+~3–4 min per prop — reference seed-search ~40s (6 candidates; **~6s when a seed is pinned**), shape
+~39s, paint ~190s (@2.5k-tri budget), finalize + render a few seconds. (Editing a worker/app needs
+a process restart; see `prop_farm/README.md`.)
+
+**Reference seed-search → pin the winner.** The reference stage generates `ref_count` candidates at
+**distinct seeds** (`seed … seed+N-1`), hard-filters tiled/empty ones, and picks the **best** by a
+single-centered-object × flat-Synty-look score. It **returns the winning seed** (`chosen_seed`); pin
+it in the Mac's `prop_presets.json` and re-run with `ref_count=1` + that seed to reproduce the exact
+reference fast (pixel-identical). All candidates tiled → a clean `reference FAILED` (no shape on junk).
 
 **Two output tracks / Godot materials:**
 - `flat` — grey low-poly GLB; **tint per material in Godot** (no texture). Reduced + flat-shaded +
@@ -43,13 +50,15 @@ the GLB; the Mac then `git pull` + `prop(...)`.
 - Browser: **http://192.168.0.62:7860** (`DESKTOP-3A5JORP`) — form, live per-stage progress, 3D
   preview, shared **Jobs** dashboard.
 - REST API: `from gradio_client import Client; Client("http://192.168.0.62:7860")
-  .predict(name, prompt, seed, track, angle, height_m, poly, style_image_or_None, commit_bool, api_name="/generate")`
+  .predict(name, prompt, seed, track, angle, height_m, poly, ref_count, style_image_or_None, commit_bool, api_name="/generate")`
   — `track` = `"flat"`/`"painted"`; `height_m` = real bbox height in metres (ships true-sized →
-  `prop(...)` with scale 1.0); `poly` = painted tri budget (default 4000).
+  `prop(...)` with scale 1.0); `poly` = painted tri budget (default 4000); `ref_count` = reference
+  candidates to search (default 6; pass 1 + a pinned seed to reproduce). **Returns a 5-tuple**
+  `(status, gallery, model_glb, download, chosen_seed)` — `chosen_seed` is the winning reference seed.
 
-**Stage scripts** (`scripts/`): `gen_prop_ref_comfy.py` (ComfyUI/SDXL, `--batch` candidates in one
-pass → pick first non-tiled, + optional IPAdapter set-consistency), `gen_prop_mesh_cuda.py`
-(Hunyuan shape), `gen_prop_paint_cuda.py` (Hunyuan
+**Stage scripts** (`scripts/`): `gen_prop_ref_comfy.py` (ComfyUI/SDXL, `--count` candidates at
+distinct seeds → pipeline ranks + pins the winner, + optional IPAdapter set-consistency),
+`gen_prop_mesh_cuda.py` (Hunyuan shape), `gen_prop_paint_cuda.py` (Hunyuan
 paint — lean: skips discarded mr + super-res, texture_size 1536, `--remesh-target` = poly budget),
 `finalize_painted.py` (keep diffuse + mesh as-is, 512px texture, real-world size), `normalize_prop.py`
 (flat-track reduce; default dissolve angle 6°). Service code + ops docs live on the 3090 at

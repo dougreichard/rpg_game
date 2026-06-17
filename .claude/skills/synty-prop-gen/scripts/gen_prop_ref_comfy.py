@@ -37,9 +37,10 @@ ap.add_argument("--seed", type=int, default=11)
 # (A 4-8 step SDXL-Lightning/Turbo LoRA would cut this further, but none is installed.)
 ap.add_argument("--steps", type=int, default=16)
 ap.add_argument("--cfg", type=float, default=7.0)
-ap.add_argument("--batch", type=int, default=1,
-                help="generate N candidates in ONE batched SDXL pass; caller picks the first "
-                     "non-tiled one. Cheap on CUDA VRAM; replaces a sequential seed-retry loop.")
+ap.add_argument("--count", type=int, default=1,
+                help="generate N candidates at DISTINCT seeds (seed, seed+1, …, seed+N-1), one "
+                     "image per seed. The caller ranks them and pins the winning seed; that seed "
+                     "+ --count 1 reproduces the exact image (batch-index noise would not).")
 # Portrait default (832x1216): SDXL base TILES props into a grid at square 1024x1024 (barrels,
 # pins) which Hunyuan then cubes — a tall frame can't tile a grid, so it yields one object.
 ap.add_argument("--width", type=int, default=832)
@@ -85,7 +86,7 @@ g = {}
 g["4"] = {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": a.ckpt}}
 g["6"] = {"class_type": "CLIPTextEncode", "inputs": {"text": a.prompt + STYLE, "clip": ["4", 1]}}
 g["7"] = {"class_type": "CLIPTextEncode", "inputs": {"text": a.negative, "clip": ["4", 1]}}
-g["5"] = {"class_type": "EmptyLatentImage", "inputs": {"width": a.width, "height": a.height, "batch_size": a.batch}}
+g["5"] = {"class_type": "EmptyLatentImage", "inputs": {"width": a.width, "height": a.height, "batch_size": 1}}
 
 model_ref = ["4", 0]
 if a.style_image:
@@ -116,35 +117,38 @@ g["3"] = {"class_type": "KSampler", "inputs": {
 g["8"] = {"class_type": "VAEDecode", "inputs": {"samples": ["3", 0], "vae": ["4", 2]}}
 g["9"] = {"class_type": "SaveImage", "inputs": {"images": ["8", 0], "filename_prefix": f"ref_{a.name}"}}
 
-client_id = uuid.uuid4().hex
-print("queuing prompt", "(IPAdapter)" if a.style_image else "", "(ControlNet)" if a.control_image else "")
-req = urllib.request.Request(f"{BASE}/prompt", data=json.dumps({"prompt": g, "client_id": client_id}).encode(),
-                             headers={"Content-Type": "application/json"})
-pid = json.load(urllib.request.urlopen(req))["prompt_id"]
-print("prompt_id", pid)
-
-# poll history
-t0 = time.time()
-while True:
-    hist = json.load(urllib.request.urlopen(f"{BASE}/history/{pid}"))
-    if pid in hist:
-        break
-    if time.time() - t0 > 600:
-        print("TIMEOUT"); sys.exit(1)
-    time.sleep(1.5)
-
-outs = hist[pid]["outputs"]
 os.makedirs(os.path.expanduser(a.out_dir), exist_ok=True)
-saved = []
-idx = 0  # batch index -> {name}_ref_seed{seed}_{i}.png (the caller enumerates these by index)
-for node_id, out in outs.items():
-    for img in out.get("images", []):
-        q = urllib.parse.urlencode({"filename": img["filename"], "subfolder": img.get("subfolder", ""), "type": img.get("type", "output")})
-        data = urllib.request.urlopen(f"{BASE}/view?{q}").read()
-        dst = os.path.join(os.path.expanduser(a.out_dir), f"{a.name}_ref_seed{a.seed}_{idx}.png")
-        with open(dst, "wb") as f:
-            f.write(data)
-        saved.append(dst)
-        idx += 1
-        print("saved", dst, f"({len(data)//1024} KB)")
-print(f"done in {time.time()-t0:.0f}s ->", saved)
+
+
+def run_one(seed):
+    """Queue one generation at `seed` (batch_size 1), wait, save -> {name}_ref_seed{seed}.png.
+    Distinct-seed (not batch-index) so the winner is reproducible by seed alone."""
+    g["3"]["inputs"]["seed"] = seed
+    client_id = uuid.uuid4().hex
+    req = urllib.request.Request(f"{BASE}/prompt", data=json.dumps({"prompt": g, "client_id": client_id}).encode(),
+                                 headers={"Content-Type": "application/json"})
+    pid = json.load(urllib.request.urlopen(req))["prompt_id"]
+    t0 = time.time()
+    while True:
+        hist = json.load(urllib.request.urlopen(f"{BASE}/history/{pid}"))
+        if pid in hist:
+            break
+        if time.time() - t0 > 600:
+            print("TIMEOUT seed", seed); sys.exit(1)
+        time.sleep(1.0)
+    dst = os.path.join(os.path.expanduser(a.out_dir), f"{a.name}_ref_seed{seed}.png")
+    for out in hist[pid]["outputs"].values():
+        for img in out.get("images", []):
+            q = urllib.parse.urlencode({"filename": img["filename"], "subfolder": img.get("subfolder", ""), "type": img.get("type", "output")})
+            data = urllib.request.urlopen(f"{BASE}/view?{q}").read()
+            with open(dst, "wb") as f:
+                f.write(data)
+            print("saved", dst, f"({len(data)//1024} KB, {time.time()-t0:.0f}s)")
+            return dst
+    return None
+
+
+print("queuing", a.count, "candidate(s)", "(IPAdapter)" if a.style_image else "", "(ControlNet)" if a.control_image else "")
+T0 = time.time()
+saved = [p for p in (run_one(a.seed + i) for i in range(a.count)) if p]
+print(f"done in {time.time()-T0:.0f}s ->", saved)

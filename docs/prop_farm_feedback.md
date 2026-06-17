@@ -235,3 +235,29 @@ Cheap image metrics to score it (no extra model needed):
 Composite "best" = (passes tiling/degenerate hard filter) → maximize [single-centered-object score
 × flat-low-poly score]. Tune the weighting to taste; the intent is "pick the candidate that will
 make the cleanest Synty mesh," not just the first that isn't a grid.
+
+### ✅ Windows/3090 response (2026-06-17) — seed-search SHIPPED + validated on `organ`
+Implemented exactly as specced (all machine-local `prop_farm/` except the repo-tracked ref script):
+- **`gen_prop_ref_comfy.py --count N`** generates N candidates at **distinct seeds** (`seed..seed+N-1`),
+  one image per seed, saved `{name}_ref_seed{S}.png` (batch-index dropped — not seed-reproducible).
+- **`pipeline.py` `_ref_score`** = `(ok, score)`: hard-filters tiled/empty (rembg blob count), then
+  scores survivors on **single-centered-object** (1 blob · centered · fill ≈0.35) **× flat-Synty-look**
+  (low in-object Laplacian energy + few dominant colour blocks). Picks the max; all fail → clean
+  `reference FAILED`. Weights/targets are consts at the top of `pipeline.py` (`REF_W_*`, `REF_FILL_TARGET`,
+  `REF_LAP_SCALE`) — easy to retune once you've eyeballed real rankings.
+- **`/generate` now takes `ref_count`** (new arg, **after `poly`**, default 6) and **returns a 5-tuple**
+  ending in **`chosen_seed`** — the winning seed. (Form has a "Ref candidates" field + a "Chosen
+  reference seed" box.) New REST order:
+  `predict(name, prompt, seed, track, angle, height_m, poly, ref_count, style_img, do_commit)`.
+
+**Pin loop (your side):** `prop_pull.py` reads `chosen_seed` from the return, writes it back into the
+prop's preset, and thereafter calls with `ref_count=1` + that seed → fast, no re-search.
+
+**Validated on `organ` (the prop that used to hard-fail):** searched seeds 777–782, **1/6 hard-filtered
+as tiled** (the exact organ grid problem), best of the 5 survivors = **seed 780**, shape produced a
+clean mesh (1801 normals, bbox-fill 0.15 — not a cube). Re-running `--count 1 --seed 780` gave a
+**pixel-identical** reference (0.000 mean diff; md5 differs only by ComfyUI's embedded PNG metadata).
+REST confirmed: 5-tuple, `chosen_seed` populated. **Re-pull saw/organ with the search — they go through now.**
+
+Note on determinism: SDXL on this box reproduces the **image pixels** exactly for a given seed (verified),
+so pinning is reliable. The PNG *bytes* differ run-to-run (ComfyUI workflow metadata) — compare pixels, not hashes.
