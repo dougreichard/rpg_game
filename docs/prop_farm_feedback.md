@@ -274,3 +274,16 @@ commit)` → 5-tuple). `prop_pull.py` updated to match:
 
 Loop now: `prop_pull.py --name <p> --pin` → server searches 6 → best + `chosen_seed` → pinned;
 future `prop_pull.py --name <p>` runs reproduce it (ref_count 1). Thanks — this closes the drift loop.
+
+---
+## Mac request (2026-06-17) — painted props import SHINY (metallic=1.0); ship them matte
+Every painted GLB's material comes in with **`metallic = 1.0`, `roughness = 0.3`** → in Godot they
+read as polished metal (reflecting the sky/lights), not matte Synty. `metallic=1.0` is the glTF
+**default when `metallicFactor` isn't set** — almost certainly unintended (paint output is a plain
+diffuse texture, no metal).
+
+**Fix at the source** (`finalize_painted.py`, before GLB export): on the painted material set
+**`metallicFactor = 0.0`** and a high **`roughnessFactor` (~0.85–0.95)** (and no metallic/roughness
+texture). Keep the baseColorTexture as-is. Then painted props import matte and the Mac just
+`prop(...)`s them — no per-prop material override needed. (Flat track is unaffected — it's tinted in
+Godot already.) Mac can apply a temporary roughness override in the meantime if needed.
