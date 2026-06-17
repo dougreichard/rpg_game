@@ -10,7 +10,9 @@ import os
 os.environ.setdefault("PYTORCH_ENABLE_MPS_FALLBACK", "1")
 import sys, argparse, shutil
 
-REPO = os.path.expanduser("~/ai/hunyuan3d-mac")
+# Repo path: Mac fork by default; on a CUDA box set HY3D_REPO to the upstream Hunyuan3D-2.1
+# checkout (where the real custom_rasterizer CUDA kernel is built).
+REPO = os.path.expanduser(os.environ.get("HY3D_REPO", "~/ai/hunyuan3d-mac"))
 PAINT = os.path.join(REPO, "hy3dpaint")
 os.chdir(PAINT)                              # demo runs from here (relative cfgs/ckpt paths)
 sys.path.insert(0, PAINT)
