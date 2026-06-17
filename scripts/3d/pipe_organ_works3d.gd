@@ -210,11 +210,10 @@ func _set_organ_phase(fixed: bool) -> void:
 
 func _workshop_tools() -> void:
 	# Table saw — squares the plank, cuts the pipe to length.
-	# VISUAL ONLY (synty-prop-gen): generated saw, split into co-registered parts so each
-	# takes its own tint — dark steel frame/legs + brighter steel table/blade/housing.
-	# TOOL station/marker + recipes unchanged.
-	_tint_prop(prop("res://assets/models/props/table_saw_body.glb", F1 + SAW, 0.0, 1.4), Color(0.26, 0.27, 0.30), 0.5, 0.4)
-	_tint_prop(prop("res://assets/models/props/table_saw_top.glb", F1 + SAW, 0.0, 1.4), STEEL, 0.4, 0.45)
+	# VISUAL ONLY: Prop Farm "painted" mesh (diffuse texture on its own material, real-world
+	# sized 1.2m, base-aligned). Plain prop() at scale 1.0 — uses the GLB's material as-is.
+	# TOOL station/marker + recipes unchanged. (yaw 0; verify facing in-engine.)
+	prop("res://assets/models/props/table_saw.glb", F1 + SAW, 0.0)
 	var saw := add_station(Station.Kind.TOOL, F1 + SAW + Vector3(0, 0, 1.0), "Table Saw", "Quinn")
 	saw.set("recipes", [
 		{"in": "rough_plank", "out": "windchest_board"},
