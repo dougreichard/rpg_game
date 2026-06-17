@@ -11,7 +11,7 @@ at floor (min Z -> 0), centre X/Y, re-export Y-up glTF. Feed it the RAW Hunyuan 
 is one-pass Synty-ready (no separate stylize step needed).
 
   blender --background --python normalize_prop.py -- <in.glb> <out.glb> \
-      [angle_deg=12] [face_cap=0] [precollapse=300000] [shade_deg=30]
+      [angle_deg=6] [face_cap=0] [precollapse=300000] [shade_deg=30]
 
 Tune for the Synty count/look: set face_cap (e.g. 5000) to push the budget down; lower
 shade_deg for chunkier facets (0 = fully flat, <0 = keep smooth/realistic).
@@ -20,7 +20,12 @@ import bpy, sys, math
 
 argv = sys.argv[sys.argv.index("--") + 1:]
 IN, OUT = argv[0], argv[1]
-ANGLE = float(argv[2]) if len(argv) > 2 else 12.0   # limited-dissolve / planar angle (deg)
+ANGLE = float(argv[2]) if len(argv) > 2 else 6.0    # limited-dissolve / planar angle (deg)
+# Default lowered 12->6 (2026-06-17): 12deg is silhouette-safe on flat-panel props (the bench
+# survives it) but over-merges THIN/CYLINDRICAL features (saw teeth, cables, organ pipes),
+# whose dense small-angle facets get dissolved away. 6deg is near-lossless on flat panels and
+# preserves thin features far better; push lower per-prop for very fine tubes. Manage the tri
+# budget with FACE_CAP/stylize, not by raising this angle.
 FACE_CAP = int(argv[3]) if len(argv) > 3 else 0      # collapse cap after dissolve (0 = none)
 # Pre-collapse cap: Limited Dissolve is O(faces) and *thrashes* on dense meshes full of
 # thin/curved features (e.g. cylindrical rods/pipes — varying normals merge nothing), which
