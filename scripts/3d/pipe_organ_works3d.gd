@@ -165,13 +165,13 @@ func _organ() -> void:
 	# PARTS for a part-additive build: the bare console always stands; the pipe bank
 	# installs when the brass pipe is fitted; the whole thing warms + glows when repaired.
 	# VISUAL ONLY — the organ's collision + ASSEMBLY station/marker (ORGAN_HIT) are unchanged.
-	_organ_base = prop("res://assets/models/props/organ_part_base.glb", F1 + ORGAN, 0.0, 2.4)
-	_organ_pipes = prop("res://assets/models/props/organ_part_pipes.glb", F1 + ORGAN, 0.0, 2.4)
+	_organ_base = prop("res://assets/models/props/organ_part_base.glb", F1 + ORGAN, 0.0, 2.9)
+	_organ_pipes = prop("res://assets/models/props/organ_part_pipes.glb", F1 + ORGAN, 0.0, 2.9)
 	_tint_prop(_organ_pipes, BRASS, 0.4, 0.5)
 	if _organ_pipes != null: _organ_pipes.visible = false
 	var bx: float = (F1 + ORGAN).x
-	# thin key-strip that glows on the restored organ (the solved cue)
-	_organ_node = box_mesh(Vector3(1.6, 0.08, 0.3), Color(0.92, 0.9, 0.85), Vector3(bx, 1.2, (F1 + ORGAN).z + 0.95))
+	# thin key-strip that glows on the restored organ (the solved cue) — sized/placed for the 2.9 organ
+	_organ_node = box_mesh(Vector3(2.0, 0.1, 0.32), Color(0.92, 0.9, 0.85), Vector3(bx, 1.45, (F1 + ORGAN).z + 1.15))
 	add_child(_organ_node)
 	_set_organ_phase(false)   # _restore() flips it if already repaired
 
@@ -180,6 +180,16 @@ func _tint_prop(node: Node, col: Color, rough: float, metal: float) -> void:
 		return
 	var m := StandardMaterial3D.new()
 	m.albedo_color = col; m.roughness = rough; m.metallic = metal
+	for mi: Node in node.find_children("*", "MeshInstance3D"):
+		(mi as MeshInstance3D).material_override = m
+
+# Render a prop's baked-in vertex colours (multi-tone, no texture) instead of a flat tint.
+func _apply_vcolor(node: Node, rough: float = 0.8) -> void:
+	if node == null:
+		return
+	var m := StandardMaterial3D.new()
+	m.vertex_color_use_as_albedo = true
+	m.albedo_color = Color.WHITE; m.roughness = rough; m.metallic = 0.0
 	for mi: Node in node.find_children("*", "MeshInstance3D"):
 		(mi as MeshInstance3D).material_override = m
 
@@ -198,15 +208,19 @@ func _set_organ_phase(fixed: bool) -> void:
 func _workshop_tools() -> void:
 	# Table saw — squares the plank, cuts the pipe to length.
 	# VISUAL ONLY (synty-prop-gen): generated saw mesh replaces the box+blade primitives;
-	# the TOOL station/marker + recipes are unchanged.
-	prop("res://assets/models/props/table_saw.glb", F1 + SAW, 0.0, 1.4)
+	# the TOOL station/marker + recipes are unchanged. Shape-only mesh → tint it (steel).
+	_tint_prop(prop("res://assets/models/props/table_saw.glb", F1 + SAW, 0.0, 1.4), STEEL, 0.5, 0.35)
 	var saw := add_station(Station.Kind.TOOL, F1 + SAW + Vector3(0, 0, 1.0), "Table Saw", "Quinn")
 	saw.set("recipes", [
 		{"in": "rough_plank", "out": "windchest_board"},
 		{"in": "rough_organ_pipe", "out": "cut_organ_pipe"}])
 	_register_station(saw)
-	# Tuning bench — tunes the cut pipe, trues the gear. VISUAL ONLY: generated bench mesh.
-	prop("res://assets/models/props/tuning_bench.glb", F1 + BENCH, 0.0, 1.3)
+	# Tuning bench — tunes the cut pipe, trues the gear. VISUAL ONLY: generated bench mesh,
+	# split (synty-prop-gen split_prop) into co-registered parts so each takes its own tint —
+	# wood body (legs/table) + steel rod-rack/tools. Both at the same pos/yaw/scale; rotated
+	# PI so the open working front faces the player's approach (-Z marker).
+	_tint_prop(prop("res://assets/models/props/tuning_bench_body.glb", F1 + BENCH, PI, 1.3), WOOD.lightened(0.04), 0.7, 0.0)
+	_tint_prop(prop("res://assets/models/props/tuning_bench_top.glb", F1 + BENCH, PI, 1.3), STEEL, 0.4, 0.4)
 	var bench := add_station(Station.Kind.TOOL, F1 + BENCH + Vector3(0, 0, -1.0), "Tuning Bench", "Quinn")
 	bench.set("recipes", [
 		{"in": "cut_organ_pipe", "out": "brass_organ_pipe"},

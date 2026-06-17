@@ -5,10 +5,16 @@ Reduction order matters for hard-surface Synty props:
      keeping flats flat and edges crisp. Far cleaner than pure quadric collapse, which
      distorts flat panels (that's what made early props look lumpy).
   2. Optional **Collapse** cap — only if still over the face budget after dissolving.
-Then: weld doubles, recalc normals, scale to height 1.0 (rescale in Godot), base at
-floor (min Z -> 0), centre X/Y, re-export Y-up glTF. Feed it the RAW Hunyuan mesh.
+Then: weld doubles, recalc normals, apply angle-based **auto-smooth** (the Synty faceted
+look — big panels flat, gentle curves smooth), scale to height 1.0 (rescale in Godot), base
+at floor (min Z -> 0), centre X/Y, re-export Y-up glTF. Feed it the RAW Hunyuan mesh. Output
+is one-pass Synty-ready (no separate stylize step needed).
 
-  blender --background --python normalize_prop.py -- <in.glb> <out.glb> [angle_deg=12] [face_cap=0]
+  blender --background --python normalize_prop.py -- <in.glb> <out.glb> \
+      [angle_deg=12] [face_cap=0] [precollapse=300000] [shade_deg=30]
+
+Tune for the Synty count/look: set face_cap (e.g. 5000) to push the budget down; lower
+shade_deg for chunkier facets (0 = fully flat, <0 = keep smooth/realistic).
 """
 import bpy, sys, math
 
@@ -22,6 +28,7 @@ FACE_CAP = int(argv[3]) if len(argv) > 3 else 0      # collapse cap after dissol
 # input so its cost is predictable, while still leaving plenty for dissolve to flatten. Arg
 # 4 sets the cap (0 = skip); default 300k catches the pathological raw meshes only.
 PRECOLLAPSE = int(argv[4]) if len(argv) > 4 else 300000
+SHADE = float(argv[5]) if len(argv) > 5 else 30.0   # auto-smooth angle (deg); 0 = flat, <0 = smooth
 TARGET_HEIGHT = 1.0
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
@@ -69,6 +76,18 @@ bpy.ops.mesh.select_all(action="SELECT")
 bpy.ops.mesh.remove_doubles(threshold=0.0005)
 bpy.ops.mesh.normals_make_consistent(inside=False)
 bpy.ops.object.mode_set(mode="OBJECT")
+
+# 3) shading — the main Synty cue. Angle-based auto-smooth: big panels read flat/faceted,
+#    gentle curves stay smooth (full-smooth looks too realistic; full-flat looks busy on
+#    organic topology). SHADE=0 → fully faceted; SHADE<0 → keep smooth.
+if SHADE == 0:
+    bpy.ops.object.shade_flat()
+elif SHADE > 0:
+    bpy.ops.object.shade_smooth()
+    try:
+        bpy.ops.object.shade_auto_smooth(angle=math.radians(SHADE))  # Blender 4.1+/5.x
+    except Exception as e:
+        print("auto_smooth op unavailable, leaving smooth:", e)
 
 def bounds():
     mn = [1e9] * 3; mx = [-1e9] * 3
