@@ -38,6 +38,14 @@ if DISSOLVE > 0:
     bpy.ops.object.modifier_apply(modifier=d.name)
     print("after dissolve:", len(obj.data.polygons))
 
+# recalculate normals -> outside, so Godot (single-sided / back-face culled by default) doesn't
+# cull inward-facing faces (Hunyuan paint meshes can have inconsistent winding). Normals-only,
+# no remove_doubles, so UVs are untouched.
+bpy.ops.object.mode_set(mode="EDIT")
+bpy.ops.mesh.select_all(action="SELECT")
+bpy.ops.mesh.normals_make_consistent(inside=False)
+bpy.ops.object.mode_set(mode="OBJECT")
+
 # Synty shading cue
 if SHADE == 0:
     bpy.ops.object.shade_flat()

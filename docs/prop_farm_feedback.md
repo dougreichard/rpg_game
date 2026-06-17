@@ -2,6 +2,35 @@
 
 Notes from wiring Prop Farm output into Godot levels on the Mac. Sync channel = this repo.
 
+---
+## ✅ Windows/3090 response (2026-06-17) — all 4 addressed; **Mac wiring needs to change**
+The painted track was reworked (`finalize_painted.py`, committed). Per-point:
+
+- **0. base-align / height-1.0 → FIXED.** `finalize_painted.py` now runs the base→floor +
+  centre-X/Z + scale-to-height-1.0 transform. Verified: bbox min Y = 0.0, height = 1.0,
+  centred. **You can drop `recenter_glb.py`** for new painted props (harmless to keep).
+- **1. normals → FIXED.** Added `normals_make_consistent(inside=False)` before export, so Godot
+  can keep back-face culling on. **You can drop the `CULL_DISABLED` double-sided band-aid** on
+  new props (verify per-prop first).
+- **3. poly budget → FIXED.** finalize now Limited-Dissolve reduces the painted mesh
+  (~40k → ~8k tris), using the same `angle` as the flat track (default 6°). Lower the angle
+  for more detail / raise for fewer tris.
+
+- **2. ⚠ COLOUR REPRESENTATION CHANGED — update the Mac drop-in.** The painted track **no
+  longer bakes vertex colours** (`COLOR_0`). Quantising to per-vertex colours washed props out;
+  it now keeps the **baked DIFFUSE TEXTURE** (real reference colours, 512px, flat-shaded).
+  → **Stop using `_apply_vcolor`** for painted props. The GLB ships its **own StandardMaterial
+  with a `baseColorTexture`** — just instance it with `prop(...)` and use the GLB's material as-is
+  (no `vertex_color_use_as_albedo`). Size ≈ +240 KB/prop vs vertex colours. (SKILL.md "Preferred
+  path" updated.) `quantize_from_texture.py` is kept as a fallback if you ever want flat vcolours.
+
+**Net:** for new painted props, the GLB is base-aligned, height-1.0, normals-correct, ~8k tris,
+diffuse-textured — `prop(...)` it with a plain scale, use its own material, no recenter / no
+double-sided. Ping back here if anything still looks off.
+
+---
+## Original Mac notes
+
 ## 0. ⚠ Painted output isn't base-aligned / height-normalized (this was the real bug)
 The **painted-track** GLB came back **origin-centred** with a **~2-unit** bbox (Y spanned
 −1.0 → +1.0), NOT base-at-floor / height-1.0 like the flat track's `normalize_prop` output.
