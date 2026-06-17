@@ -196,27 +196,17 @@ func _set_organ_phase(fixed: bool) -> void:
 		if fixed: _organ_node.material_override = _glow_mat()
 
 func _workshop_tools() -> void:
-	# Table saw — squares the plank, cuts the pipe to length
-	add_child(box_mesh(Vector3(1.8, 0.9, 1.2), WOOD.lightened(0.05), F1 + SAW + Vector3(0, 0.45, 0)))
-	var blade := MeshInstance3D.new()
-	var cm := CylinderMesh.new(); cm.top_radius = 0.35; cm.bottom_radius = 0.35; cm.height = 0.04
-	var bmat := StandardMaterial3D.new(); bmat.albedo_color = STEEL; bmat.metallic = 0.8; bmat.roughness = 0.2
-	cm.material = bmat; blade.mesh = cm
-	blade.rotation_degrees = Vector3(0, 0, 90)
-	blade.position = F1 + SAW + Vector3(0.2, 1.05, 0)
-	add_child(blade)
+	# Table saw — squares the plank, cuts the pipe to length.
+	# VISUAL ONLY (synty-prop-gen): generated saw mesh replaces the box+blade primitives;
+	# the TOOL station/marker + recipes are unchanged.
+	prop("res://assets/models/props/table_saw.glb", F1 + SAW, 0.0, 1.4)
 	var saw := add_station(Station.Kind.TOOL, F1 + SAW + Vector3(0, 0, 1.0), "Table Saw", "Quinn")
 	saw.set("recipes", [
 		{"in": "rough_plank", "out": "windchest_board"},
 		{"in": "rough_organ_pipe", "out": "cut_organ_pipe"}])
 	_register_station(saw)
-	# Tuning bench — tunes the cut pipe, trues the gear (vise + tuning fork)
-	add_child(box_mesh(Vector3(2.0, 0.9, 1.0), WOOD, F1 + BENCH + Vector3(0, 0.45, 0)))
-	add_child(box_mesh(Vector3(0.3, 0.4, 0.3), STEEL.darkened(0.1), F1 + BENCH + Vector3(0.7, 1.05, 0)))  # vise
-	# little tuning fork
-	add_child(box_mesh(Vector3(0.05, 0.6, 0.05), STEEL, F1 + BENCH + Vector3(-0.6, 1.2, -0.1)))
-	add_child(box_mesh(Vector3(0.05, 0.6, 0.05), STEEL, F1 + BENCH + Vector3(-0.6, 1.2, 0.1)))
-	add_child(box_mesh(Vector3(0.05, 0.25, 0.05), STEEL, F1 + BENCH + Vector3(-0.6, 0.78, 0)))
+	# Tuning bench — tunes the cut pipe, trues the gear. VISUAL ONLY: generated bench mesh.
+	prop("res://assets/models/props/tuning_bench.glb", F1 + BENCH, 0.0, 1.3)
 	var bench := add_station(Station.Kind.TOOL, F1 + BENCH + Vector3(0, 0, -1.0), "Tuning Bench", "Quinn")
 	bench.set("recipes", [
 		{"in": "cut_organ_pipe", "out": "brass_organ_pipe"},

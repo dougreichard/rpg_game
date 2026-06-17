@@ -16,6 +16,12 @@ argv = sys.argv[sys.argv.index("--") + 1:]
 IN, OUT = argv[0], argv[1]
 ANGLE = float(argv[2]) if len(argv) > 2 else 12.0   # limited-dissolve / planar angle (deg)
 FACE_CAP = int(argv[3]) if len(argv) > 3 else 0      # collapse cap after dissolve (0 = none)
+# Pre-collapse cap: Limited Dissolve is O(faces) and *thrashes* on dense meshes full of
+# thin/curved features (e.g. cylindrical rods/pipes — varying normals merge nothing), which
+# made a 1M-face bench take 25+ min. A gentle quadric collapse FIRST bounds the dissolve's
+# input so its cost is predictable, while still leaving plenty for dissolve to flatten. Arg
+# 4 sets the cap (0 = skip); default 300k catches the pathological raw meshes only.
+PRECOLLAPSE = int(argv[4]) if len(argv) > 4 else 300000
 TARGET_HEIGHT = 1.0
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
@@ -32,6 +38,16 @@ if len(meshes) > 1:
 obj = bpy.context.view_layer.objects.active
 bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
 print("raw tris:", len(obj.data.polygons))
+
+# 0) pre-collapse cap — bound the dissolve input so it can't thrash on a huge/thin-feature
+#    mesh. Gentle (only kicks in well above PRECOLLAPSE), so the silhouette is preserved and
+#    dissolve still does the real flat-merging work.
+if PRECOLLAPSE and len(obj.data.polygons) > PRECOLLAPSE:
+    pc = obj.modifiers.new("precollapse", "DECIMATE")
+    pc.decimate_type = "COLLAPSE"
+    pc.ratio = PRECOLLAPSE / float(len(obj.data.polygons))
+    bpy.ops.object.modifier_apply(modifier=pc.name)
+    print("after pre-collapse:", len(obj.data.polygons))
 
 # 1) limited dissolve (planar) — the main reduction; keeps the silhouette + hard edges
 d = obj.modifiers.new("planar", "DECIMATE")

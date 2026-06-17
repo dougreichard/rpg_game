@@ -30,8 +30,31 @@ Run heavy stages **backgrounded** (they exceed a single command timeout). `<S>` 
    ```
    conda run -n hunyuan3d python <S>/gen_prop_mesh.py --name <slug> --seed <S>
    ```
-   Saves the ~2M-face `~/ai/refs/<slug>_raw.glb` (+ a quadric `_lowpoly.glb` fallback).
-   CPU-fallback for the unsupported MPS resize op is baked in — no env var needed.
+   Saves `~/ai/refs/<slug>_raw.glb` (feed to stage 3). CPU-fallback for the unsupported
+   MPS resize op is baked in — no env var needed.
+
+   **Two-tier speed/quality policy** (the prop list is long; bake accordingly):
+   - **Hero props** (saw, organ, crane, gear train, carousel…): defaults. High-res capture
+     + dissolve preserves the silhouette + small features best (~8–10 min/prop).
+   - **Set-dressing** (crates, records, buoys, balloons, seats…): lighten the raw mesh at
+     the source — `--octree 192 --mc-algo dmc --steps 30` (~3–4 min/prop, never hangs):
+     - `--octree N` — lower marching-cubes grid → far fewer raw tris + near-instant dissolve,
+       at the cost of softer corners + dropped small features.
+     - `--steps N` — fewer diffusion steps (~30 vs default 50); faster, little loss on chunks.
+     - `--mc-algo dmc` — dual contouring → crisper hard edges at low `--octree`. **Requires
+       `pip install diso`** (NOT installed by default, and may not build on Apple Silicon);
+       without it the gen errors out, so leave it off unless you've confirmed diso imports.
+   Reliable fast lever = `--octree` alone. NOTE: `--octree`/`--steps` only help **flat-panel**
+   props; props with many **thin/cylindrical features** (rods, pipes, railings) stay dense and
+   slow to dissolve regardless — for those the pre-collapse in stage 3 is what bounds the time.
+
+   **Batch a whole level's set in ONE model load** (the ~7 GB model load is otherwise paid
+   per prop — batching amortizes it across N):
+   ```
+   conda run -n hunyuan3d python <S>/gen_prop_mesh.py --manifest level_props.json
+   ```
+   `manifest = {"defaults": {<any flag>}, "props": [{"name": "...", "seed": "...", <overrides>}, …]}`
+   — `defaults` (e.g. the fast-path flags) apply to all; each entry can override per-prop.
 
 3. **Reduce + normalize** (Blender, seconds) — feed it the **RAW** mesh:
    ```
