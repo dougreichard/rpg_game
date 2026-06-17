@@ -1,6 +1,6 @@
 ---
 name: synty-prop-gen
-description: Generate a Synty-style low-poly prop mesh (GLB) for a 3D level from a text prompt, using the local Apple-Silicon pipeline (SDXL reference → Hunyuan3D-2.1 on MPS → Blender normalize), then drop it into a level as a visual-only mesh over the existing primitive collision. Use when asked to replace box_mesh placeholder props or add thematic set-dressing/hero props to a location, or to build phase meshes for a stateful puzzle.
+description: Generate a Synty-style low-poly prop mesh (GLB) for a 3D level from a text prompt (SDXL reference → Hunyuan3D-2.1 → Blender normalize), then drop it into a level as a visual-only mesh over the existing primitive collision. Use when asked to replace box_mesh placeholder props or add thematic set-dressing/hero props to a location, or to build phase meshes for a stateful puzzle. NOTE: a Windows/CUDA RTX-3090 box now runs this whole pipeline as the "Prop Farm" web service (faster, with texture paint) — PREFER it over the local Apple-Silicon/MPS path; see "Preferred path" at the top of this skill.
 ---
 
 # Synty prop generation (local, M3)
@@ -8,6 +8,31 @@ description: Generate a Synty-style low-poly prop mesh (GLB) for a 3D level from
 Turns a prompt into a committed `assets/models/props/<name>.glb` matching the Synty
 low-poly look, then wires it into a level. Three scriptable stages + a Godot drop-in.
 Bundled scripts are in `scripts/` next to this file.
+
+## ⚡ Preferred path: the Prop Farm service (Windows/CUDA RTX-3090 box)
+**Generation now runs as a web service on the 3090 — prefer it over the local MPS pipeline below.**
+It runs the full chain **reference → shape → (paint → quantize | reduce) → GLB** faster (CUDA),
+adds **real texture paint** (Hunyuan paint → flat palette sampled from the paint, not the old
+height-band heuristic), and has a **degenerate-mesh guard** (Hunyuan silently returns a *cube*
+when the reference isn't a single, centered, 3/4-view object — so prompt one object, not a scatter).
+
+- **Two-machine division:** the **3090 box generates** (stages 1–3 + paint); the **Mac wires it
+  into levels** (stage 4, the Godot drop-in below) and is git source-of-truth. They sync via the
+  shared GitHub remote. The service can **auto-commit + push** the finished GLB; the Mac then
+  `git pull` and `prop(...)` it in.
+- **Use it (from anywhere on the LAN):**
+  - Browser: **http://192.168.0.62:7860** (host `DESKTOP-3A5JORP`) — form + live per-stage
+    progress + 3D preview + a shared **Jobs** dashboard.
+  - REST API (Python): `from gradio_client import Client; Client("http://192.168.0.62:7860")
+    .predict(name, prompt, seed, track, angle, style_image_or_None, commit_bool, api_name="/generate")`
+    — `track` = `"flat"` (grey low-poly, tint in Godot) or `"painted"` (flat palette from paint).
+- **What it runs:** the CUDA-variant stage scripts in `scripts/` — `gen_prop_ref_comfy.py`
+  (ComfyUI/SDXL + optional IPAdapter set-consistency), `gen_prop_mesh_cuda.py` (Hunyuan shape),
+  `gen_prop_paint_cuda.py` (Hunyuan paint), `quantize_from_texture.py` (paint → flat palette),
+  `normalize_prop.py` (reduce; default dissolve angle **6°** — 12° over-merges thin features).
+- **Service code + full ops docs** live on the 3090 at `E:\ai\prop_farm\` (`README.md`,
+  `start_all.bat`) — *not* in this repo (machine-local infra, like the ComfyUI/Hunyuan clones).
+- **Fallback:** if the 3090/service is offline, the local Apple-Silicon/MPS pipeline below still works.
 
 ## Prerequisites (already set up on this machine — verify, don't reinstall)
 - conda env **`hunyuan3d`** (torch+MPS, diffusers, trimesh, rembg).
