@@ -52,7 +52,8 @@ def generate(client, job: dict, repo: str, do_import: bool, do_commit: bool) -> 
     print(f"→ [{job.get('track','painted')}] {name}  h={job.get('height',1.0)}m  seed={job.get('seed',11)}")
     res = client.predict(
         name, job["prompt"], job.get("seed", 11), job.get("track", "painted"),
-        job.get("angle", 6), job.get("height", 1.0), style, False, api_name="/generate",
+        job.get("angle", 6), job.get("height", 1.0), job.get("poly", 4000),
+        style, False, api_name="/generate",
     )
     glb = find_glb(res)
     if not glb:
@@ -86,6 +87,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--name"); ap.add_argument("--prompt")
     ap.add_argument("--height", type=float, default=1.0)
+    ap.add_argument("--poly", type=int, default=4000,
+                    help="painted pre-paint remesh tri budget (set-dressing ~1500-2500, hero ~4000-6000)")
     ap.add_argument("--track", default="painted", choices=["painted", "flat"])
     ap.add_argument("--seed", type=float, default=11)
     ap.add_argument("--angle", type=float, default=6)
@@ -103,7 +106,7 @@ def main():
     if os.path.exists(presets_path):
         presets = {k: v for k, v in json.load(open(presets_path)).items() if not k.startswith("_")}
 
-    defaults = {"track": a.track, "seed": a.seed, "angle": a.angle, "height": a.height, "style": a.style}
+    defaults = {"track": a.track, "seed": a.seed, "angle": a.angle, "height": a.height, "poly": a.poly, "style": a.style}
     # only treat a flag as an override if it was actually passed (else fall back to preset)
     passed = {x.lstrip("-").split("=")[0] for x in sys.argv[1:]}
     overrides = {k: v for k, v in defaults.items() if k in passed}
