@@ -72,3 +72,21 @@ a per-material split instead:
 The painted `tuning_bench` came back ~40k tris (vs ~10k on the flat/dissolve track). Fine for
 a hero prop, but if the painted track can target a lower budget (or expose an angle/face-cap
 like `normalize_prop.py`) that'd help for set-dressing.
+
+---
+## Mac request (2026-06-17) — bake REAL-WORLD SIZE at generation
+Props currently come out height-normalized to **1.0 unit**, so the Mac has to eyeball a scale
+per prop in Godot (e.g. the tuning bench needed ×2.25). Please add a **target height in metres**
+to the generate API + finalize, so the GLB ships at its true size and the Mac can `prop(...)`
+it with **scale = 1.0**.
+
+- Add `target_height_m: float` to the `/generate` API (and the form). finalize scales the
+  prop so its bbox height = that value (instead of 1.0). `recenter_glb.py` already does exactly
+  this (its 3rd arg `target_height`) — reuse that logic.
+- Default: keep 1.0 if omitted (back-compat), but in practice we'll pass the real height.
+- Known sizes so far (metres, total bbox height): **tuning bench ≈ 2.25**. (We'll supply a
+  height per prop as we go; a sensible default per category is fine too — e.g. hand-tool ~0.3,
+  bench/console ~2.0–2.5, crane ~10–14.)
+
+Net goal: every committed prop is **real-world sized**, so level wiring is just
+`prop(path, pos, yaw)` with no per-prop scale guess.

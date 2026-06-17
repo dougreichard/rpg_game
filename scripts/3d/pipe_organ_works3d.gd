@@ -223,7 +223,7 @@ func _workshop_tools() -> void:
 	# Tuning bench — VISUAL ONLY: Prop Farm "painted" mesh. The painted track now ships a baked
 	# diffuse TEXTURE on the GLB's own material (base-aligned, height-1.0, normals-correct), so
 	# just instance it and use its material as-is — no _apply_vcolor / recenter / double-sided.
-	prop("res://assets/models/props/tuning_bench.glb", F1 + BENCH, PI, 1.4)
+	prop("res://assets/models/props/tuning_bench.glb", F1 + BENCH, PI, 2.25)
 	var bench := add_station(Station.Kind.TOOL, F1 + BENCH + Vector3(0, 0, -1.0), "Tuning Bench", "Quinn")
 	bench.set("recipes", [
 		{"in": "cut_organ_pipe", "out": "brass_organ_pipe"},
