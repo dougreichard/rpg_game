@@ -190,6 +190,9 @@ func _apply_vcolor(node: Node, rough: float = 0.8) -> void:
 	var m := StandardMaterial3D.new()
 	m.vertex_color_use_as_albedo = true
 	m.albedo_color = Color.WHITE; m.roughness = rough; m.metallic = 0.0
+	# Generated/painted meshes have inconsistent winding → single-sided culling drops faces
+	# ("missing parts"). Render double-sided so the whole mesh shows (matches a GLB viewer).
+	m.cull_mode = BaseMaterial3D.CULL_DISABLED
 	for mi: Node in node.find_children("*", "MeshInstance3D"):
 		(mi as MeshInstance3D).material_override = m
 
