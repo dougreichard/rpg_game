@@ -1,10 +1,7 @@
 {
-  "_comment": "Canonical Prop Farm recipes — the known-good inputs for each prop so regenerating reproduces the same detail level (prompt drift was the cause of 'why did the mesh change'). prop_pull.py --name <key> loads this when --prompt is omitted. Note: even with identical inputs the GPU pipeline isn't bit-deterministic, but the DETAIL level is governed by the prompt+seed here.",
-
-  "_prompt_convention": "Describe the SUBJECT + its real materials/colours ONLY (e.g. 'a table saw, cast-iron grey top, charcoal steel frame, orange motor, silver blade'). Do NOT add 'low poly', 'flat shading', 'Synty', etc. — the reference generator (gen_prop_ref_comfy.py) appends a fixed STYLE suffix with all of that to EVERY prompt automatically; repeating it only dilutes the subject tokens. The Synty look is centralised there (single knob, Windows-side); tune STYLE if you want it stronger, not these prompts.",
-
-  "_size_convention": "height = real-world bbox height in metres (GLB ships true-sized → wire with prop(path,pos,yaw) scale 1.0). poly = painted pre-paint tri budget (set-dressing ~1500-2500, hero ~4000-6000).",
-
+  "_comment": "Canonical Prop Farm recipes \u2014 the known-good inputs for each prop so regenerating reproduces the same detail level (prompt drift was the cause of 'why did the mesh change'). prop_pull.py --name <key> loads this when --prompt is omitted. Note: even with identical inputs the GPU pipeline isn't bit-deterministic, but the DETAIL level is governed by the prompt+seed here.",
+  "_prompt_convention": "Describe the SUBJECT + its real materials/colours ONLY (e.g. 'a table saw, cast-iron grey top, charcoal steel frame, orange motor, silver blade'). Do NOT add 'low poly', 'flat shading', 'Synty', etc. \u2014 the reference generator (gen_prop_ref_comfy.py) appends a fixed STYLE suffix with all of that to EVERY prompt automatically; repeating it only dilutes the subject tokens. The Synty look is centralised there (single knob, Windows-side); tune STYLE if you want it stronger, not these prompts.",
+  "_size_convention": "height = real-world bbox height in metres (GLB ships true-sized \u2192 wire with prop(path,pos,yaw) scale 1.0). poly = painted pre-paint tri budget (set-dressing ~1500-2500, hero ~4000-6000).",
   "tuning_bench": {
     "prompt": "a sturdy wooden carpenter's workbench with a dark walnut top and four turned legs, a low back rack holding a row of upright slim silver steel rods, a black iron vise clamped to one end, and brass and chrome hand tools lying flat on the top",
     "seed": 11,
@@ -13,7 +10,6 @@
     "height": 2.25,
     "poly": 4000
   },
-
   "table_saw": {
     "prompt": "a single complete woodworking table saw machine, one unit centered in frame: a flat cast-iron grey metal table top, a charcoal-black steel frame and four legs, a bright orange motor housing on the side, one silver circular saw blade above the table, a yellow rip-fence rail",
     "seed": 42,
@@ -22,13 +18,13 @@
     "height": 1.2,
     "poly": 4000
   },
-
   "organ": {
-    "prompt": "one tall antique pipe organ, a single carved dark-walnut wood cabinet topped with golden brass pipes, a cream and black keyboard, brass trim accents, the whole instrument as one object centered in frame",
-    "seed": 42,
+    "prompt": "one tall pipe organ, a single instrument centered: a dark-walnut wood console with a cream and black keyboard, topped with a prominent bank of tall golden brass pipes, ornate brass trim",
+    "seed": 100,
     "track": "painted",
     "angle": 6,
     "height": 3.0,
-    "poly": 6000
+    "poly": 6000,
+    "ref_count": 1
   }
 }

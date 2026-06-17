@@ -138,8 +138,9 @@ def main():
 
     defaults = {"track": a.track, "seed": a.seed, "angle": a.angle, "height": a.height,
                 "poly": a.poly, "ref_count": a.ref_count, "style": a.style}
-    # only treat a flag as an override if it was actually passed (else fall back to preset)
-    passed = {x.lstrip("-").split("=")[0] for x in sys.argv[1:]}
+    # only treat a flag as an override if it was actually passed (else fall back to preset).
+    # normalise dashes→underscores so --ref-count maps to the ref_count key (was a silent bug).
+    passed = {x.lstrip("-").split("=")[0].replace("-", "_") for x in sys.argv[1:]}
     overrides = {k: v for k, v in defaults.items() if k in passed}
 
     def build(spec: dict) -> dict:
