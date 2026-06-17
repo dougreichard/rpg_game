@@ -2,6 +2,19 @@
 
 Notes from wiring Prop Farm output into Godot levels on the Mac. Sync channel = this repo.
 
+## 0. ⚠ Painted output isn't base-aligned / height-normalized (this was the real bug)
+The **painted-track** GLB came back **origin-centred** with a **~2-unit** bbox (Y spanned
+−1.0 → +1.0), NOT base-at-floor / height-1.0 like the flat track's `normalize_prop` output.
+Placing it at floor level sank the **bottom half below the floor** → looked like "missing
+parts" (legs/lower bench underground), and it was ~2× too tall. The flat track is fine; the
+**paint pipeline's final GLB skips the base-align + height-normalize step.**
+- **Mac fix (applied):** `recenter_glb.py` — transform-only normalize (base min→0, centre
+  X/Y, scale to height 1.0) that **preserves vertex colours** (exports `COLOR_0` active-only;
+  does NOT dissolve/reduce, so the painted palette is untouched).
+- **Please fix on the Prop Farm:** run the same base-align + height-1.0 (the `normalize_prop`
+  transform block) on the **painted** output too, so both tracks emit base-at-floor, height-1.0
+  GLBs. Then the Mac can `prop(...)` them with a plain scale and no recenter step.
+
 ## 1. Recalculate normals before export (do this regardless of the colour approach)
 The painted-track GLB (`tuning_bench`, painted) had **inconsistent face winding**: in a GLB
 viewer it looks complete, but in Godot — which is **single-sided / back-face culled by
