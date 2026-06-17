@@ -7,6 +7,12 @@ Run with the env that has gradio_client (e.g. the Mac's hunyuan3d env):
   conda run -n hunyuan3d python prop_pull.py --name tuning_bench --height 2.25 \
       --prompt "a sturdy wooden carpenter's workbench, dark walnut top, steel rods, brass tools"
 
+PRESETS — reproducibility: ../prop_presets.json holds each prop's canonical recipe
+(prompt/seed/track/angle/height). If you omit --prompt and the --name matches a preset, that
+recipe is used verbatim — so `prop_pull.py --name tuning_bench` reproduces the known-good
+inputs (prompt drift was why a re-roll looked "over-decimated" / less detailed). Any flag you
+pass explicitly overrides the preset. Add a prop to prop_presets.json once it looks right.
+
 Common flags:
   --track painted|flat   (default painted; painted = diffuse texture, flat = grey low-poly)
   --height M             real-world bbox height in metres → GLB ships true-sized, wire scale 1.0
@@ -91,15 +97,38 @@ def main():
     a = ap.parse_args()
 
     repo = repo_root()
+    # canonical recipes (avoids prompt drift — the cause of "why did the mesh change")
+    presets_path = os.path.join(os.path.dirname(__file__), "..", "prop_presets.json")
+    presets = {}
+    if os.path.exists(presets_path):
+        presets = {k: v for k, v in json.load(open(presets_path)).items() if not k.startswith("_")}
+
     defaults = {"track": a.track, "seed": a.seed, "angle": a.angle, "height": a.height, "style": a.style}
+    # only treat a flag as an override if it was actually passed (else fall back to preset)
+    passed = {x.lstrip("-").split("=")[0] for x in sys.argv[1:]}
+    overrides = {k: v for k, v in defaults.items() if k in passed}
+
+    def build(spec: dict) -> dict:
+        j = dict(presets.get(spec.get("name", ""), {}))   # preset base (if any)
+        j.update(spec)                                     # explicit values (prompt, name, ...)
+        for k, v in defaults.items():                      # fill any still-missing with defaults
+            j.setdefault(k, v)
+        j.update(overrides)                                # CLI flags win
+        return j
+
     if a.batch:
-        jobs = []
-        for p in json.load(open(a.batch)):
-            j = dict(defaults); j.update(p); jobs.append(j)
+        jobs = [build(p) for p in json.load(open(a.batch))]
     else:
-        if not (a.name and a.prompt):
-            ap.error("provide --name and --prompt (or --batch)")
-        jobs = [dict(defaults, name=a.name, prompt=a.prompt)]
+        if not a.name:
+            ap.error("provide --name (+ --prompt, or a matching preset) or --batch")
+        spec = {"name": a.name}
+        if a.prompt:
+            spec["prompt"] = a.prompt
+        jobs = [build(spec)]
+        if "prompt" not in jobs[0]:
+            ap.error(f"no --prompt and no preset for '{a.name}' in prop_presets.json")
+        if a.name in presets and not a.prompt:
+            print(f"(using preset recipe for '{a.name}')")
 
     from gradio_client import Client
     print(f"Prop Farm: {a.host}  ({len(jobs)} prop(s))")

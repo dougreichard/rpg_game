@@ -1,0 +1,11 @@
+{
+  "_comment": "Canonical Prop Farm recipes — the known-good inputs for each prop so regenerating reproduces the same detail level (prompt drift was the cause of 'why did the mesh change'). prop_pull.py --name <key> loads this when --prompt is omitted. Note: even with identical inputs the GPU pipeline isn't bit-deterministic, but the DETAIL level is governed by the prompt+seed here.",
+
+  "tuning_bench": {
+    "prompt": "a sturdy wooden carpenter's workbench with a dark walnut top and four turned legs, a low back rack holding a row of upright slim silver steel rods, a black iron vise clamped to one end, and brass and chrome hand tools lying flat on the top",
+    "seed": 11,
+    "track": "painted",
+    "angle": 6,
+    "height": 2.25
+  }
+}
