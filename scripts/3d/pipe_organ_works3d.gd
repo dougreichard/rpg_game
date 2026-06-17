@@ -217,12 +217,10 @@ func _workshop_tools() -> void:
 		{"in": "rough_plank", "out": "windchest_board"},
 		{"in": "rough_organ_pipe", "out": "cut_organ_pipe"}])
 	_register_station(saw)
-	# Tuning bench — tunes the cut pipe, trues the gear. VISUAL ONLY: generated bench mesh,
-	# split (synty-prop-gen split_prop) into co-registered parts so each takes its own tint —
-	# wood body (legs/table) + steel rod-rack/tools. Both at the same pos/yaw/scale; rotated
-	# PI so the open working front faces the player's approach (-Z marker).
-	_tint_prop(prop("res://assets/models/props/tuning_bench_body.glb", F1 + BENCH, PI, 1.3), WOOD.lightened(0.04), 0.7, 0.0)
-	_tint_prop(prop("res://assets/models/props/tuning_bench_top.glb", F1 + BENCH, PI, 1.3), STEEL, 0.4, 0.4)
+	# Tuning bench — VISUAL ONLY: Prop Farm "painted" mesh (Hunyuan paint → flat palette baked
+	# as vertex colours), so wood/steel/tools are coloured in one mesh — render via _apply_vcolor.
+	# (Replaces the old body/top split.) Rotated PI; verify facing in-engine.
+	_apply_vcolor(prop("res://assets/models/props/tuning_bench.glb", F1 + BENCH, PI, 1.4), 0.7)
 	var bench := add_station(Station.Kind.TOOL, F1 + BENCH + Vector3(0, 0, -1.0), "Tuning Bench", "Quinn")
 	bench.set("recipes", [
 		{"in": "cut_organ_pipe", "out": "brass_organ_pipe"},
