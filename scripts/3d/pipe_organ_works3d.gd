@@ -220,10 +220,10 @@ func _workshop_tools() -> void:
 		{"in": "rough_plank", "out": "windchest_board"},
 		{"in": "rough_organ_pipe", "out": "cut_organ_pipe"}])
 	_register_station(saw)
-	# Tuning bench — VISUAL ONLY: Prop Farm "painted" mesh (Hunyuan paint → flat palette baked
-	# as vertex colours), so wood/steel/tools are coloured in one mesh — render via _apply_vcolor.
-	# (Replaces the old body/top split.) Rotated PI; verify facing in-engine.
-	_apply_vcolor(prop("res://assets/models/props/tuning_bench.glb", F1 + BENCH, PI, 1.4), 0.7)
+	# Tuning bench — VISUAL ONLY: Prop Farm "painted" mesh. The painted track now ships a baked
+	# diffuse TEXTURE on the GLB's own material (base-aligned, height-1.0, normals-correct), so
+	# just instance it and use its material as-is — no _apply_vcolor / recenter / double-sided.
+	prop("res://assets/models/props/tuning_bench.glb", F1 + BENCH, PI, 1.4)
 	var bench := add_station(Station.Kind.TOOL, F1 + BENCH + Vector3(0, 0, -1.0), "Tuning Bench", "Quinn")
 	bench.set("recipes", [
 		{"in": "cut_organ_pipe", "out": "brass_organ_pipe"},
