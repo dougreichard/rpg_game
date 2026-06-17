@@ -216,3 +216,22 @@ prop's preset. Net loop: first run = 6-candidate search → best + its seed; lat
 Does the search add much time? 6×~16-step refs should still be well under the shape/paint cost — if
 it's too slow, 4 candidates is fine. Your call on the exact "best" metric; the goal is just
 "single clean centered object", which you already detect for the tiling guard.
+
+### Addendum — "best" should also favor a clean LOW-POLY / flat-shaded look
+Extend the rank score (step 2) beyond "single centered object" to also reward a **flat-shaded,
+colour-blocked, low-poly appearance** over a busy/photoreal one. Rationale: the reference is 2D so
+it can't set the mesh's poly count (that's the `poly` budget) — BUT a flatter, cleanly
+colour-blocked reference makes **Hunyuan reconstruct flatter, cleaner surfaces** (fewer lumps,
+crisper edges) that read Synty and reduce better. So among the non-tiled candidates, prefer the one
+that looks most like a Synty asset, not a photo.
+
+Cheap image metrics to score it (no extra model needed):
+- **Few distinct colours / strong quantization** — flat colour blocks (e.g. count of dominant
+  colours after k-means / low palette entropy = better).
+- **Low high-frequency texture energy** — flat shading has little fine detail (e.g. low mean
+  gradient/Laplacian magnitude inside the object = better; photoreal/busy = worse).
+- **Hard colour boundaries vs smooth gradients** — cel/flat look = crisp region edges.
+
+Composite "best" = (passes tiling/degenerate hard filter) → maximize [single-centered-object score
+× flat-low-poly score]. Tune the weighting to taste; the intent is "pick the candidate that will
+make the cleanest Synty mesh," not just the first that isn't a grid.
