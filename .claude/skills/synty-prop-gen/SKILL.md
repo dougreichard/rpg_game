@@ -11,10 +11,18 @@ Bundled scripts are in `scripts/` next to this file.
 
 ## ⚡ Preferred path: the Prop Farm service (Windows/CUDA RTX-3090 box)
 **Generation now runs as a web service on the 3090 — prefer it over the local MPS pipeline below.**
-It runs the full chain **reference → shape → (paint → quantize | reduce) → GLB** faster (CUDA),
-adds **real texture paint** (Hunyuan paint → flat palette sampled from the paint, not the old
-height-band heuristic), and has a **degenerate-mesh guard** (Hunyuan silently returns a *cube*
-when the reference isn't a single, centered, 3/4-view object — so prompt one object, not a scatter).
+It runs the full chain **reference → shape → (paint → finalize | reduce) → GLB** faster (CUDA),
+and has a **degenerate-mesh guard** (Hunyuan silently returns a *cube* when the reference isn't a
+single, centered, 3/4-view object — so prompt one object, not a scatter; the service also
+auto-retries tiled references and renders at portrait to avoid SDXL grids).
+
+**Two output tracks / Godot materials:**
+- `flat` — grey low-poly GLB; **tint per material in Godot** (no texture). The proven default.
+- `painted` — Hunyuan paints the prop, then `finalize_painted.py` keeps the baked **DIFFUSE
+  texture** (real reference colours; reads cleaner than quantising to vertex colours, which
+  washed out), flat-shades, reduces, and **downsizes the texture to 512px**. In Godot use a
+  **standard material that samples the GLB's `baseColorTexture`** (NOT `vertex_color_use_as_albedo`).
+  ~+240 KB/prop vs vertex colours (the embedded texture); drop to 256px or use LFS if it adds up.
 
 - **Two-machine division:** the **3090 box generates** (stages 1–3 + paint); the **Mac wires it
   into levels** (stage 4, the Godot drop-in below) and is git source-of-truth. They sync via the
@@ -25,11 +33,12 @@ when the reference isn't a single, centered, 3/4-view object — so prompt one o
     progress + 3D preview + a shared **Jobs** dashboard.
   - REST API (Python): `from gradio_client import Client; Client("http://192.168.0.62:7860")
     .predict(name, prompt, seed, track, angle, style_image_or_None, commit_bool, api_name="/generate")`
-    — `track` = `"flat"` (grey low-poly, tint in Godot) or `"painted"` (flat palette from paint).
+    — `track` = `"flat"` (grey low-poly, tint in Godot) or `"painted"` (diffuse-textured, real colours).
 - **What it runs:** the CUDA-variant stage scripts in `scripts/` — `gen_prop_ref_comfy.py`
   (ComfyUI/SDXL + optional IPAdapter set-consistency), `gen_prop_mesh_cuda.py` (Hunyuan shape),
-  `gen_prop_paint_cuda.py` (Hunyuan paint), `quantize_from_texture.py` (paint → flat palette),
-  `normalize_prop.py` (reduce; default dissolve angle **6°** — 12° over-merges thin features).
+  `gen_prop_paint_cuda.py` (Hunyuan paint), `finalize_painted.py` (keep diffuse texture, flat-shade,
+  reduce, 512px), `normalize_prop.py` (flat-track reduce; default dissolve angle **6°**).
+  (`quantize_from_texture.py` = the old vertex-colour Synty-fy, kept as a fallback, not the default.)
 - **Service code + full ops docs** live on the 3090 at `E:\ai\prop_farm\` (`README.md`,
   `start_all.bat`) — *not* in this repo (machine-local infra, like the ComfyUI/Hunyuan clones).
 - **Fallback:** if the 3090/service is offline, the local Apple-Silicon/MPS pipeline below still works.
