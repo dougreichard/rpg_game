@@ -122,18 +122,25 @@ func _water() -> void:
 	add_child(box_mesh(Vector3(24.0, 0.1, 5.0), WATER_COL, Vector3(0, 0.02, -12.0), 0.25))
 
 func _crane() -> void:
-	# Generated Synty gantry crane (synty-prop-gen, limited-dissolve reduce) — VISUAL ONLY;
-	# no collision/logic rides on it. Tinted weathered-yellow dock steel (shape-only mesh).
-	var crane := prop("res://assets/models/props/dock_crane.glb", CRANE_POS + Vector3(0, 0, 1.0), 0.0, 4.3)
-	if crane != null:
-		var tint := StandardMaterial3D.new()
-		tint.albedo_color = Color(0.86, 0.70, 0.18); tint.roughness = 0.5; tint.metallic = 0.4
-		for mi: Node in crane.find_children("*", "MeshInstance3D"):
-			(mi as MeshInstance3D).material_override = tint
+	# Generated Synty gantry crane (synty-prop-gen) — VISUAL ONLY, no collision/logic rides
+	# on it. Split into co-registered parts so each takes its own tint: grey steel base legs
+	# + safety-yellow boom/gantry.
+	_tint_crane_part("res://assets/models/props/dock_crane_body.glb", Color(0.45, 0.47, 0.50))
+	_tint_crane_part("res://assets/models/props/dock_crane_top.glb", Color(0.86, 0.70, 0.18))
 	add_child(box_mesh(Vector3(3.0, 0.08, 2.0), Color(0.35, 0.33, 0.3), CRANE_POS + Vector3(0, 0.04, 0)))  # platform pad
+	# (crane parts added above via _tint_crane_part)
 	# the manifest crate the crane lifts (Doug's trail) — sits on the platform
 	_crate = box_mesh(Vector3(1.2, 1.2, 1.2), Color(0.55, 0.4, 0.22), CRANE_POS + Vector3(1.4, 0.6, 0))
 	add_child(_crate)
+
+func _tint_crane_part(path: String, col: Color) -> void:
+	var part := prop(path, CRANE_POS + Vector3(0, 0, 1.0), 0.0, 4.3)
+	if part == null:
+		return
+	var tint := StandardMaterial3D.new()
+	tint.albedo_color = col; tint.roughness = 0.5; tint.metallic = 0.4
+	for mi: Node in part.find_children("*", "MeshInstance3D"):
+		(mi as MeshInstance3D).material_override = tint
 
 func _container_block() -> void:
 	_container = StaticBody3D.new()
