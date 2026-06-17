@@ -1,20 +1,28 @@
-"""Stage 4 (painted track) — finalize a Hunyuan-PAINTED glb for the game: keep the baked DIFFUSE
-texture (real reference colours read well + flat enough for Synty — better than quantising to
-vertex colours, which washed out), apply flat/auto-smooth shading (the Synty faceted cue),
-downsize the texture (2048 -> 512 keeps it sharp on a low-poly prop but tiny to commit), and
-normalize to height 1.0 / base at floor / centred. Preserves UVs + material.
+"""Stage 4 (painted track) — finalize a Hunyuan-PAINTED glb for the game.
 
-  blender --background --python finalize_painted.py -- <painted.glb> <out.glb> [tex=512] [shade_deg=30] [dissolve_deg=0] [target_height_m=1.0]
+KEEP THE PAINTED MESH EXACTLY AS-IS. Hunyuan's paint output is a non-watertight, multi-shell
+mesh (thousands of open patch seams). It renders correctly in Godot as delivered, but ANY
+geometry processing corrupts it:
+  - Limited Dissolve folds faces across the open gaps -> "crushed",
+  - normals_make_consistent can't orient a non-manifold mesh -> flips patches inward -> Godot
+    culls them -> "holes",
+  - auto-smooth writes custom split normals that read as dented on the low-poly result.
+(We learned this the hard way — every one of those steps made the bench/barrel look bad.)
+
+So this stage does ONLY the safe, transform/texture work the Mac needs:
+  - downsize the baked diffuse texture (2048 -> 512: sharp on a low-poly prop, tiny to commit),
+  - normalize: scale bbox height to target metres, centre X/Y, base at floor (min up -> 0).
+No dissolve, no normals recalc, no shading change, no weld.
+
+  blender --background --python finalize_painted.py -- <painted.glb> <out.glb> [tex=512] [target_height_m=1.0]
 """
-import bpy, sys, math
+import bpy, sys
 from mathutils import Vector
 
 argv = sys.argv[sys.argv.index("--") + 1:]
 IN, OUT = argv[0], argv[1]
 TEX = int(argv[2]) if len(argv) > 2 else 512
-SHADE = float(argv[3]) if len(argv) > 3 else 30.0     # auto-smooth angle; 0 = fully flat, <0 = keep smooth
-DISSOLVE = float(argv[4]) if len(argv) > 4 else 0.0   # optional Limited Dissolve (0 = none; UVs are fragile)
-TARGET_HEIGHT = float(argv[5]) if len(argv) > 5 else 1.0  # real-world bbox height in metres (1 unit = 1 m)
+TARGET_HEIGHT = float(argv[3]) if len(argv) > 3 else 1.0   # bbox height in metres (1 unit = 1 m)
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
 bpy.ops.import_scene.gltf(filepath=IN)
@@ -29,44 +37,18 @@ if len(meshes) > 1:
     bpy.ops.object.join()
 obj = bpy.context.view_layer.objects.active
 bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
-print("painted tris:", len(obj.data.polygons))
+print("painted tris (kept as-is):", len(obj.data.polygons))
 
-# optional gentle reduce (keeps UVs for coplanar merges only) — off by default
-if DISSOLVE > 0:
-    d = obj.modifiers.new("planar", "DECIMATE"); d.decimate_type = "DISSOLVE"
-    d.angle_limit = math.radians(DISSOLVE)
-    bpy.ops.object.modifier_apply(modifier=d.name)
-    print("after dissolve:", len(obj.data.polygons))
-
-# recalculate normals -> outside, so Godot (single-sided / back-face culled by default) doesn't
-# cull inward-facing faces (Hunyuan paint meshes can have inconsistent winding). Normals-only,
-# no remove_doubles, so UVs are untouched.
-bpy.ops.object.mode_set(mode="EDIT")
-bpy.ops.mesh.select_all(action="SELECT")
-bpy.ops.mesh.normals_make_consistent(inside=False)
-bpy.ops.object.mode_set(mode="OBJECT")
-
-# Synty shading cue
-if SHADE == 0:
-    bpy.ops.object.shade_flat()
-elif SHADE > 0:
-    bpy.ops.object.shade_smooth()
-    try:
-        bpy.ops.object.shade_auto_smooth(angle=math.radians(SHADE))
-    except Exception as e:
-        print("auto_smooth unavailable:", e)
-
-# downsize the baked texture(s) — scale the in-memory buffer + pack so the GLB export embeds
-# the smaller image (a glTF-imported image may otherwise re-export at its original resolution)
+# downsize the baked texture(s) — scale + pack so the GLB export embeds the smaller image
 for img in list(bpy.data.images):
     try:
         if max(img.size) > TEX:
-            img.scale(TEX, TEX)
-            img.pack()
-            print("texture downsized ->", TEX, img.name, tuple(img.size))
+            img.scale(TEX, TEX); img.pack()
+            print("texture downsized ->", TEX, img.name)
     except Exception as e:
         print("tex skip", img.name, e)
 
+# normalize transform only (geometry untouched)
 def bounds():
     mn = [1e9] * 3; mx = [-1e9] * 3
     for c in obj.bound_box:

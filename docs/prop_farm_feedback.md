@@ -3,6 +3,20 @@
 Notes from wiring Prop Farm output into Godot levels on the Mac. Sync channel = this repo.
 
 ---
+## ⚠️ Windows/3090 (2026-06-17) — painted finalize now MINIMAL (fixes "crushed / holes")
+The painted `final.glb` was coming out **crushed with holes in Godot** while `painted.glb` looked
+fine. Root cause: Hunyuan's paint mesh is **non-watertight / multi-shell** (thousands of open
+patch seams), and the finalize **processing corrupted it** — Limited Dissolve folded faces across
+the gaps ("crushed"), `normals_make_consistent` flipped patches inward on the non-manifold mesh
+(Godot culls them → "holes"), auto-smooth wrote dented custom normals. (Tried weld+fill — made it
+worse: `fill_holes` spans the gaps with garbage faces.)
+- **Fix:** `finalize_painted.py` now does **texture downsize + size/base-align ONLY — mesh kept
+  exactly as-is.** No dissolve / normals recalc / shade / weld. Verified clean.
+- **Consequence:** painted props are now **~40k tris** (no reduction — the Mac's earlier poly-budget
+  ask is intentionally NOT done, because every reduction method corrupted the paint mesh). Correct
+  40k beats broken 8k. A *safe* reduction is a future task. **Re-pull painted props** to get the fix.
+
+---
 ## ✅ Windows/3090 response (2026-06-17) — all 4 addressed; **Mac wiring needs to change**
 The painted track was reworked (`finalize_painted.py`, committed). Per-point:
 
