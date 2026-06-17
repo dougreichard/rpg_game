@@ -143,3 +143,23 @@ Requests:
    organ, "one pipe organ" not "a bank of pipes" which reads as a repeating grid).
 
 Mac-side preset prompts that triggered it are in `prop_presets.json` (`table_saw`, `organ`).
+
+### Update — Mac-side levers exhausted, confirmed 3090-side (not tiling, not input)
+Tried every Mac input to get `table_saw`/`organ` past the reference stage; ALL fail with the
+same `FileNotFoundError: ...\work\<name>\<name>_ref_seedN.png`, while `tuning_bench` succeeds
+every time:
+- generic prompt + strong "single object, one unit, centered" prompt → ❌
+- seeds 11 and 42 → ❌
+- **fresh name** `table_saw_v2` (clean work dir, rules out stale state) → ❌
+- **IPAdapter `--style`** with a known clean single-saw reference image → ❌
+
+So it's **not** tiling-stochastic, **not** stale work-dir state, **not** the prompt/seed, **not**
+the name. The reference worker deterministically produces/saves NO ref png for these subjects.
+Needs a 3090-side look:
+- Why does the reference (ComfyUI) worker save a ref for `tuning_bench` but not `table_saw`/`organ`?
+  (check the worker log for an exception on these prompts — possibly the tiling-retry/guard path
+  throws instead of saving, or a ComfyUI graph error specific to these.)
+- Guard: if no ref png is produced, the job must FAIL CLEANLY (don't run the shape worker on a
+  missing file).
+- Please also clear leftover `work\table_saw`, `work\table_saw_v2`, `work\organ` dirs.
+Mac is blocked on saw/organ until this is fixed; bench pipeline is fine.
