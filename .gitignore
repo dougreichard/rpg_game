@@ -23,3 +23,7 @@ _arena3d_shot.png
 
 # 3D capture scratch sidecar
 _arena3d_shot.png.import
+
+# Python bytecode cache (from skill scripts)
+__pycache__/
+*.pyc

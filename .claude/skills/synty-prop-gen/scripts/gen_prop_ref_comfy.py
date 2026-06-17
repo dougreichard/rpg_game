@@ -13,12 +13,19 @@ Requires the ComfyUI server running (main.py --listen 127.0.0.1 --port 8188).
 """
 import argparse, json, os, sys, time, uuid, urllib.request, urllib.parse, io, mimetypes
 
-STYLE = (", flat shading, distinct flat colours per material, clear colour separation "
-         "between parts, clean colour blocking, minimal geometric detail, Synty low-poly "
-         "3D game asset style, soft even studio lighting, plain light grey seamless "
-         "background, centered, whole object in frame, front three-quarter view")
-NEG = ("photorealistic, busy texture, clutter, multiple objects, text, watermark, "
-       "harsh shadows, dark background, cropped, cut off")
+# IMPORTANT: image-to-3D needs ONE centered object. SDXL otherwise tends to TILE the subject
+# into a grid (a field of barrels / pins), which Hunyuan then reconstructs as a featureless cube.
+# The single-object emphasis + strong anti-tiling negatives below are load-bearing.
+STYLE = (", a single isolated object, ONE object only, the complete whole object centered "
+         "with a small margin of empty background around it, full object visible, not "
+         "cropped, not cut off, front three-quarter view, flat shading, distinct flat "
+         "colours per material, clear colour separation between parts, clean colour "
+         "blocking, minimal geometric detail, Synty low-poly 3D game asset style, soft "
+         "even studio lighting, plain light grey background")
+NEG = ("grid, tiled, tiling, pattern, repeated, repeating, multiple objects, many objects, "
+       "two objects, several, collection, set, array, rows, columns, collage, montage, "
+       "contact sheet, sprite sheet, thumbnails, duplicated, photorealistic, busy texture, "
+       "clutter, text, watermark, harsh shadows, dark background, cropped, cut off")
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--name", required=True)
@@ -27,8 +34,10 @@ ap.add_argument("--negative", default=NEG)
 ap.add_argument("--seed", type=int, default=11)
 ap.add_argument("--steps", type=int, default=30)
 ap.add_argument("--cfg", type=float, default=7.0)
-ap.add_argument("--width", type=int, default=1024)
-ap.add_argument("--height", type=int, default=1024)
+# Portrait default (832x1216): SDXL base TILES props into a grid at square 1024x1024 (barrels,
+# pins) which Hunyuan then cubes — a tall frame can't tile a grid, so it yields one object.
+ap.add_argument("--width", type=int, default=832)
+ap.add_argument("--height", type=int, default=1216)
 ap.add_argument("--ckpt", default="sd_xl_base_1.0.safetensors")
 ap.add_argument("--style-image", default=None, help="IPAdapter style reference")
 ap.add_argument("--ip-weight", type=float, default=0.7)
