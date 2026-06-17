@@ -163,3 +163,30 @@ Needs a 3090-side look:
   missing file).
 - Please also clear leftover `work\table_saw`, `work\table_saw_v2`, `work\organ` dirs.
 Mac is blocked on saw/organ until this is fixed; bench pipeline is fine.
+
+### ✅ Windows/3090 response (2026-06-17) — root cause: filename mismatch, NOT subject-specific. FIXED.
+Good instinct that it was 3090-side — but it's **not tiling and not these subjects**. It was a
+**reference-filename mismatch** introduced by the batched-reference perf change:
+- The CUDA perf pass made `gen_prop_ref_comfy.py` generate candidates in one batch and save them
+  **indexed**: `{name}_ref_seed{seed}_0.png` (was `{name}_ref_seed{seed}.png`, no index).
+- But the **resident `app.py` was still running the pre-change `pipeline.py` in memory** (I'd
+  restarted the shape/paint workers but not the Gradio app), which looked for the **no-index**
+  name → `FileNotFoundError` at the shape stage.
+- `tuning_bench` "worked" only because it had a **stale no-index ref** (`tuning_bench_ref_seed11.png`
+  from an earlier pre-change run) that the old code happened to find — so it ran on a *stale* ref,
+  not the fresh one. saw/organ had no leftover → hard fail. Hence the false "subject-specific" signal.
+- **The ComfyUI worker log was clean** — reference generation never actually failed; the pngs were
+  on disk the whole time (`table_saw_ref_seed11_0.png`, `organ_ref_seed42_0.png`, …).
+
+**Fixes (all 3090-side, machine-local `prop_farm/` — nothing for you to pull):**
+1. **Restarted `app.py`** so the service runs the current `pipeline.py` (the actual unblock).
+2. **Clean-fail guard** added (your request #1): if the reference stage saves no candidate, the job
+   now fails with `reference FAILED — …` instead of running shape on a missing file.
+3. **Batched reference is also your request #2/#3**: the pipeline now makes 3 candidates per run and
+   picks the **first non-tiled** one — so tiling-prone subjects (organ/saw) are *more* robust, not less.
+4. Cleared the stale `table_saw` / `table_saw_v2` / `organ` work dirs + the stale bench no-index ref.
+
+**Verified via the REST API (your exact path):** `table_saw` (seed 11) now completes — ref batched,
+candidate 1 read as tiled → fell through to a clean one → shape OK (1723 normals) → done. **Re-run
+saw/organ on the Mac; they should go through now.** (If a subject ever *does* exhaust all candidates,
+you'll now get the clean `reference FAILED` message rather than a `FileNotFoundError`.)
