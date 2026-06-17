@@ -26,18 +26,22 @@ Run heavy stages **backgrounded** (they exceed a single command timeout). `<S>` 
    Review `~/ai/refs/<slug>_ref_seed*.png`; pick the one with a clean, centred,
    **3/4 perspective** (best depth cues for image-to-3D) and a full object on plain bg.
 
-2. **Mesh** (Hunyuan3D shape-only + decimate, several min on MPS):
+2. **Mesh** (Hunyuan3D shape-only, several min on MPS):
    ```
-   conda run -n hunyuan3d python <S>/gen_prop_mesh.py --name <slug> --seed <S> [--faces 3500]
+   conda run -n hunyuan3d python <S>/gen_prop_mesh.py --name <slug> --seed <S>
    ```
-   → `~/ai/refs/<slug>_lowpoly.glb`. (CPU-fallback for the unsupported MPS resize op
-   is baked into the script — no env var needed.)
+   Saves the ~2M-face `~/ai/refs/<slug>_raw.glb` (+ a quadric `_lowpoly.glb` fallback).
+   CPU-fallback for the unsupported MPS resize op is baked in — no env var needed.
 
-3. **Normalize** (Blender, seconds) → commit into the repo:
+3. **Reduce + normalize** (Blender, seconds) — feed it the **RAW** mesh:
    ```
    /Applications/Blender.app/Contents/MacOS/Blender --background --python <S>/normalize_prop.py -- \
-       ~/ai/refs/<slug>_lowpoly.glb assets/models/props/<slug>.glb
+       ~/ai/refs/<slug>_raw.glb assets/models/props/<slug>.glb [angle_deg=12] [face_cap=0]
    ```
+   Reduction is **Limited Dissolve / planar decimate** (merges coplanar faces → flats stay
+   flat, edges stay crisp) with an optional **collapse cap** — NOT pure quadric collapse,
+   which distorts flat panels and lumps hard-surface props. Tune `angle_deg` (~8–15) for
+   how aggressively coplanar faces merge; set `face_cap` (e.g. 4000) only if still dense.
    Output is height 1.0, base at floor (Y=0), centred — scale to real size in Godot.
 
 4. **Into the level (visual-only):** add it with `prop("res://assets/models/props/<slug>.glb", pos, yaw, scale)`.
