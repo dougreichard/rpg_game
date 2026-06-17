@@ -190,3 +190,29 @@ Good instinct that it was 3090-side — but it's **not tiling and not these subj
 candidate 1 read as tiled → fell through to a clean one → shape OK (1723 normals) → done. **Re-run
 saw/organ on the Mac; they should go through now.** (If a subject ever *does* exhaust all candidates,
 you'll now get the clean `reference FAILED` message rather than a `FileNotFoundError`.)
+
+---
+## Mac request (2026-06-17) — reference: 6 candidates, pick BEST, return the winning seed
+References are cheap (~16-step SDXL), so spend a bit more to nail the reference (it dictates the
+whole mesh). Replace "first non-tiled of ~3" with a small **search + best-pick + seed return**:
+
+1. **Generate 6 candidates per reference**, each with a **distinct, recorded seed** — e.g.
+   `base_seed .. base_seed+5` (NOT a single-seed batch: batch-index variations aren't reproducible
+   by seed alone, and we want the winner to be re-rollable exactly). `base_seed` = the `seed` arg.
+2. **Pick the BEST**, not the first non-tiled:
+   - **Hard filter** (drop): tiled/grid/degenerate-cube (reuse the existing guard).
+   - **Rank survivors** by a "single centered object" score — one dominant foreground blob
+     (fewest disconnected components), well-centered, fills a good fraction of the frame, clean
+     plain background. Highest score wins. (If all 6 fail the hard filter → the existing clean
+     `reference FAILED` message.)
+3. **Return the winning seed to the client** as a new `/generate` output (e.g. add `chosen_seed`
+   to the returned tuple; the score/candidate-index too if easy). So the Mac can **record that seed
+   in `prop_presets.json`** and thereafter regenerate with **1 candidate at that exact seed** —
+   fast + deterministic, no re-search, no drift.
+
+Client side (Mac, we'll handle): `prop_pull.py` captures `chosen_seed` and writes it back into the
+prop's preset. Net loop: first run = 6-candidate search → best + its seed; later runs = pinned seed.
+
+Does the search add much time? 6×~16-step refs should still be well under the shape/paint cost — if
+it's too slow, 4 candidates is fine. Your call on the exact "best" metric; the goal is just
+"single clean centered object", which you already detect for the tiling guard.
