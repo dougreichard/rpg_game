@@ -16,7 +16,9 @@ pass explicitly overrides the preset. Add a prop to prop_presets.json once it lo
 Common flags:
   --track painted|flat   (default painted; painted = diffuse texture, flat = grey low-poly)
   --height M             real-world bbox height in metres → GLB ships true-sized, wire scale 1.0
-  --seed N  --angle D    generation seed / dissolve angle (defaults 11 / 6)
+  --seed N  --angle D    base seed / dissolve angle (defaults 11 / 6)
+  --ref-count N          reference candidates the server best-picks (default 6; 1 = reproduce a pinned seed)
+  --pin                  write the winning chosen_seed (+ ref_count 1) back into prop_presets.json
   --style IMG            optional style-reference image (IPAdapter set-consistency)
   --commit               git add + commit + push the landed GLB (else leave it for review)
   --host URL             Prop Farm (default http://192.168.0.62:7860)
@@ -43,17 +45,33 @@ def find_glb(result) -> str | None:
     return None
 
 
-def generate(client, job: dict, repo: str, do_import: bool, do_commit: bool) -> bool:
+def pin_preset(path: str, name: str, job: dict, chosen_seed: int) -> None:
+    """Record the winning recipe in prop_presets.json: seed = chosen_seed, ref_count = 1, so a
+    later run reproduces this exact reference fast (no re-search). Preserves the _* doc keys."""
+    data = json.load(open(path)) if os.path.exists(path) else {}
+    data[name] = {
+        "prompt": job["prompt"], "seed": int(chosen_seed),
+        "track": job.get("track", "painted"), "angle": job.get("angle", 6),
+        "height": job.get("height", 1.0), "poly": job.get("poly", 4000),
+        "ref_count": 1,
+    }
+    with open(path, "w") as f:
+        json.dump(data, f, indent=2)
+        f.write("\n")
+
+
+def generate(client, job: dict, repo: str, do_import: bool, do_commit: bool, pin_path: str = "") -> bool:
     name = job["name"]
     style = None
     if job.get("style"):
         from gradio_client import handle_file
         style = handle_file(job["style"])
-    print(f"→ [{job.get('track','painted')}] {name}  h={job.get('height',1.0)}m  seed={job.get('seed',11)}")
+    rc = int(job.get("ref_count", 6))
+    print(f"→ [{job.get('track','painted')}] {name}  h={job.get('height',1.0)}m  seed={job.get('seed',11)}  ref_count={rc}")
     res = client.predict(
         name, job["prompt"], job.get("seed", 11), job.get("track", "painted"),
         job.get("angle", 6), job.get("height", 1.0), job.get("poly", 4000),
-        style, False, api_name="/generate",
+        rc, style, False, api_name="/generate",
     )
     glb = find_glb(res)
     if not glb:
@@ -62,6 +80,14 @@ def generate(client, job: dict, repo: str, do_import: bool, do_commit: bool) -> 
     dest = os.path.join(repo, "assets/models/props", name + ".glb")
     shutil.copy(glb, dest)
     print(f"  ✓ landed {os.path.relpath(dest, repo)} ({os.path.getsize(dest) // 1024} KB)")
+
+    # chosen_seed (5th output): the winning reference seed from the server's candidate search.
+    chosen = int(res[4]) if len(res) > 4 and res[4] is not None else None
+    if chosen is not None:
+        print(f"  chosen_seed = {chosen}")
+        if pin_path:
+            pin_preset(pin_path, name, job, chosen)
+            print(f"  ✓ pinned seed {chosen} (+ ref_count 1) into prop_presets.json")
 
     if do_import:
         try:
@@ -92,10 +118,14 @@ def main():
     ap.add_argument("--track", default="painted", choices=["painted", "flat"])
     ap.add_argument("--seed", type=float, default=11)
     ap.add_argument("--angle", type=float, default=6)
+    ap.add_argument("--ref-count", type=int, default=6, dest="ref_count",
+                    help="reference candidates the server searches (best-pick); pass 1 with a pinned seed to reproduce")
     ap.add_argument("--style", default=None)
     ap.add_argument("--batch", default="", help="JSON file: list of per-prop arg dicts")
     ap.add_argument("--host", default="http://192.168.0.62:7860")
     ap.add_argument("--commit", action="store_true")
+    ap.add_argument("--pin", action="store_true",
+                    help="write the winning chosen_seed (+ ref_count 1) back into prop_presets.json")
     ap.add_argument("--no-import", action="store_true")
     a = ap.parse_args()
 
@@ -106,7 +136,8 @@ def main():
     if os.path.exists(presets_path):
         presets = {k: v for k, v in json.load(open(presets_path)).items() if not k.startswith("_")}
 
-    defaults = {"track": a.track, "seed": a.seed, "angle": a.angle, "height": a.height, "poly": a.poly, "style": a.style}
+    defaults = {"track": a.track, "seed": a.seed, "angle": a.angle, "height": a.height,
+                "poly": a.poly, "ref_count": a.ref_count, "style": a.style}
     # only treat a flag as an override if it was actually passed (else fall back to preset)
     passed = {x.lstrip("-").split("=")[0] for x in sys.argv[1:]}
     overrides = {k: v for k, v in defaults.items() if k in passed}
@@ -136,7 +167,8 @@ def main():
     from gradio_client import Client
     print(f"Prop Farm: {a.host}  ({len(jobs)} prop(s))")
     client = Client(a.host)
-    ok = sum(generate(client, j, repo, not a.no_import, a.commit) for j in jobs)
+    pin_path = os.path.abspath(presets_path) if a.pin else ""
+    ok = sum(generate(client, j, repo, not a.no_import, a.commit, pin_path) for j in jobs)
     print(f"\ndone: {ok}/{len(jobs)} landed")
     sys.exit(0 if ok == len(jobs) else 1)
 

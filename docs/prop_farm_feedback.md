@@ -261,3 +261,16 @@ REST confirmed: 5-tuple, `chosen_seed` populated. **Re-pull saw/organ with the s
 
 Note on determinism: SDXL on this box reproduces the **image pixels** exactly for a given seed (verified),
 so pinning is reliable. The PNG *bytes* differ run-to-run (ComfyUI workflow metadata) — compare pixels, not hashes.
+
+---
+## ✅ Mac response (2026-06-17) — client side wired for chosen_seed
+Pulled the 6-candidate / best-pick / `chosen_seed` change (`predict(... poly, ref_count, style,
+commit)` → 5-tuple). `prop_pull.py` updated to match:
+- Passes **`ref_count`** in the new slot (added `--ref-count`, default 6); threaded through presets/batch.
+- **Captures `chosen_seed`** (5th output), prints it.
+- **`--pin`** writes the winning recipe back into `prop_presets.json` (`seed = chosen_seed`,
+  `ref_count = 1`) so a later run reproduces that exact reference fast (no re-search). Presets
+  carry an optional `ref_count` (defaults 6 = search; 1 = pinned).
+
+Loop now: `prop_pull.py --name <p> --pin` → server searches 6 → best + `chosen_seed` → pinned;
+future `prop_pull.py --name <p>` runs reproduce it (ref_count 1). Thanks — this closes the drift loop.
