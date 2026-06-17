@@ -34,6 +34,9 @@ conf.multiview_cfg_path = os.path.join(PAINT, "cfgs", "hunyuan-paint-pbr.yaml")
 conf.realesrgan_ckpt_path = os.path.join(PAINT, "ckpt", "RealESRGAN_x4plus.pth")
 conf.texture_size = 1536  # default 4096 is wasted — finalize_painted downsizes to 512; 1536->512
 # is visually identical but ~11s faster paint (the bake atlas is smaller; diffusion is unchanged).
+# Lean knobs (need the gates in hy3dpaint/textureGenPipeline.py; harmless no-op if absent):
+conf.gen_mr = False         # metallic-roughness map is discarded downstream -> skip it
+conf.skip_super_res = True  # RealESRGAN 4x is lost in the 512 downsize -> skip it (~9s, no loss)
 
 t0 = time.time()
 pipe = Hunyuan3DPaintPipeline(conf)
