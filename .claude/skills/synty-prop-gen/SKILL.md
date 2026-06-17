@@ -18,11 +18,16 @@ auto-retries tiled references and renders at portrait to avoid SDXL grids).
 
 **Two output tracks / Godot materials:**
 - `flat` — grey low-poly GLB; **tint per material in Godot** (no texture). The proven default.
+  Reduced + flat-shaded + sized via `normalize_prop.py` (~few-k tris).
 - `painted` — Hunyuan paints the prop, then `finalize_painted.py` keeps the baked **DIFFUSE
-  texture** (real reference colours; reads cleaner than quantising to vertex colours, which
-  washed out), flat-shades, reduces, and **downsizes the texture to 512px**. In Godot use a
-  **standard material that samples the GLB's `baseColorTexture`** (NOT `vertex_color_use_as_albedo`).
-  ~+240 KB/prop vs vertex colours (the embedded texture); drop to 256px or use LFS if it adds up.
+  texture** (real reference colours; reads cleaner than quantising to vertex colours, which washed
+  out) and **keeps the mesh EXACTLY as-is** — only downsizes the texture to 512px and applies the
+  real-world size + base-align. In Godot use a **standard material that samples the GLB's
+  `baseColorTexture`** (NOT `vertex_color_use_as_albedo`); no double-siding needed.
+  - ⚠ **Do NOT reduce/recalc-normals/flat-shade/weld a painted mesh.** Hunyuan's paint output is
+    **non-watertight / multi-shell** (thousands of open patch seams); any such processing folds or
+    flips it → **"crushed + holes" in Godot**. So painted props stay **~40k tris** (a safe reduction
+    is future work — correct 40k beats broken 8k). ~+0.x MB/prop vs flat; 512px texture is small.
 
 - **Two-machine division:** the **3090 box generates** (stages 1–3 + paint); the **Mac wires it
   into levels** (stage 4, the Godot drop-in below) and is git source-of-truth. They sync via the
@@ -37,8 +42,9 @@ auto-retries tiled references and renders at portrait to avoid SDXL grids).
     `height_m` = real-world bbox height in metres so the GLB ships true-sized (`prop(...)` with scale 1.0).
 - **What it runs:** the CUDA-variant stage scripts in `scripts/` — `gen_prop_ref_comfy.py`
   (ComfyUI/SDXL + optional IPAdapter set-consistency), `gen_prop_mesh_cuda.py` (Hunyuan shape),
-  `gen_prop_paint_cuda.py` (Hunyuan paint), `finalize_painted.py` (keep diffuse texture, flat-shade,
-  reduce, 512px), `normalize_prop.py` (flat-track reduce; default dissolve angle **6°**).
+  `gen_prop_paint_cuda.py` (Hunyuan paint, lean: skips discarded mr + super-res; texture_size 1536),
+  `finalize_painted.py` (keep diffuse texture + **mesh as-is**, downsize texture 512px, real-world
+  size), `normalize_prop.py` (flat-track reduce; default dissolve angle **6°**).
   (`quantize_from_texture.py` = the old vertex-colour Synty-fy, kept as a fallback, not the default.)
 - **Service code + full ops docs** live on the 3090 at `E:\ai\prop_farm\` (`README.md`,
   `start_all.bat`) — *not* in this repo (machine-local infra, like the ComfyUI/Hunyuan clones).
