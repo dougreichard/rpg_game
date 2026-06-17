@@ -32,6 +32,8 @@ from textureGenPipeline import Hunyuan3DPaintPipeline, Hunyuan3DPaintConfig
 conf = Hunyuan3DPaintConfig(a.views, a.resolution)
 conf.multiview_cfg_path = os.path.join(PAINT, "cfgs", "hunyuan-paint-pbr.yaml")
 conf.realesrgan_ckpt_path = os.path.join(PAINT, "ckpt", "RealESRGAN_x4plus.pth")
+conf.texture_size = 1536  # default 4096 is wasted — finalize_painted downsizes to 512; 1536->512
+# is visually identical but ~11s faster paint (the bake atlas is smaller; diffusion is unchanged).
 
 t0 = time.time()
 pipe = Hunyuan3DPaintPipeline(conf)
