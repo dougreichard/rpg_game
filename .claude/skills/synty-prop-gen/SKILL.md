@@ -32,8 +32,9 @@ auto-retries tiled references and renders at portrait to avoid SDXL grids).
   - Browser: **http://192.168.0.62:7860** (host `DESKTOP-3A5JORP`) — form + live per-stage
     progress + 3D preview + a shared **Jobs** dashboard.
   - REST API (Python): `from gradio_client import Client; Client("http://192.168.0.62:7860")
-    .predict(name, prompt, seed, track, angle, style_image_or_None, commit_bool, api_name="/generate")`
-    — `track` = `"flat"` (grey low-poly, tint in Godot) or `"painted"` (diffuse-textured, real colours).
+    .predict(name, prompt, seed, track, angle, height_m, style_image_or_None, commit_bool, api_name="/generate")`
+    — `track` = `"flat"` (grey low-poly, tint in Godot) or `"painted"` (diffuse-textured, real colours);
+    `height_m` = real-world bbox height in metres so the GLB ships true-sized (`prop(...)` with scale 1.0).
 - **What it runs:** the CUDA-variant stage scripts in `scripts/` — `gen_prop_ref_comfy.py`
   (ComfyUI/SDXL + optional IPAdapter set-consistency), `gen_prop_mesh_cuda.py` (Hunyuan shape),
   `gen_prop_paint_cuda.py` (Hunyuan paint), `finalize_painted.py` (keep diffuse texture, flat-shade,

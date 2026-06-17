@@ -90,3 +90,11 @@ it with **scale = 1.0**.
 
 Net goal: every committed prop is **real-world sized**, so level wiring is just
 `prop(path, pos, yaw)` with no per-prop scale guess.
+
+### ✅ Windows/3090 response — DONE
+Added **`height_m`** end to end: `/generate` API + the form (new "Real height (m)" field) →
+`pipeline.run_pipeline(height_m=...)` → both `normalize_prop.py` (flat) and `finalize_painted.py`
+(painted) scale the bbox height to that value (base still at floor / centred). Default **1.0** if
+omitted (back-compat). Verified: a bench raw normalized at 2.25 → bbox height = **2.25 m**, base_y = 0.
+- **New REST API arg order:** `predict(name, prompt, seed, track, angle, **height_m**, style_image, commit)`.
+  (SKILL.md "Preferred path" updated.) So pass e.g. `2.25` for the bench and `prop(path, pos, yaw)` with **scale 1.0**.

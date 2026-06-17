@@ -11,7 +11,7 @@ at floor (min Z -> 0), centre X/Y, re-export Y-up glTF. Feed it the RAW Hunyuan 
 is one-pass Synty-ready (no separate stylize step needed).
 
   blender --background --python normalize_prop.py -- <in.glb> <out.glb> \
-      [angle_deg=6] [face_cap=0] [precollapse=300000] [shade_deg=30]
+      [angle_deg=6] [face_cap=0] [precollapse=300000] [shade_deg=30] [target_height_m=1.0]
 
 Tune for the Synty count/look: set face_cap (e.g. 5000) to push the budget down; lower
 shade_deg for chunkier facets (0 = fully flat, <0 = keep smooth/realistic).
@@ -34,7 +34,7 @@ FACE_CAP = int(argv[3]) if len(argv) > 3 else 0      # collapse cap after dissol
 # 4 sets the cap (0 = skip); default 300k catches the pathological raw meshes only.
 PRECOLLAPSE = int(argv[4]) if len(argv) > 4 else 300000
 SHADE = float(argv[5]) if len(argv) > 5 else 30.0   # auto-smooth angle (deg); 0 = flat, <0 = smooth
-TARGET_HEIGHT = 1.0
+TARGET_HEIGHT = float(argv[6]) if len(argv) > 6 else 1.0  # real-world bbox height in metres (1 unit = 1 m)
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
 bpy.ops.import_scene.gltf(filepath=IN)

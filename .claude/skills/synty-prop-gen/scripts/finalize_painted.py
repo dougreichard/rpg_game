@@ -4,7 +4,7 @@ vertex colours, which washed out), apply flat/auto-smooth shading (the Synty fac
 downsize the texture (2048 -> 512 keeps it sharp on a low-poly prop but tiny to commit), and
 normalize to height 1.0 / base at floor / centred. Preserves UVs + material.
 
-  blender --background --python finalize_painted.py -- <painted.glb> <out.glb> [tex=512] [shade_deg=30] [dissolve_deg=0]
+  blender --background --python finalize_painted.py -- <painted.glb> <out.glb> [tex=512] [shade_deg=30] [dissolve_deg=0] [target_height_m=1.0]
 """
 import bpy, sys, math
 from mathutils import Vector
@@ -14,7 +14,7 @@ IN, OUT = argv[0], argv[1]
 TEX = int(argv[2]) if len(argv) > 2 else 512
 SHADE = float(argv[3]) if len(argv) > 3 else 30.0     # auto-smooth angle; 0 = fully flat, <0 = keep smooth
 DISSOLVE = float(argv[4]) if len(argv) > 4 else 0.0   # optional Limited Dissolve (0 = none; UVs are fragile)
-TARGET_HEIGHT = 1.0
+TARGET_HEIGHT = float(argv[5]) if len(argv) > 5 else 1.0  # real-world bbox height in metres (1 unit = 1 m)
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
 bpy.ops.import_scene.gltf(filepath=IN)
