@@ -121,3 +121,25 @@ Added **`height_m`** end to end: `/generate` API + the form (new "Real height (m
 omitted (back-compat). Verified: a bench raw normalized at 2.25 → bbox height = **2.25 m**, base_y = 0.
 - **New REST API arg order:** `predict(name, prompt, seed, track, angle, **height_m**, style_image, commit)`.
   (SKILL.md "Preferred path" updated.) So pass e.g. `2.25` for the bench and `prop(path, pos, yaw)` with **scale 1.0**.
+
+---
+## Mac report (2026-06-17) — reference stage hard-fails on tile-prone subjects
+Generating via `prop_pull.py` (REST `/generate`): **bench works**, but **table_saw (seed 11)** and
+**organ (seed 777)** both fail with:
+```
+shape worker: [Errno 2] No such file or directory: 'E:\ai\prop_farm\work\<name>\<name>_ref_seedN.png'
+```
+i.e. the **reference (ComfyUI/SDXL) stage produced no saved ref**, yet the **shape worker still ran**
+and crashed. Repro'd single + batch; bench (seed 11) succeeds right before/after, so the service is
+up — it's **subject-specific** (table saw and especially a pipe organ are tiling-prone: SDXL makes a
+grid of pipes / rows of saws → the anti-tiling retry exhausts → no ref saved).
+
+Requests:
+1. **Don't run the shape stage if the reference stage produced no image** — fail the job with a
+   clear `reference failed (all candidates tiled)` message instead of the `FileNotFoundError`.
+2. **On tiling-retry exhaustion, still save the *least-tiled* candidate** (best-effort) so the prop
+   can at least be produced, or expose retry count / accept a per-prop seed override to dodge it.
+3. Possibly a stronger single-object path for these subjects (one giant centered object; for the
+   organ, "one pipe organ" not "a bank of pipes" which reads as a repeating grid).
+
+Mac-side preset prompts that triggered it are in `prop_presets.json` (`table_saw`, `organ`).

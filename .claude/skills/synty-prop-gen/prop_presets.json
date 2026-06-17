@@ -8,5 +8,23 @@
     "angle": 6,
     "height": 2.25,
     "poly": 4000
+  },
+
+  "table_saw": {
+    "prompt": "a woodworking table saw: a flat cast-iron grey metal table top, a charcoal-black steel frame and four legs, a bright orange motor housing on the side, a silver circular saw blade rising through the table, and a yellow rip-fence rail",
+    "seed": 11,
+    "track": "painted",
+    "angle": 6,
+    "height": 1.2,
+    "poly": 4000
+  },
+
+  "organ": {
+    "prompt": "an antique pipe organ console: a dark walnut wood cabinet, a tall bank of golden brass pipes rising above the cabinet, a cream and black keyboard, and polished brass trim accents",
+    "seed": 777,
+    "track": "painted",
+    "angle": 6,
+    "height": 3.0,
+    "poly": 6000
   }
 }
