@@ -24,10 +24,15 @@ auto-retries tiled references and renders at portrait to avoid SDXL grids).
   out) and **keeps the mesh EXACTLY as-is** — only downsizes the texture to 512px and applies the
   real-world size + base-align. In Godot use a **standard material that samples the GLB's
   `baseColorTexture`** (NOT `vertex_color_use_as_albedo`); no double-siding needed.
-  - ⚠ **Do NOT reduce/recalc-normals/flat-shade/weld a painted mesh.** Hunyuan's paint output is
-    **non-watertight / multi-shell** (thousands of open patch seams); any such processing folds or
-    flips it → **"crushed + holes" in Godot**. So painted props stay **~40k tris** (a safe reduction
-    is future work — correct 40k beats broken 8k). ~+0.x MB/prop vs flat; 512px texture is small.
+  - **Poly budget** is set by the **`poly` param** (default 4000): the paint stage's internal
+    **quadric remesh** is reduced to that target *before* painting, so the prop comes out low-poly
+    with **clean topology** and the texture carries the detail. Synty reference: Quinn=1,830,
+    church=6,629, set-dressing props ~400–1,100 — so use ~**1,500–2,500** for set-dressing,
+    ~**4,000–6,000** for hero props.
+  - ⚠ **NEVER reduce/recalc-normals/flat-shade/weld the painted mesh AFTER paint.** Hunyuan's
+    paint output is **non-watertight / multi-shell** (open patch seams); post-paint processing
+    folds/flips it → **"crushed + holes" in Godot**. Reduce via `poly` (pre-paint remesh) only;
+    `finalize_painted.py` then just downsizes the texture + sizes/base-aligns (mesh untouched).
 
 - **Two-machine division:** the **3090 box generates** (stages 1–3 + paint); the **Mac wires it
   into levels** (stage 4, the Godot drop-in below) and is git source-of-truth. They sync via the
@@ -37,9 +42,10 @@ auto-retries tiled references and renders at portrait to avoid SDXL grids).
   - Browser: **http://192.168.0.62:7860** (host `DESKTOP-3A5JORP`) — form + live per-stage
     progress + 3D preview + a shared **Jobs** dashboard.
   - REST API (Python): `from gradio_client import Client; Client("http://192.168.0.62:7860")
-    .predict(name, prompt, seed, track, angle, height_m, style_image_or_None, commit_bool, api_name="/generate")`
+    .predict(name, prompt, seed, track, angle, height_m, poly, style_image_or_None, commit_bool, api_name="/generate")`
     — `track` = `"flat"` (grey low-poly, tint in Godot) or `"painted"` (diffuse-textured, real colours);
-    `height_m` = real-world bbox height in metres so the GLB ships true-sized (`prop(...)` with scale 1.0).
+    `height_m` = real-world bbox height in metres so the GLB ships true-sized (`prop(...)` with scale 1.0);
+    `poly` = painted-track tri budget (default 4000; set-dressing ~1.5–2.5k, hero ~4–6k).
 - **What it runs:** the CUDA-variant stage scripts in `scripts/` — `gen_prop_ref_comfy.py`
   (ComfyUI/SDXL + optional IPAdapter set-consistency), `gen_prop_mesh_cuda.py` (Hunyuan shape),
   `gen_prop_paint_cuda.py` (Hunyuan paint, lean: skips discarded mr + super-res; texture_size 1536),

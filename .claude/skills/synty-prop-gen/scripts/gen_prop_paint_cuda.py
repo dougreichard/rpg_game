@@ -20,6 +20,8 @@ ap.add_argument("--image", required=True)
 ap.add_argument("--out", required=True)
 ap.add_argument("--views", type=int, default=6)
 ap.add_argument("--resolution", type=int, default=512)
+ap.add_argument("--remesh-target", type=int, default=40000,
+                help="quadric reduce BEFORE paint -> final tri budget (Synty: ~1.5-6k). No post-paint reduce.")
 a = ap.parse_args()
 
 try:
@@ -37,6 +39,7 @@ conf.texture_size = 1536  # default 4096 is wasted — finalize_painted downsize
 # Lean knobs (need the gates in hy3dpaint/textureGenPipeline.py; harmless no-op if absent):
 conf.gen_mr = False         # metallic-roughness map is discarded downstream -> skip it
 conf.skip_super_res = True  # RealESRGAN 4x is lost in the 512 downsize -> skip it (~9s, no loss)
+conf.remesh_target = a.remesh_target  # quadric reduce pre-paint -> low-poly Synty budget (texture carries detail)
 
 t0 = time.time()
 pipe = Hunyuan3DPaintPipeline(conf)

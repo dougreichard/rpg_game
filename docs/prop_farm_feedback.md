@@ -3,6 +3,15 @@
 Notes from wiring Prop Farm output into Godot levels on the Mac. Sync channel = this repo.
 
 ---
+## ✅ Windows/3090 (2026-06-17) — painted props now have a POLY BUDGET (`poly`)
+Painted props were ~40k tris (≈20× a Synty character). New **`poly` param** (API arg after
+`height_m`; default **4000**) reduces the paint stage's internal **quadric remesh BEFORE paint**,
+so the prop comes out low-poly with clean topology and the texture carries the detail — no
+post-paint reduce (that's what crushed/holed them). Verified: barrel at `poly=3000` → 3000-tri
+clean GLB, diffuse-only texture, sized. **`prop_pull.py` should pass `poly`** per prop: Synty
+ref Quinn=1830, church=6629, set-dressing ~400–1100 → use ~1.5–2.5k set-dressing, ~4–6k hero.
+
+---
 ## ⚠️ Windows/3090 (2026-06-17) — painted finalize now MINIMAL (fixes "crushed / holes")
 The painted `final.glb` was coming out **crushed with holes in Godot** while `painted.glb` looked
 fine. Root cause: Hunyuan's paint mesh is **non-watertight / multi-shell** (thousands of open
