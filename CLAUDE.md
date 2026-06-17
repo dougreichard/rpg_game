@@ -805,10 +805,9 @@ with how the editor serializes, then reopen in the editor to confirm it's valid.
   Town = cm). Original art and CC0/OFL assets are also fine. **Not** retro/pixel-art and
   **not** 2.5D billboards — both pipelines are retired (see Project overview).
   **Generating NEW thematic props** (not from the Synty packs) → the `synty-prop-gen` skill.
-  A Windows/CUDA RTX-3090 box runs that whole pipeline (SDXL ref → Hunyuan shape/paint →
-  Blender) as the **Prop Farm** web service at **http://192.168.0.62:7860** — prefer it (faster,
-  adds texture paint); it can auto-commit+push the GLB for the Mac to wire in. See the skill's
-  "Preferred path" section. (3090 box generates; the Mac wires props into levels.)
+  Its **Prop Farm** web service (Windows/CUDA RTX-3090 box, SDXL ref → Hunyuan shape/paint →
+  Blender) at **http://192.168.0.62:7860** is the primary path; it can auto-commit+push the
+  GLB. The 3090 box generates; the Mac wires props into levels.
 - Enemy attacks must be **telegraphed**; combat must stay **readable**.
 - Character abilities should feel distinct and be required by at least one puzzle
   or encounter — no ability should be purely cosmetic.
