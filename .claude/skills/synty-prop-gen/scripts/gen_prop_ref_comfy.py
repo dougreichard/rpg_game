@@ -32,8 +32,14 @@ ap.add_argument("--name", required=True)
 ap.add_argument("--prompt", required=True)
 ap.add_argument("--negative", default=NEG)
 ap.add_argument("--seed", type=int, default=11)
-ap.add_argument("--steps", type=int, default=30)
+# 16 steps (was 30): the reference is throwaway — it only needs a clean, single-object,
+# colour-blocked silhouette for Hunyuan, not finished art. dpmpp_2m karras converges fast.
+# (A 4-8 step SDXL-Lightning/Turbo LoRA would cut this further, but none is installed.)
+ap.add_argument("--steps", type=int, default=16)
 ap.add_argument("--cfg", type=float, default=7.0)
+ap.add_argument("--batch", type=int, default=1,
+                help="generate N candidates in ONE batched SDXL pass; caller picks the first "
+                     "non-tiled one. Cheap on CUDA VRAM; replaces a sequential seed-retry loop.")
 # Portrait default (832x1216): SDXL base TILES props into a grid at square 1024x1024 (barrels,
 # pins) which Hunyuan then cubes — a tall frame can't tile a grid, so it yields one object.
 ap.add_argument("--width", type=int, default=832)
@@ -79,7 +85,7 @@ g = {}
 g["4"] = {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": a.ckpt}}
 g["6"] = {"class_type": "CLIPTextEncode", "inputs": {"text": a.prompt + STYLE, "clip": ["4", 1]}}
 g["7"] = {"class_type": "CLIPTextEncode", "inputs": {"text": a.negative, "clip": ["4", 1]}}
-g["5"] = {"class_type": "EmptyLatentImage", "inputs": {"width": a.width, "height": a.height, "batch_size": 1}}
+g["5"] = {"class_type": "EmptyLatentImage", "inputs": {"width": a.width, "height": a.height, "batch_size": a.batch}}
 
 model_ref = ["4", 0]
 if a.style_image:
@@ -130,13 +136,15 @@ while True:
 outs = hist[pid]["outputs"]
 os.makedirs(os.path.expanduser(a.out_dir), exist_ok=True)
 saved = []
+idx = 0  # batch index -> {name}_ref_seed{seed}_{i}.png (the caller enumerates these by index)
 for node_id, out in outs.items():
     for img in out.get("images", []):
         q = urllib.parse.urlencode({"filename": img["filename"], "subfolder": img.get("subfolder", ""), "type": img.get("type", "output")})
         data = urllib.request.urlopen(f"{BASE}/view?{q}").read()
-        dst = os.path.join(os.path.expanduser(a.out_dir), f"{a.name}_ref_seed{a.seed}.png")
+        dst = os.path.join(os.path.expanduser(a.out_dir), f"{a.name}_ref_seed{a.seed}_{idx}.png")
         with open(dst, "wb") as f:
             f.write(data)
         saved.append(dst)
+        idx += 1
         print("saved", dst, f"({len(data)//1024} KB)")
 print(f"done in {time.time()-t0:.0f}s ->", saved)
