@@ -16,6 +16,10 @@ guard** (Hunyuan silently returns a *cube* when the reference isn't a single, ce
 object — so prompt one object, not a scatter; the service also auto-retries tiled references and
 renders at portrait to dodge SDXL grids).
 
+**Typical timings (3090, resident workers, perf-tuned: FlashVDM + TF32):** flat ~1 min, painted
+~3–4 min per prop — batched reference ~17s, shape ~39s, paint ~190s (@2.5k-tri budget), finalize +
+render a few seconds. (Editing a worker needs a process restart; see `prop_farm/README.md`.)
+
 **Two output tracks / Godot materials:**
 - `flat` — grey low-poly GLB; **tint per material in Godot** (no texture). Reduced + flat-shaded +
   sized via `normalize_prop.py` (~few-k tris).
@@ -43,8 +47,9 @@ the GLB; the Mac then `git pull` + `prop(...)`.
   — `track` = `"flat"`/`"painted"`; `height_m` = real bbox height in metres (ships true-sized →
   `prop(...)` with scale 1.0); `poly` = painted tri budget (default 4000).
 
-**Stage scripts** (`scripts/`): `gen_prop_ref_comfy.py` (ComfyUI/SDXL + optional IPAdapter
-set-consistency), `gen_prop_mesh_cuda.py` (Hunyuan shape), `gen_prop_paint_cuda.py` (Hunyuan
+**Stage scripts** (`scripts/`): `gen_prop_ref_comfy.py` (ComfyUI/SDXL, `--batch` candidates in one
+pass → pick first non-tiled, + optional IPAdapter set-consistency), `gen_prop_mesh_cuda.py`
+(Hunyuan shape), `gen_prop_paint_cuda.py` (Hunyuan
 paint — lean: skips discarded mr + super-res, texture_size 1536, `--remesh-target` = poly budget),
 `finalize_painted.py` (keep diffuse + mesh as-is, 512px texture, real-world size), `normalize_prop.py`
 (flat-track reduce; default dissolve angle 6°). Service code + ops docs live on the 3090 at
