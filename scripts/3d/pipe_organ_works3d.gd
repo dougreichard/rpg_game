@@ -71,9 +71,7 @@ const F_LOFT := Vector2(9.5, 52.0)
 
 const ORGAN_PARTS := ["windchest_board", "brass_organ_pipe", "trued_gear"]
 
-var _organ_node: MeshInstance3D = null
-var _organ_base: Node3D = null      # part-additive: bare console (always)
-var _organ_pipes: Node3D = null     # the pipe bank that installs with the brass pipe
+var _organ_mesh: Node3D = null      # Prop Farm painted organ (one complete textured mesh)
 var _organ_station: Node3D = null
 var _stations: Array = []
 var _erin_npc: Node3D = null
@@ -155,24 +153,16 @@ func _floor1() -> void:
 	_organ_station.set("parts", ORGAN_PARTS.duplicate())
 	_register_station(_organ_station)
 	_organ_station.connect("produced", func(id: String) -> void:
-		GameManager.set_level_flag(location_id, "organ_part_" + id, true)
-		if id == "brass_organ_pipe": _reveal_pipes())   # the pipe bank visibly installs
+		GameManager.set_level_flag(location_id, "organ_part_" + id, true))
 	_organ_station.connect("completed", _on_organ_complete)
 	add_exit_portal(F1 + Vector3(0, 0, 6.3), Vector3(3, 3, 1.4))
 
 func _organ() -> void:
-	# Generated Synty low-poly organ (synty-prop-gen), split in Blender into co-registered
-	# PARTS for a part-additive build: the bare console always stands; the pipe bank
-	# installs when the brass pipe is fitted; the whole thing warms + glows when repaired.
+	# Prop Farm "painted" organ — ONE complete textured mesh (real-sized 3.0m, base-aligned).
 	# VISUAL ONLY — the organ's collision + ASSEMBLY station/marker (ORGAN_HIT) are unchanged.
-	_organ_base = prop("res://assets/models/props/organ_part_base.glb", F1 + ORGAN, 0.0, 2.9)
-	_organ_pipes = prop("res://assets/models/props/organ_part_pipes.glb", F1 + ORGAN, 0.0, 2.9)
-	_tint_prop(_organ_pipes, BRASS, 0.4, 0.5)
-	if _organ_pipes != null: _organ_pipes.visible = false
-	var bx: float = (F1 + ORGAN).x
-	# thin key-strip that glows on the restored organ (the solved cue) — sized/placed for the 2.9 organ
-	_organ_node = box_mesh(Vector3(2.0, 0.1, 0.32), Color(0.92, 0.9, 0.85), Vector3(bx, 1.45, (F1 + ORGAN).z + 1.15))
-	add_child(_organ_node)
+	# Phase cue (Option A): the mesh isn't split (a painted mesh must not be cut) — instead its
+	# OWN material is modulated dusty/dim while derelict → full + warm glow when repaired.
+	_organ_mesh = prop("res://assets/models/props/organ.glb", F1 + ORGAN, 0.0)
 	_set_organ_phase(false)   # _restore() flips it if already repaired
 
 func _tint_prop(node: Node, col: Color, rough: float, metal: float) -> void:
@@ -196,17 +186,25 @@ func _apply_vcolor(node: Node, rough: float = 0.8) -> void:
 	for mi: Node in node.find_children("*", "MeshInstance3D"):
 		(mi as MeshInstance3D).material_override = m
 
-func _reveal_pipes() -> void:
-	if _organ_pipes != null: _organ_pipes.visible = true
-
 func _set_organ_phase(fixed: bool) -> void:
-	# base reads dusty/derelict until repaired, warm wood once restored
-	_tint_prop(_organ_base, Color(0.55, 0.40, 0.22) if fixed else Color(0.32, 0.29, 0.25), 0.7, 0.1)
-	if fixed:
-		_reveal_pipes()
-	if _organ_node != null:
-		_organ_node.visible = fixed
-		if fixed: _organ_node.material_override = _glow_mat()
+	# Modulate the painted organ's OWN material (keeps the diffuse texture — we duplicate it and
+	# only change the albedo multiplier + emission): dusty/dim derelict → bright + warm glow fixed.
+	if _organ_mesh == null:
+		return
+	for mi: Node in _organ_mesh.find_children("*", "MeshInstance3D"):
+		var src: Material = (mi as MeshInstance3D).get_active_material(0)
+		var m := (src.duplicate() if src != null else StandardMaterial3D.new()) as StandardMaterial3D
+		if m == null:
+			continue
+		if fixed:
+			m.albedo_color = Color.WHITE                      # full-strength texture
+			m.emission_enabled = true
+			m.emission = Color(1.0, 0.82, 0.45)
+			m.emission_energy_multiplier = 0.18               # subtle warm glow
+		else:
+			m.albedo_color = Color(0.5, 0.5, 0.55)            # multiplies the texture down (dusty/unlit)
+			m.emission_enabled = false
+		(mi as MeshInstance3D).material_override = m
 
 func _workshop_tools() -> void:
 	# Table saw — squares the plank, cuts the pipe to length.
@@ -326,8 +324,6 @@ func _restore() -> void:
 	for part: String in ORGAN_PARTS:
 		if GameManager.get_level_flag(location_id, "organ_part_" + part, false):
 			_organ_station.call("restore_part", part)
-	if GameManager.get_level_flag(location_id, "organ_part_brass_organ_pipe", false):
-		_reveal_pipes()   # pipe bank stays installed across re-entry
 	if _erin_recruited:
 		_recruit_erin(false)
 		_storeroom_done = true
