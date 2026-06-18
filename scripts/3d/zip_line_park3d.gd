@@ -27,22 +27,24 @@ const PULSE_OPEN := 0.72    # wider OPEN window (was 0.82 — too tight)
 const WALL_H := 1.6   # low hedge-height boundary (green walls/corners now read as hedges, fronted by hedge props)
 const REACH := 2.2
 
-const LANDING_C := Vector3(0, 0, 13.0)
-const LENA_POS := Vector3(3.0, 0, 13.5)
+# Expanded outdoor layout (z+ = south/landing/start, z- = north/high summit). Rooms spaced
+# apart with long tree-lined trails between them. Mid 24x22 @0 · Landing 18x14 @+26 · High 18x16 @-27.
+const LANDING_C := Vector3(0, 0, 26.0)
+const LENA_POS := Vector3(3.0, 0, 26.5)
 const PANEL_POS := Vector3(-4.0, 0.0, -2.0)
 const LOCKS := [Vector3(4.0, 0, -4.0), Vector3(4.0, 0, -2.0), Vector3(4.0, 0, 0.0)]
 const WINCH_POS := Vector3(-6.0, 0, 3.0)
-const LOCK_GATE := Vector3(0.0, 0, -8.5)
-const HIGH_C := Vector3(0, 0, -14.0)
+const LOCK_GATE := Vector3(0.0, 0, -15.0)          # on the mid→high trail
+const HIGH_C := Vector3(0, 0, -27.0)
 # zip-line rider path (cable deck points, trolley hangs just under the cable): high -> mid -> low
-const ZIP_TOP := Vector3(0, 4.6, -15.0)
+const ZIP_TOP := Vector3(0, 4.6, -28.0)
 const ZIP_MID := Vector3(0, 3.4, -2.0)
 const ZIP_LOW := Vector3(-6.0, 2.2, 6.0)
 const ZIP_HANG := Vector3(0, -0.32, 0)
-const RELEASE_POS := Vector3(-1.5, 0.0, -12.0)    # release post (Ben TIMES) — in FRONT of the high tower
-const HIGH_PANEL_POS := Vector3(1.5, 0.0, -12.0)  # release control panel (Ethan ARMS) — beside the post
-const CLUE_POS := Vector3(-3.5, 0.0, -16.5)
-const RHYTHM_POS := Vector3(3.5, 0.0, -16.5)
+const RELEASE_POS := Vector3(-1.5, 0.0, -24.0)    # release post (Ben TIMES) — in FRONT of the high tower
+const HIGH_PANEL_POS := Vector3(1.5, 0.0, -24.0)  # release control panel (Ethan ARMS) — beside the post
+const CLUE_POS := Vector3(-3.5, 0.0, -30.0)
+const RHYTHM_POS := Vector3(3.5, 0.0, -30.0)
 
 var _cleared := false
 var _enemies_cleared := false
@@ -79,7 +81,7 @@ func _build_level() -> void:
 	point_light(HIGH_PANEL_POS + Vector3(0, 2.0, 0), Color(0.4, 0.7, 1.0), 1.3, 5.0)
 	# outer ground so the forest ring / perimeter foliage isn't floating over the void
 	set_theme(FLOOR_GRASS, FLOOR_GRASS)
-	floor_box(44, 66, FT_PARK.darkened(0.08), Vector3(0, -0.06, -1.0))
+	floor_box(56, 104, FT_PARK.darkened(0.08), Vector3(0, -0.06, -3.0))
 	_rooms()
 	_towers()
 	_ziplines()
@@ -102,22 +104,22 @@ func _build_level() -> void:
 	_restore()
 
 func _rooms() -> void:
-	# Mid platform — grass, wood rails. Combat. Openings: south (landing), north (high).
+	# Mid platform — big grassy combat field. Openings: south (landing trail), north (high trail).
 	set_theme(FLOOR_GRASS, FLOOR_GRASS)
-	room(Vector3.ZERO, 16, 16, FT_PARK, WT_PARK, WALL_H, ["s", "n"], 3.0, true)
-	corridor(Vector3(0, 0, 8), "s", 1.0, FT_PARK, WT_PARK, 3.0, WALL_H, true, CORNER_COL)        # → landing
-	corridor(Vector3(0, 0, -8), "n", 1.0, FT_PARK, WT_PARK, 3.0, WALL_H, true, CORNER_COL)       # → high
+	room(Vector3.ZERO, 24, 22, FT_PARK, WT_PARK, WALL_H, ["s", "n"], 4.0, true)
+	corridor(Vector3(0, 0, 11), "s", 8.0, FT_PARK, WT_PARK, 4.0, WALL_H, true, CORNER_COL)    # long trail → landing
+	corridor(Vector3(0, 0, -11), "n", 8.0, FT_PARK, WT_PARK, 4.0, WALL_H, true, CORNER_COL)   # long trail → high (gated)
 	_lock_wall = _gate_panel(LOCK_GATE, WALL_H)
-	# Landing — grass (combat-free). South vestibule = exit.
+	# Landing — grassy entry plaza (combat-free). South vestibule = exit.
 	set_theme(FLOOR_GRASS, FLOOR_GRASS)
-	room(LANDING_C, 12, 8, FT_PARK, WT_PARK, WALL_H, ["n", "s"], 3.0, true)
-	corridor(LANDING_C + Vector3(0, 0, 4.0), "s", 2.0, FT_PARK, WT_PARK, 3.0, WALL_H, true, CORNER_COL)
-	# High platform — dirt landing pad up top.
+	room(LANDING_C, 18, 14, FT_PARK, WT_PARK, WALL_H, ["n", "s"], 4.0, true)
+	corridor(LANDING_C + Vector3(0, 0, 7.0), "s", 3.0, FT_PARK, WT_PARK, 4.0, WALL_H, true, CORNER_COL)
+	# High platform — dirt launch summit up top.
 	set_theme(FLOOR_DIRT, FLOOR_GRASS)
-	room(HIGH_C, 12, 10, FT_PARK, WT_PARK, WALL_H, ["s"], 3.0, true)
+	room(HIGH_C, 18, 16, FT_PARK, WT_PARK, WALL_H, ["s"], 4.0, true)
 
 func _gate_panel(pos: Vector3, h: float) -> Node3D:
-	var size := Vector3(3.0, h, 0.4)
+	var size := Vector3(4.4, h, 0.4)
 	var sb := StaticBody3D.new()
 	sb.collision_layer = Combat3D.L_WORLD
 	var cs := CollisionShape3D.new(); var bs := BoxShape3D.new()
@@ -233,9 +235,12 @@ func _hedge_room(c: Vector3, w: float, d: float, openings: Array, gap := 3.0) ->
 			prop(TOWN + "bush.glb", corner, (sx + sz) * 0.7, 1.1)
 
 func _hedges() -> void:
-	_hedge_room(Vector3.ZERO, 16, 16, ["s", "n"])
-	_hedge_room(LANDING_C, 12, 8, ["n", "s"])
-	_hedge_room(HIGH_C, 12, 10, ["s"])
+	_hedge_room(Vector3.ZERO, 24, 22, ["s", "n"], 4.0)
+	_hedge_room(LANDING_C, 18, 14, ["n", "s"], 4.0)
+	_hedge_room(HIGH_C, 18, 16, ["s"], 4.0)
+	# line the two long trails between the rooms with bushes (open gateways stay clear)
+	_hedge_run(Vector3(-2.0, 0, 11), "z", 8.0); _hedge_run(Vector3(2.0, 0, 11), "z", 8.0)     # mid→landing
+	_hedge_run(Vector3(-2.0, 0, -19), "z", 8.0); _hedge_run(Vector3(2.0, 0, -19), "z", 8.0)   # mid→high
 
 func _forest_ring() -> void:
 	# a denser tree/bush border OUTSIDE the room walls (taller trees peek over the 2.8m walls
@@ -243,14 +248,14 @@ func _forest_ring() -> void:
 	var town := "res://assets/models/town/"
 	var rng := RandomNumberGenerator.new(); rng.seed = 4242
 	var kinds := ["tree", "tree", "tree_large", "bush"]
-	var xb := 11.0
-	var z := -22.0
-	while z <= 21.0:                                   # east + west borders
+	var xb := 16.0
+	var z := -42.0
+	while z <= 40.0:                                   # east + west borders
 		for sx: float in [-xb, xb]:
 			prop(town + kinds[rng.randi() % kinds.size()] + ".glb",
-				Vector3(sx + rng.randf_range(-1.0, 1.0), 0.0, z + rng.randf_range(-1.2, 1.2)), rng.randf() * TAU)
+				Vector3(sx + rng.randf_range(-1.5, 1.5), 0.0, z + rng.randf_range(-1.2, 1.2)), rng.randf() * TAU)
 		z += rng.randf_range(2.6, 3.6)
-	for sz: float in [-23.0, 22.0]:                    # north + south caps
+	for sz: float in [-43.0, 41.0]:                    # north + south caps
 		var x := -xb
 		while x <= xb:
 			prop(town + kinds[rng.randi() % kinds.size()] + ".glb",
@@ -270,25 +275,34 @@ func _set_dressing() -> void:
 	# around each area's perimeter — clear of the puzzle spots, paths, spawn/exit and towers.
 	# [kind, x, z, yaw_deg]
 	var town := "res://assets/models/town/"
+	# [kind, x, z, yaw_deg] — accents near room edges, clear of puzzle spots / trails
 	var items := [
-		# --- mid platform (room 16x16 @ origin; avoid panel/locks/winch/towers/corridors) ---
-		["tree_large", 6.6, 6.6, 20], ["tree", 6.6, -6.6, 120], ["tree", -6.6, -6.6, 210],
-		["bush", 6.9, 2.0, 0], ["bush", 6.9, -2.5, 0], ["bush", -6.9, -4.5, 0], ["bush", 2.6, 6.9, 0],
-		["park_lamp", 6.8, 6.8, 0], ["park_lamp", -6.8, 6.8, 0], ["street_sign", -6.6, 7.0, 90],
-		# --- landing (lobby, room 12x8 @ z=13; Lena + exit) ---
-		["bench", -3.0, 13.0, 180], ["tree", 5.0, 15.6, 40], ["tree", -5.0, 15.6, 300],
-		["flowerbed", 5.0, 10.6, 0], ["planter", -5.0, 10.6, 0], ["park_lamp", 5.2, 15.6, 0],
-		["street_sign", 4.6, 16.2, 200],
-		# --- high platform (room 12x10 @ z=-14; avoid release/clue/rhythm/tower) ---
-		["tree", 5.0, -17.6, 60], ["tree", -5.0, -17.6, 250], ["tree", 5.0, -10.6, 140],
-		["bush", -5.0, -14.0, 0], ["bush", 5.0, -13.6, 0], ["park_lamp", 5.2, -17.6, 0],
+		# --- mid (24x22 @0): edges x±10.5 / z±9; avoid panel(-4,-2)/locks(4,*)/winch(-6,3)/towers ---
+		["tree_large", 10.5, 9.0, 20], ["tree", 10.5, -9.0, 120], ["tree", -10.5, -9.0, 210], ["tree", -10.5, 9.0, 300],
+		["bush", 11.0, 3.0, 0], ["bush", 11.0, -3.0, 0], ["bush", -11.0, -6.0, 0],
+		["park_lamp", 10.5, 9.5, 0], ["park_lamp", -10.5, 9.5, 0],
+		# --- landing (18x14 @+26): Lena/kiosk/picnic ---
+		["tree", 7.5, 31.0, 40], ["tree", -7.5, 31.0, 300], ["tree", -7.5, 20.5, 150],
+		["flowerbed", 7.0, 21.0, 0], ["planter", -3.0, 31.5, 0], ["park_lamp", 7.5, 27.0, 0],
+		# --- high (18x16 @-27): avoid release(-1.5,-24)/panel(1.5,-24)/clue(-3.5,-30)/rhythm(3.5,-30)/tower(0,-28) ---
+		["tree", 7.5, -33.0, 60], ["tree", -7.5, -33.0, 250], ["tree", 7.5, -21.0, 140], ["tree", -7.5, -21.0, 30],
+		["bush", -7.5, -27.0, 0], ["bush", 7.5, -27.0, 0], ["park_lamp", 7.5, -21.0, 0],
 	]
 	for it: Array in items:
 		prop(town + str(it[0]) + ".glb", Vector3(it[1], 0.0, it[2]), deg_to_rad(it[3]), 1.0)
-	# generated park-specific props (Prop Farm, real-sized)
-	prop("res://assets/models/props/warden_kiosk.glb", Vector3(3.5, 0.0, 15.6), PI)        # Lena's hut, back of landing
-	# (gear_rack dropped — "rack of helmets" is too abstract a subject; came out a blob twice)
-	# hay-bale crash pad under the low (landing) zip tower
+	prop("res://assets/models/props/warden_kiosk.glb", Vector3(4.5, 0.0, 30.5), PI)   # Lena's hut, back of landing
+	# picnic rest area at the landing (baked Kids "Park" set)
+	prop(town + "picnic_table.glb", Vector3(-5.0, 0.0, 28.5), deg_to_rad(20))
+	prop(town + "park_seat.glb", Vector3(-6.8, 0.0, 24.5), deg_to_rad(90))
+	prop(town + "park_bin.glb", Vector3(-7.8, 0.0, 30.5), 0.0)
+	# park fences flanking the entrance path (south of the landing)
+	prop(town + "park_fence.glb", Vector3(-3.0, 0.0, 34.5), 0.0)
+	prop(town + "park_fence.glb", Vector3(3.0, 0.0, 34.5), 0.0)
+	# scattered boulders (baked rock)
+	prop(town + "rock_round.glb", Vector3(9.0, 0.0, -9.5), 0.0, 1.0)
+	prop(town + "rock_round.glb", Vector3(-9.5, 0.0, 5.0), 1.5, 0.8)
+	prop(town + "rock_round.glb", Vector3(7.5, 0.0, -31.5), 2.4, 1.1)
+	# hay-bale crash pad under the low zip tower (mid, unchanged)
 	prop("res://assets/models/props/hay_bale.glb", Vector3(-6.0, 0.0, 7.2), 0.0)
 	prop("res://assets/models/props/hay_bale.glb", Vector3(-5.1, 0.0, 7.0), 1.0)
 	prop("res://assets/models/props/hay_bale.glb", Vector3(-6.5, 0.0, 6.2), 2.2)
