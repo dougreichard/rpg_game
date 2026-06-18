@@ -103,7 +103,8 @@ func _build_level() -> void:
 # A grassy ground plane under the whole fairground footprint (the carnival sits in a park
 # clearing) so the area outside the rooms reads as grass, not void.
 func _ground() -> void:
-	add_child(box_mesh(Vector3(76, 0.12, 78), Color(0.5, 0.55, 0.38), Vector3(-4, -0.06, 0.5)))
+	# top at y=-0.1, clearly BELOW the room floors (top y=0) so the two never z-fight.
+	add_child(box_mesh(Vector3(76, 0.5, 78), Color(0.5, 0.55, 0.38), Vector3(-4, -0.35, 0.5)))
 
 # A tree/bush border around the fairground perimeter (taller trees peek over the walls for an
 # enclosed-park backdrop). Deterministic RNG so it's stable across runs.
@@ -119,19 +120,19 @@ func _tree_ring() -> void:
 			if sx > 0 and z > -8.0 and z < 8.0:
 				continue
 			prop(town + kinds[rng.randi() % kinds.size()] + ".glb",
-				Vector3(sx + rng.randf_range(-1.4, 1.4), 0.0, z + rng.randf_range(-1.2, 1.2)), rng.randf() * TAU)
+				Vector3(sx + rng.randf_range(-1.4, 1.4), -0.1, z + rng.randf_range(-1.2, 1.2)), rng.randf() * TAU)
 		z += rng.randf_range(2.6, 3.6)
 	# back the Sideshow Alley with a tree line just east of its wall (x28)
 	var az := -7.0
 	while az <= 7.0:
 		prop(town + kinds[rng.randi() % kinds.size()] + ".glb",
-			Vector3(30.0 + rng.randf_range(-0.8, 0.8), 0.0, az + rng.randf_range(-0.8, 0.8)), rng.randf() * TAU)
+			Vector3(30.0 + rng.randf_range(-0.8, 0.8), -0.1, az + rng.randf_range(-0.8, 0.8)), rng.randf() * TAU)
 		az += rng.randf_range(2.6, 3.4)
 	for sz: float in [-32.0, 33.0]:                     # north + south caps
 		var x := -30.0
 		while x <= 16.0:
 			prop(town + kinds[rng.randi() % kinds.size()] + ".glb",
-				Vector3(x + rng.randf_range(-1.0, 1.0), 0.0, sz + rng.randf_range(-1.0, 1.0)), rng.randf() * TAU)
+				Vector3(x + rng.randf_range(-1.0, 1.0), -0.1, sz + rng.randf_range(-1.0, 1.0)), rng.randf() * TAU)
 			x += rng.randf_range(2.6, 3.6)
 
 func _rooms() -> void:
