@@ -24,7 +24,7 @@ const CORNER_COL := Color(0.10, 0.30, 0.15)   # solid forest-green trim
 
 const PULSE_SPEED := 2.0    # slower pulse → easier to catch
 const PULSE_OPEN := 0.72    # wider OPEN window (was 0.82 — too tight)
-const WALL_H := 2.8
+const WALL_H := 1.6   # low hedge-height boundary (green walls/corners now read as hedges, fronted by hedge props)
 const REACH := 2.2
 
 const LANDING_C := Vector3(0, 0, 13.0)
@@ -194,7 +194,7 @@ func _hedge_run(start: Vector3, axis: String, length: float) -> void:
 		var yaw := PI * 0.5 if axis == "x" else 0.0
 		var h := prop("res://assets/models/props/hedge.glb", pos, yaw, 1.0)
 		if h != null:
-			h.scale = Vector3(1.0, 1.0, step / HEDGE_LEN)   # stretch local length (Z) to fill the gap
+			h.scale = Vector3(1.0, 1.3, step / HEDGE_LEN)   # ~1.7m tall (covers the 1.6m wall) + stretch length (Z) to fill
 
 func _hedge_room(c: Vector3, w: float, d: float, skip: Array) -> void:
 	# line a room's inner walls with hedges (in front of the green walls); skip opening sides

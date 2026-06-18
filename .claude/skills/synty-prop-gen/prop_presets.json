@@ -102,8 +102,8 @@
     "ref_count": 1
   },
   "hedge": {
-    "prompt": "a long straight section of a manicured garden hedge, a dense flat-topped rectangular green leafy box shrub, much wider than it is tall, trimmed neat",
-    "seed": 906,
+    "prompt": "a freestanding section of a dense green garden hedge, entirely covered in green leafy foliage on the top and all four sides, trimmed flat, no flower pot, no planter box, no soil, no stone or concrete base, just the green shrub",
+    "seed": 955,
     "track": "painted",
     "angle": 6,
     "height": 1.3,
