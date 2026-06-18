@@ -60,6 +60,7 @@ var _spawned := 0
 var _pulse := 0.0
 var _lena = null
 var _panel_lights: Array = []
+var _high_panel_lights: Array = []
 var _lock_lights: Array = []
 var _release_light: MeshInstance3D = null
 var _zip_rider: Node3D = null    # trolley that sits on the high cable, ready, and zips on release
@@ -178,6 +179,11 @@ func _release() -> void:
 	# high launch tower so neither is buried in it.
 	prop("res://assets/models/props/zip_release.glb", RELEASE_POS, 0.0)        # signal/gate post — Ben
 	prop("res://assets/models/props/zip_control_panel.glb", HIGH_PANEL_POS, PI)  # release control panel — Ethan
+	# matching button pips on the high panel's face (panel is yaw PI, so its front is at -Z)
+	for i: int in range(3):
+		var pip := box_mesh(Vector3(0.16, 0.06, 0.1), Color(0.85, 0.25, 0.2), HIGH_PANEL_POS + Vector3(-0.3 + float(i) * 0.3, 1.0, -0.28), 1.2)
+		add_child(pip)
+		_high_panel_lights.append(pip)
 	_release_light = box_mesh(Vector3(0.3, 0.3, 0.12), Color(0.6, 0.6, 0.2), RELEASE_POS + Vector3(0, 1.1, 0.22), 1.0)
 	add_child(_release_light)
 
@@ -393,6 +399,8 @@ func _restore() -> void:
 	if _locks_done:
 		for g in _lock_lights: ((g as MeshInstance3D).mesh as BoxMesh).material.albedo_color = Color(0.3, 0.95, 0.4)
 		_open_lock_gate(false)
+	if _release_armed:
+		_set_high_panel_armed()
 	if _release_armed and not _release_timed and _release_light != null:
 		((_release_light.mesh as BoxMesh).material as StandardMaterial3D).albedo_color = Color(0.95, 0.7, 0.2)  # armed (amber)
 	if _release_timed and _release_light != null:
@@ -449,6 +457,7 @@ func _on_special(char_name: String) -> void:
 			_release_armed = true
 			GameManager.set_level_flag(location_id, "release_armed", true)
 			((_release_light.mesh as BoxMesh).material as StandardMaterial3D).albedo_color = Color(0.95, 0.7, 0.2)  # amber: armed
+			_set_high_panel_armed()
 			_hud_hint.text = "Ethan powers the release from the panel — now swap to Ben (Tab) and time the post."
 			Audio.play("special")
 		else:
@@ -538,6 +547,11 @@ func _open_lock_gate(animate: bool) -> void:
 
 func _set_panel_solved() -> void:
 	for pip in _panel_lights:
+		var m := ((pip as MeshInstance3D).mesh as BoxMesh).material as StandardMaterial3D
+		m.albedo_color = Color(0.3, 0.95, 0.4); m.emission = m.albedo_color
+
+func _set_high_panel_armed() -> void:
+	for pip in _high_panel_lights:
 		var m := ((pip as MeshInstance3D).mesh as BoxMesh).material as StandardMaterial3D
 		m.albedo_color = Color(0.3, 0.95, 0.4); m.emission = m.albedo_color
 
