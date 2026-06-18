@@ -30,6 +30,7 @@ const REACH := 2.2
 # Expanded outdoor layout (z+ = south/landing/start, z- = north/high summit). Rooms spaced
 # apart with long tree-lined trails between them. Mid 24x22 @0 · Landing 18x14 @+26 · High 18x16 @-27.
 const LANDING_C := Vector3(0, 0, 26.0)
+const POND_C := Vector3(18.0, 0, 26.0)   # peaceful pond clearing, a detour east of the landing
 const LENA_POS := Vector3(3.0, 0, 26.5)
 const PANEL_POS := Vector3(-4.0, 0.0, -2.0)
 const LOCKS := [Vector3(4.0, 0, -4.0), Vector3(4.0, 0, -2.0), Vector3(4.0, 0, 0.0)]
@@ -93,6 +94,7 @@ func _build_level() -> void:
 	_release()
 	_high_extras()
 	_set_dressing()
+	_pond_clearing()
 	_hedges()
 	_forest_ring()
 	make_dialog()
@@ -112,10 +114,13 @@ func _rooms() -> void:
 	corridor(Vector3(0, 0, 11), "s", 8.0, FT_PARK, WT_PARK, 4.0, WALL_H, true, CORNER_COL)    # long trail → landing
 	corridor(Vector3(0, 0, -11), "n", 8.0, FT_PARK, WT_PARK, 4.0, WALL_H, true, CORNER_COL)   # long trail → high (gated)
 	_lock_wall = _gate_panel(LOCK_GATE, WALL_H)
-	# Landing — grassy entry plaza (combat-free). South vestibule = exit.
+	# Landing — grassy entry plaza (combat-free). South vestibule = exit; east path → pond.
 	set_theme(FLOOR_GRASS, FLOOR_GRASS)
-	room(LANDING_C, 18, 14, FT_PARK, WT_PARK, WALL_H, ["n", "s"], 4.0, true)
+	room(LANDING_C, 18, 14, FT_PARK, WT_PARK, WALL_H, ["n", "s", "e"], 4.0, true)
 	corridor(LANDING_C + Vector3(0, 0, 7.0), "s", 3.0, FT_PARK, WT_PARK, 4.0, WALL_H, true, CORNER_COL)
+	# Pond clearing — peaceful detour east of the landing (forest ring locally opened for it).
+	room(POND_C, 12, 12, FT_PARK, WT_PARK, WALL_H, ["w"], 4.0, true)
+	corridor(Vector3(9, 0, 26), "e", 3.0, FT_PARK, WT_PARK, 4.0, WALL_H, true, CORNER_COL)
 	# High platform — dirt launch summit up top.
 	set_theme(FLOOR_DIRT, FLOOR_GRASS)
 	room(HIGH_C, 18, 16, FT_PARK, WT_PARK, WALL_H, ["s"], 4.0, true)
@@ -243,11 +248,13 @@ func _hedge_room(c: Vector3, w: float, d: float, openings: Array, gap := 3.0) ->
 
 func _hedges() -> void:
 	_hedge_room(Vector3.ZERO, 24, 22, ["s", "n"], 4.0)
-	_hedge_room(LANDING_C, 18, 14, ["n", "s"], 4.0)
+	_hedge_room(LANDING_C, 18, 14, ["n", "s", "e"], 4.0)
 	_hedge_room(HIGH_C, 18, 16, ["s"], 4.0)
+	_hedge_room(POND_C, 12, 12, ["w"], 4.0)
 	# line the two long trails between the rooms with bushes (open gateways stay clear)
 	_hedge_run(Vector3(-2.0, 0, 11), "z", 8.0); _hedge_run(Vector3(2.0, 0, 11), "z", 8.0)     # mid→landing
 	_hedge_run(Vector3(-2.0, 0, -19), "z", 8.0); _hedge_run(Vector3(2.0, 0, -19), "z", 8.0)   # mid→high
+	_hedge_run(Vector3(10.5, 0, 24), "x", 3.0); _hedge_run(Vector3(10.5, 0, 28), "x", 3.0)    # landing→pond
 
 func _forest_ring() -> void:
 	# a denser tree/bush border OUTSIDE the room walls (taller trees peek over the 2.8m walls
@@ -259,9 +266,19 @@ func _forest_ring() -> void:
 	var z := -42.0
 	while z <= 40.0:                                   # east + west borders
 		for sx: float in [-xb, xb]:
+			# the pond clearing pushes east to x~24 around z26 — skip east-ring trees in that
+			# band (they'd land inside the pond room) and back the clearing further out instead
+			if sx > 0 and z > 19.0 and z < 33.0:
+				continue
 			prop(town + kinds[rng.randi() % kinds.size()] + ".glb",
 				Vector3(sx + rng.randf_range(-1.5, 1.5), 0.0, z + rng.randf_range(-1.2, 1.2)), rng.randf() * TAU)
 		z += rng.randf_range(2.6, 3.6)
+	# back the pond clearing with a tree line just east of its wall (x24)
+	var pz := 20.0
+	while pz <= 32.0:
+		prop(town + kinds[rng.randi() % kinds.size()] + ".glb",
+			Vector3(25.5 + rng.randf_range(-0.8, 0.8), 0.0, pz + rng.randf_range(-0.8, 0.8)), rng.randf() * TAU)
+		pz += rng.randf_range(2.6, 3.4)
 	for sz: float in [-43.0, 41.0]:                    # north + south caps
 		var x := -xb
 		while x <= xb:
@@ -335,6 +352,22 @@ func _park_visitors() -> void:
 	spawn_npc("congregant_m", Vector3(0, 0, 23.0), PI, ADULT_QUIPS, [
 		Vector3(-2.5, 0, 22.0), Vector3(2.5, 0, 22.0), Vector3(2.5, 0, 24.0), Vector3(-2.5, 0, 24.0),
 	])
+
+# Peaceful pond clearing east of the landing: the baked Synty pond + curved footbridge,
+# ringed by boulders/reeds, with a bench to sit and view it and a trail sign at the mouth.
+func _pond_clearing() -> void:
+	var town := "res://assets/models/town/"
+	prop(town + "park_pond.glb", POND_C + Vector3(0, 0.02, 0), 0.0, 0.4)              # ~7.4 x 8.2 m pond
+	prop(town + "bridge_curved.glb", POND_C + Vector3(0, 0.1, 0), 0.0, 0.7)           # curved footbridge across it
+	# boulders + reeds around the rim
+	for r: Array in [[14.8, 22.0, 1.0], [21.3, 23.0, 0.8], [21.6, 29.5, 1.1], [14.5, 30.2, 0.9]]:
+		prop(town + "rock_round.glb", Vector3(r[0], 0, r[1]), float(r[0]), float(r[2]))
+	for b: Vector2 in [Vector2(15.4, 21.6), Vector2(20.8, 30.6), Vector2(13.9, 28.2), Vector2(22.0, 26.0)]:
+		prop(town + "bush.glb", Vector3(b.x, 0, b.y), b.x, 0.8)
+	# a bench at the west edge, facing east into the pond
+	prop(town + "park_seat.glb", Vector3(13.2, 0, 26.0), -PI * 0.5)
+	# trail sign at the landing→pond path mouth
+	prop("res://assets/models/props/trail_marker.glb", Vector3(8.0, 0, 23.8), deg_to_rad(60))
 
 func _set_dressing() -> void:
 	# Outdoor-park dressing from the Synty town pack (scale 1.0, like the overworld), placed

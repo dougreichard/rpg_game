@@ -100,5 +100,23 @@
     "height": 0.6,
     "poly": 2000,
     "ref_count": 1
+  },
+  "park_sign": {
+    "prompt": "a wooden park trail signpost, a single weathered timber post with two horizontal carved wooden arrow-shaped direction boards near the top pointing opposite ways, green painted lettering",
+    "seed": 11,
+    "track": "painted",
+    "angle": 6,
+    "height": 2.2,
+    "poly": 3000,
+    "ref_count": 1
+  },
+  "trail_marker": {
+    "prompt": "a short carved wooden trail marker post, a single round-topped timber stake with a small painted arrow plaque",
+    "seed": 11,
+    "track": "painted",
+    "angle": 6,
+    "height": 1.0,
+    "poly": 2000,
+    "ref_count": 1
   }
 }
