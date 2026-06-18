@@ -115,11 +115,11 @@ func _towers() -> void:
 	_tower(Vector3(0.0, 0, -2.0), 3.4, Color(0.35, 0.45, 0.55))
 	_tower(HIGH_C + Vector3(0, 0, -1.0), 4.6, Color(0.5, 0.45, 0.35))
 
-func _tower(pos: Vector3, h: float, col: Color) -> void:
-	for sx: float in [-0.8, 0.8]:
-		for sz: float in [-0.8, 0.8]:
-			add_child(box_mesh(Vector3(0.18, h, 0.18), col.darkened(0.2), pos + Vector3(sx, h * 0.5, sz)))
-	add_child(box_mesh(Vector3(2.0, 0.2, 2.0), col.lightened(0.1), pos + Vector3(0, h, 0)))
+func _tower(pos: Vector3, h: float, _col: Color) -> void:
+	# Generated timber zip-line tower (synty-prop-gen, painted) — visual-only over the room
+	# floor. Mesh is ~4.5m tall; scale to this tower's height so the deck sits near h (where
+	# the cables attach). (yaw 0; verify deck facing in-engine.)
+	prop("res://assets/models/props/zip_tower.glb", pos, 0.0, h / 4.5)
 
 func _ziplines() -> void:
 	_cable(Vector3(-6.0, 2.2, 6.0), Vector3(0.0, 3.4, -2.0))
@@ -137,7 +137,7 @@ func _cable(a: Vector3, b: Vector3) -> void:
 	add_child(line)
 
 func _panel() -> void:
-	add_child(box_mesh(Vector3(1.0, 1.1, 0.5), Color(0.2, 0.2, 0.26), PANEL_POS + Vector3(0, 0.55, 0)))
+	prop("res://assets/models/props/zip_control_panel.glb", PANEL_POS, 0.0)  # Ethan's hack kiosk (painted)
 	for i: int in range(3):
 		var pip := box_mesh(Vector3(0.16, 0.06, 0.1), Color(0.85, 0.25, 0.2), PANEL_POS + Vector3(-0.3 + float(i) * 0.3, 1.0, 0.28), 1.2)
 		add_child(pip)
@@ -151,15 +151,12 @@ func _locks() -> void:
 		_floating_label(str(i + 1), LOCKS[i] + Vector3(0, 1.4, 0), Color(0.7, 0.9, 1.0))
 
 func _winch() -> void:
-	add_child(box_mesh(Vector3(0.8, 0.8, 0.8), Color(0.3, 0.32, 0.36), WINCH_POS + Vector3(0, 0.4, 0)))
-	var drum := MeshInstance3D.new()
-	var cm := CylinderMesh.new(); cm.top_radius = 0.3; cm.bottom_radius = 0.3; cm.height = 0.6
-	var m := StandardMaterial3D.new(); m.albedo_color = Color(0.5, 0.5, 0.55); m.metallic = 0.6
-	cm.material = m; drum.mesh = cm; drum.rotation.z = deg_to_rad(90); drum.position = WINCH_POS + Vector3(0, 0.9, 0)
-	add_child(drum)
+	prop("res://assets/models/props/zip_winch.glb", WINCH_POS, 0.0)  # generated cable winch (painted)
 
 func _release() -> void:
-	add_child(box_mesh(Vector3(0.8, 1.0, 0.4), Color(0.26, 0.22, 0.18), RELEASE_POS + Vector3(0, 0.5, 0)))
+	prop("res://assets/models/props/zip_release.glb", RELEASE_POS, 0.0)  # generated signal/gate post (painted)
+	# staged trolley resting beside the release station (its grounded base reads fine here)
+	prop("res://assets/models/props/zip_trolley.glb", RELEASE_POS + Vector3(1.2, 0, 0.4), 0.6)
 	_release_light = box_mesh(Vector3(0.3, 0.3, 0.12), Color(0.6, 0.6, 0.2), RELEASE_POS + Vector3(0, 1.1, 0.22), 1.0)
 	add_child(_release_light)
 
