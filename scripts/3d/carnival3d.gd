@@ -164,16 +164,23 @@ func _photo_booth() -> void:
 	add_child(box_mesh(Vector3(1.5, 0.2, 1.5), Color(0.9, 0.85, 0.4), PHOTO_POS + Vector3(0, 2.5, 0)))
 
 func _string_lights() -> void:
-	for i: int in range(10):
-		var t: float = float(i) / 9.0
-		var x: float = lerp(-8.0, 8.0, t)
-		var y: float = 2.6 + 0.5 * sin(t * PI)
-		add_child(box_mesh(Vector3(0.12, 0.12, 0.12), RIDE_COLORS[i % RIDE_COLORS.size()], Vector3(x, y, 7.0), 1.6))
+	# two strands of bulbs strung across the wider midway (north + south halves)
+	for strand_z: float in [7.5, -7.5]:
+		for i: int in range(14):
+			var t: float = float(i) / 13.0
+			var x: float = lerp(-11.0, 11.0, t)
+			var y: float = 2.8 + 0.6 * sin(t * PI)
+			add_child(box_mesh(Vector3(0.12, 0.12, 0.12), RIDE_COLORS[i % RIDE_COLORS.size()], Vector3(x, y, strand_z), 1.6))
 
 func _stalls() -> void:
-	for x: float in [-6.5, 6.5]:
-		add_child(box_mesh(Vector3(2.4, 1.6, 1.2), Color(0.7, 0.4, 0.5), Vector3(x, 0.8, -5.0)))
-		add_child(box_mesh(Vector3(2.6, 0.2, 1.4), Color(0.95, 0.9, 0.85), Vector3(x, 1.7, -5.0)))
+	# canopied vendor stalls (baked Synty fairstall) lining the midway + plaza perimeter,
+	# facing inward — clear of the carousel(-3.5,0), photo(5,3), enemy spots and the lanes.
+	var fs := "res://assets/models/town/fairstall.glb"
+	for s: Array in [
+		[-9.5, -7.0, 0.0], [9.5, -6.5, PI], [10.0, 5.0, PI * 0.5], [-10.0, 4.5, -PI * 0.5],  # midway
+		[-6.0, 18.5, 0.0], [6.0, 18.5, 0.0],                                                  # plaza concessions
+	]:
+		prop(fs, Vector3(s[0], 0, s[1]), float(s[2]), 0.7)
 
 func _funhouse() -> void:
 	for i: int in range(FUN_LEVERS.size()):
