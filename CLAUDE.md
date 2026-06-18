@@ -393,11 +393,12 @@ Loft. Still-single-room levels inherit this as they're converted to multi-room.)
 
 ### 8. The Carnival & Fairground — `Carnival3D.tscn`
 - **Unlock condition:** TBD
-- **Key puzzle(s):** Quinn repairs the carousel; Erin talks down Marco at the backstage gate (or backstage pass)
-- **3D build:** multi-room — combat-free ENTRANCE PLAZA (barker Pearl + exit) → MIDWAY (combat + carousel + photo booth) → BACKSTAGE (Doug poster, behind Marco's gate) + a side FUNHOUSE. Quinn **fixes the photo booth** → `doug_photo_strip`; the **funhouse lever-sequence 1→2→3** → `library_card` (optional). Dirt/bright-wood surfaces, candy-red trim.
-- **Enemy types:** Grunts ×2 + Brute (midway only)
-- **Level progress flags:** `enemies_cleared` / `ride_repaired` / `backstage_talked` / `photo_taken` / `fun_open` / `marco_impression` / `pearl_met`
-- **NPCs:** Pearl (plaza barker) · Marco (backstage gatekeeper)
+- **Key puzzle(s):** **Quinn powers up the dead midway** (fixes the power box → the fair's string-lights blaze on) *then* re-belts the carousel (power is a prerequisite); Erin talks down Marco at the backstage gate (or backstage pass). **Quinn** also fixes the photo booth. **Optional:** Erin fast-talks **Madame Esme** the fortune teller (→ `backstage_pass`, an alt route past Marco + a Grand-Marquee Doug lore beat); Erin works the **rigged ring-toss** (→ `ticket_stub_torn`, comedic junk); the funhouse lever-sequence.
+- **3D build:** expanded fairground (Zip-bar): big MIDWAY (combat; carousel + photo booth + power box) at origin, with long stall-lined **midway lanes** to a combat-free ENTRANCE PLAZA (barker Pearl + ticket booth + exit + the waiting **crowd**), the BACKSTAGE (Doug poster, behind Marco's gate), a side FUNHOUSE (clown-face facade), and a **SIDESHOW ALLEY** sub-area east (Madame Esme's fortune wagon + the rigged game). Grassy ground + perimeter tree ring (carnival in a park). **Hero props are Prop-Farm painted** (`carousel`/`photo_booth`/`funhouse_facade`/`ticket_booth`); fortune wagon + power box are Synty bakes. Quinn **fixes the photo booth** → `doug_photo_strip`; the **funhouse lever-sequence 1→2→3** → `library_card` (optional). Dirt/bright-wood surfaces, candy-red trim.
+- **Enemy types:** Grunts ×2 + Brute (midway only; the roughnecks cleared the civilians out — the crowd waits in the plaza/sideshow)
+- **Level progress flags:** `enemies_cleared` / `ride_repaired` / `backstage_talked` / `photo_taken` / `power_on` / `fortune_done` / `game_done` / `fun_open` / `marco_impression` / `pearl_met`
+- **NPCs:** Pearl (plaza barker) · Marco (backstage gatekeeper) · Madame Esme (fortune teller, Sideshow Alley) · plaza/sideshow **crowd** (animated Synty Kids + an adult chaperone, ambient speech bubbles)
+- **Notes:** Win is unchanged — enemies cleared + ride repaired + backstage opened (the power-up folds into the ride requirement; fortune/game/funhouse are optional bonuses).
 
 ---
 
