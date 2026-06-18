@@ -68,7 +68,7 @@ var _hud_banner: Label = null
 func _build_level() -> void:
 	location_id = "zip_line"
 	multi_room = true
-	build_env(Color(0.06, 0.09, 0.10), Color(0.5, 0.55, 0.5), 0.6, 1.1)
+	build_env(Color(0.53, 0.70, 0.90), Color(0.62, 0.66, 0.68), 0.95, 1.5)  # daytime park sky
 	point_light(Vector3(0, 3.4, 0), Color(0.9, 1.0, 0.95), 2.0, 16.0)
 	point_light(LANDING_C + Vector3(0, 2.6, 0), Color(0.85, 1.0, 0.9), 1.8, 11.0)
 	point_light(PANEL_POS + Vector3(0, 2.0, 0), Color(0.4, 0.7, 1.0), 1.4, 5.0)
@@ -83,6 +83,7 @@ func _build_level() -> void:
 	_release()
 	_high_extras()
 	_set_dressing()
+	_forest_ring()
 	make_dialog()
 	_build_hud()
 	_lena = spawn_npc("congregant_f", LENA_POS, PI)
@@ -172,6 +173,26 @@ func _high_extras() -> void:
 	# the snagged clue bag (on the high line) + a rhythm-rig crate
 	add_child(box_mesh(Vector3(0.5, 0.5, 0.5), Color(0.4, 0.55, 0.35), CLUE_POS + Vector3(0, 1.6, 0), 0.4))
 	add_child(box_mesh(Vector3(0.7, 0.7, 0.7), Color(0.45, 0.4, 0.25), RHYTHM_POS + Vector3(0, 0.35, 0)))
+
+func _forest_ring() -> void:
+	# a denser tree/bush border OUTSIDE the room walls (taller trees peek over the 2.8m walls
+	# for an enclosed-park backdrop). Deterministic RNG so it's stable across runs.
+	var town := "res://assets/models/town/"
+	var rng := RandomNumberGenerator.new(); rng.seed = 4242
+	var kinds := ["tree", "tree", "tree_large", "bush"]
+	var xb := 11.0
+	var z := -22.0
+	while z <= 21.0:                                   # east + west borders
+		for sx: float in [-xb, xb]:
+			prop(town + kinds[rng.randi() % kinds.size()] + ".glb",
+				Vector3(sx + rng.randf_range(-1.0, 1.0), 0.0, z + rng.randf_range(-1.2, 1.2)), rng.randf() * TAU)
+		z += rng.randf_range(2.6, 3.6)
+	for sz: float in [-23.0, 22.0]:                    # north + south caps
+		var x := -xb
+		while x <= xb:
+			prop(town + kinds[rng.randi() % kinds.size()] + ".glb",
+				Vector3(x + rng.randf_range(-1.0, 1.0), 0.0, sz + rng.randf_range(-1.0, 1.0)), rng.randf() * TAU)
+			x += rng.randf_range(2.6, 3.6)
 
 func _play_zip() -> void:
 	# the ready trolley zips the cable: high deck -> mid deck -> low deck
