@@ -85,7 +85,7 @@ func _build_level() -> void:
 	_rooms()
 	_towers()
 	_ziplines()
-	_zip_rider = prop("res://assets/models/props/zip_trolley.glb", ZIP_TOP + ZIP_HANG, 0.0, 0.6)  # ready on the high cable
+	_build_zip_rider()
 	_panel()
 	_locks()
 	_winch()
@@ -263,6 +263,34 @@ func _forest_ring() -> void:
 				Vector3(x + rng.randf_range(-1.0, 1.0), 0.0, sz + rng.randf_range(-1.0, 1.0)), rng.randf() * TAU)
 			x += rng.randf_range(2.6, 3.6)
 
+# The zip rider = a container (so trolley + kid move together) parked on the high cable,
+# ready to ride. The trolley hangs from the cable; a seated kid (sit clip = legs forward,
+# as in a harness seat) hangs just below the handlebar. On release it zips down (#payoff).
+func _build_zip_rider() -> void:
+	_zip_rider = Node3D.new()
+	add_child(_zip_rider)
+	_zip_rider.position = ZIP_TOP + ZIP_HANG
+	var trolley: Node3D = load("res://assets/models/props/zip_trolley.glb").instantiate()
+	trolley.scale = Vector3(0.6, 0.6, 0.6)
+	_zip_rider.add_child(trolley)
+	var kid: Node3D = load("res://assets/models/characters/kid_explorer.glb").instantiate()
+	kid.position = Vector3(0, -0.85, 0)   # seated, hanging just below the handlebar
+	kid.rotation.y = 0.0                  # face along the cable (toward +Z descent)
+	_zip_rider.add_child(kid)
+	var ap := _find_anim(kid)
+	if ap != null and ap.has_animation("sit"):
+		ap.get_animation("sit").loop_mode = Animation.LOOP_LINEAR
+		ap.play("sit")
+
+func _find_anim(n: Node) -> AnimationPlayer:
+	if n is AnimationPlayer:
+		return n
+	for c in n.get_children():
+		var r := _find_anim(c)
+		if r != null:
+			return r
+	return null
+
 func _play_zip() -> void:
 	# the ready trolley zips the cable: high deck -> mid deck -> low deck
 	if _zip_rider == null:
@@ -284,14 +312,16 @@ const ADULT_QUIPS := [
 	"Lovely day for the park.", "Don't run on the platforms!",
 ]
 func _park_visitors() -> void:
-	# sitting kids — on the picnic bench and on the grass, facing the zip line (north/-Z)
-	spawn_npc("kid_cargo", Vector3(-6.8, 0.38, 24.6), 0.0, KID_QUIPS, [], "sit")
-	spawn_npc("kid_casual", Vector3(4.5, 0.0, 22.5), 0.3, KID_QUIPS, [], "sit")
+	# All grounded standing/wandering kids (idle/walk read correctly at y=0; the seated
+	# pose only looks right on a seat, so the one seated kid is the zip-line rider). Distinct
+	# meshes so no two look alike. The seated payoff rides the trolley (see _build_zip_rider).
+	# A kid standing near the picnic table, watching the zip line (-Z / north)
+	spawn_npc("kid_casual", Vector3(-4.0, 0, 26.0), 0.0, KID_QUIPS)
 	# wandering kids — small loops on the open landing, clear of Lena(3,26.5)/exit(0,31)/spawn(0,27)
 	spawn_npc("kid_adventure", Vector3(6.5, 0, 23.5), 0.0, KID_QUIPS, [
 		Vector3(6.5, 0, 23.5), Vector3(7.5, 0, 29.0), Vector3(5.0, 0, 30.5), Vector3(4.5, 0, 24.5),
 	])
-	spawn_npc("kid_cargo", Vector3(-5.0, 0, 22.0), 0.0, KID_QUIPS, [
+	spawn_npc("kid_dress", Vector3(-5.0, 0, 22.0), 0.0, KID_QUIPS, [
 		Vector3(-5.0, 0, 22.0), Vector3(-7.5, 0, 27.0), Vector3(-4.0, 0, 31.0), Vector3(-2.0, 0, 24.0),
 	])
 	# strolling adult (chaperone) near the entrance fences, south of the landing
