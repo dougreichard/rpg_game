@@ -271,11 +271,20 @@ func _on_special(char_name: String) -> void:
 		_set_panel_solved()
 		_hud_hint.text = "Power restored! Now align the platform locks, then Ben times the release up top."
 		Audio.play("special"); return
-	# Ethan: platform-lock sequence (1→2→3) → opens the gate to the High Platform
+	# Ethan: platform-lock sequence (1→2→3) → opens the gate to the High Platform.
+	# Pick the NEAREST UNSET lock in range — posts sit closer together than REACH, so a plain
+	# first-match would keep re-hitting an already-set neighbour and dead-end the sequence.
 	if not _locks_done:
+		var best := -1
+		var best_d := REACH
 		for i: int in range(LOCKS.size()):
-			if near3(pp, LOCKS[i], REACH):
-				_try_lock(char_name, i); return
+			if _lock_seq.has(i):
+				continue
+			var d := Vector2(pp.x - LOCKS[i].x, pp.z - LOCKS[i].z).length()
+			if d < best_d:
+				best_d = d; best = i
+		if best >= 0:
+			_try_lock(char_name, best); return
 	# Ethan: winch (optional → animal treat)
 	if not _winch_done and near3(pp, WINCH_POS, REACH):
 		if char_name == "Ethan":
