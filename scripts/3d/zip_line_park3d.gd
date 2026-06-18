@@ -437,18 +437,25 @@ func _process(d: float) -> void:
 		_win(true)
 
 func _update_pulse_hud() -> void:
-	# show the timing bar once power's on and there's still a timed grab to make
-	if not _panel_hacked or (_release_timed and _clue_taken and _rhythm_done):
+	# Show the timing bar ONLY when standing at a pending timed action, so it appears where the
+	# action is (not globally at the panel): the armed release, or the snagged clue bag.
+	if player == null:
+		_hud_pulse.text = ""; return
+	var pp: Vector3 = player.global_position
+	var at_release := _release_armed and not _release_timed and near3(pp, RELEASE_POS, REACH + 0.6)
+	var at_clue := not _clue_taken and near3(pp, CLUE_POS, REACH + 0.6)
+	if not (at_release or at_clue):
 		_hud_pulse.text = ""
 		return
+	var what := "RELEASE" if at_release else "CLUE BAG"
 	var mag: float = abs(sin(_pulse))
 	var filled := int(round(mag * 10.0))
 	var bar := "▮".repeat(filled) + "▯".repeat(10 - filled)
 	if _open():
-		_hud_pulse.text = "TIMING WINDOW  [%s]  ● OPEN — press G!" % bar
+		_hud_pulse.text = "%s TIMING  [%s]  ● OPEN — press G (Ben)!" % [what, bar]
 		_hud_pulse.add_theme_color_override("font_color", Color(0.4, 1.0, 0.5))
 	else:
-		_hud_pulse.text = "TIMING WINDOW  [%s]  ○ wait" % bar
+		_hud_pulse.text = "%s TIMING  [%s]  ○ wait for OPEN" % [what, bar]
 		_hud_pulse.add_theme_color_override("font_color", UITheme.CREAM)
 
 func _win(fanfare: bool) -> void:
