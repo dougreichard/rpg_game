@@ -12,11 +12,12 @@
   },
   "table_saw": {
     "prompt": "a single complete woodworking table saw machine, one unit centered in frame: a flat cast-iron grey metal table top, a charcoal-black steel frame and four legs, a bright orange motor housing on the side, one silver circular saw blade above the table, a yellow rip-fence rail",
-    "seed": 42,
+    "seed": 306,
     "track": "painted",
     "angle": 6,
     "height": 1.2,
-    "poly": 4000
+    "poly": 4000,
+    "ref_count": 1
   },
   "organ": {
     "prompt": "one tall pipe organ, a single instrument centered: a dark-walnut wood console with a cream and black keyboard, topped with a prominent bank of tall golden brass pipes, ornate brass trim",
