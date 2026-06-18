@@ -75,6 +75,7 @@ func _build_level() -> void:
 	_winch()
 	_release()
 	_high_extras()
+	_set_dressing()
 	make_dialog()
 	_build_hud()
 	_lena = spawn_npc("congregant_f", LENA_POS, PI)
@@ -164,6 +165,27 @@ func _high_extras() -> void:
 	# the snagged clue bag (on the high line) + a rhythm-rig crate
 	add_child(box_mesh(Vector3(0.5, 0.5, 0.5), Color(0.4, 0.55, 0.35), CLUE_POS + Vector3(0, 1.6, 0), 0.4))
 	add_child(box_mesh(Vector3(0.7, 0.7, 0.7), Color(0.45, 0.4, 0.25), RHYTHM_POS + Vector3(0, 0.35, 0)))
+
+func _set_dressing() -> void:
+	# Outdoor-park dressing from the Synty town pack (scale 1.0, like the overworld), placed
+	# around each area's perimeter — clear of the puzzle spots, paths, spawn/exit and towers.
+	# [kind, x, z, yaw_deg]
+	var town := "res://assets/models/town/"
+	var items := [
+		# --- mid platform (room 16x16 @ origin; avoid panel/locks/winch/towers/corridors) ---
+		["tree_large", 6.6, 6.6, 20], ["tree", 6.6, -6.6, 120], ["tree", -6.6, -6.6, 210],
+		["bush", 6.9, 2.0, 0], ["bush", 6.9, -2.5, 0], ["bush", -6.9, -4.5, 0], ["bush", 2.6, 6.9, 0],
+		["park_lamp", 6.8, 6.8, 0], ["park_lamp", -6.8, 6.8, 0], ["street_sign", -6.6, 7.0, 90],
+		# --- landing (lobby, room 12x8 @ z=13; Lena + exit) ---
+		["bench", -3.0, 13.0, 180], ["tree", 5.0, 15.6, 40], ["tree", -5.0, 15.6, 300],
+		["flowerbed", 5.0, 10.6, 0], ["planter", -5.0, 10.6, 0], ["park_lamp", 5.2, 15.6, 0],
+		["street_sign", 4.6, 16.2, 200],
+		# --- high platform (room 12x10 @ z=-14; avoid release/clue/rhythm/tower) ---
+		["tree", 5.0, -17.6, 60], ["tree", -5.0, -17.6, 250], ["tree", 5.0, -10.6, 140],
+		["bush", -5.0, -14.0, 0], ["bush", 5.0, -13.6, 0], ["park_lamp", 5.2, -17.6, 0],
+	]
+	for it: Array in items:
+		prop(town + str(it[0]) + ".glb", Vector3(it[1], 0.0, it[2]), deg_to_rad(it[3]), 1.0)
 
 func _floating_label(txt: String, pos: Vector3, col: Color) -> void:
 	var l := Label3D.new()
