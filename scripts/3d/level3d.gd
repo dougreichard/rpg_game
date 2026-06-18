@@ -280,13 +280,14 @@ func spawn_enemy(data: Resource, pos: Vector3, mesh_path: String = "", mesh_scal
 	return e
 
 # Spawn a reusable Npc3D (mesh + idle/walk + optional wander + speech bubble).
-func spawn_npc(key: String, pos: Vector3, yaw: float = PI, quips: Array = [], waypoints: Array = []) -> Node3D:
+func spawn_npc(key: String, pos: Vector3, yaw: float = PI, quips: Array = [], waypoints: Array = [], idle_anim: String = "idle") -> Node3D:
 	var n := Node3D.new()
 	n.set_script(Npc3DScript)
 	n.set("mesh_key", key)
 	n.set("quips", quips)
 	n.set("waypoints", waypoints)
 	n.set("face_yaw", yaw)
+	n.set("idle_anim", idle_anim)
 	n.position = pos
 	add_child(n)
 	return n

@@ -97,6 +97,7 @@ func _build_level() -> void:
 	make_dialog()
 	_build_hud()
 	_lena = spawn_npc("congregant_f", LENA_POS, PI)
+	_park_visitors()
 	add_exit_portal(LANDING_C + Vector3(0, 0, 5.0), Vector3(3, 3, 1.4))
 	var p := spawn_duo([ETHAN, BEN], LANDING_C + Vector3(0.0, 0.1, 1.0))
 	p.special_used.connect(_on_special)
@@ -269,6 +270,34 @@ func _play_zip() -> void:
 	var tw := create_tween().set_trans(Tween.TRANS_SINE)
 	tw.tween_property(_zip_rider, "position", ZIP_MID + ZIP_HANG, 1.2).set_ease(Tween.EASE_IN)
 	tw.tween_property(_zip_rider, "position", ZIP_LOW + ZIP_HANG, 1.2).set_ease(Tween.EASE_OUT)
+
+# Atmospheric park-goers in the combat-free landing/lobby: animated Synty Kids
+# (idle/walk/sit via the authored-clip pipeline) plus a strolling adult. Pure
+# ambience — speech bubbles only, no quests. Kids sit on the bench/grass or wander
+# a small loop clear of Lena, the exit portal and the spawn point.
+const KID_QUIPS := [
+	"Did you SEE that zip line?!", "I wanna go again!", "Mom, can we ride it?",
+	"Whoaaa, so high up!", "Bet I can go faster than you.", "Look how fast they went!",
+]
+const ADULT_QUIPS := [
+	"Stay where I can see you, you two.", "Careful near the edge!",
+	"Lovely day for the park.", "Don't run on the platforms!",
+]
+func _park_visitors() -> void:
+	# sitting kids — on the picnic bench and on the grass, facing the zip line (north/-Z)
+	spawn_npc("kid_cargo", Vector3(-6.8, 0.38, 24.6), 0.0, KID_QUIPS, [], "sit")
+	spawn_npc("kid_casual", Vector3(4.5, 0.0, 22.5), 0.3, KID_QUIPS, [], "sit")
+	# wandering kids — small loops on the open landing, clear of Lena(3,26.5)/exit(0,31)/spawn(0,27)
+	spawn_npc("kid_adventure", Vector3(6.5, 0, 23.5), 0.0, KID_QUIPS, [
+		Vector3(6.5, 0, 23.5), Vector3(7.5, 0, 29.0), Vector3(5.0, 0, 30.5), Vector3(4.5, 0, 24.5),
+	])
+	spawn_npc("kid_cargo", Vector3(-5.0, 0, 22.0), 0.0, KID_QUIPS, [
+		Vector3(-5.0, 0, 22.0), Vector3(-7.5, 0, 27.0), Vector3(-4.0, 0, 31.0), Vector3(-2.0, 0, 24.0),
+	])
+	# strolling adult (chaperone) near the entrance fences, south of the landing
+	spawn_npc("congregant_m", Vector3(2.5, 0, 33.0), PI, ADULT_QUIPS, [
+		Vector3(2.5, 0, 33.0), Vector3(-2.5, 0, 33.5), Vector3(-1.0, 0, 30.0), Vector3(2.0, 0, 30.5),
+	])
 
 func _set_dressing() -> void:
 	# Outdoor-park dressing from the Synty town pack (scale 1.0, like the overworld), placed

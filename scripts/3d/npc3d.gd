@@ -19,6 +19,7 @@ var face_yaw: float = PI       # initial facing (default: toward +Z / the camera
 var paused: bool = false       # halt wander/bark (e.g. while the player is talking to it)
 var speed: float = 1.6
 var idle_time: float = 2.2
+var idle_anim: String = "idle"  # clip played when stationary/paused; set "sit" for benched NPCs
 var yell_min: float = 5.0
 var yell_max: float = 11.0
 var bubble_dur: float = 3.0
@@ -45,9 +46,9 @@ func _ready() -> void:
 		_mesh.rotation.y = face_yaw
 		add_child(_mesh)
 		_anim = _find_anim(_mesh)
-		if _anim != null and _anim.has_animation("idle"):
-			_anim.get_animation("idle").loop_mode = Animation.LOOP_LINEAR
-			_anim.play("idle")
+		if _anim != null and _anim.has_animation(idle_anim):
+			_anim.get_animation(idle_anim).loop_mode = Animation.LOOP_LINEAR
+			_anim.play(idle_anim)
 	_make_bubble()   # always present so even quiet NPCs can say() on interaction
 	_yell = randf_range(yell_min, yell_max)
 
@@ -84,7 +85,7 @@ func _process(d: float) -> void:
 		if _bubble_t <= 0.0:
 			_bubble.visible = false
 	if paused:
-		_play("idle")
+		_play(idle_anim)
 		return
 	if not quips.is_empty():
 		_yell -= d
@@ -107,7 +108,7 @@ func _wander(d: float) -> void:
 		if _idle <= 0.0:
 			_idle = idle_time
 			_target = (_target + 1) % waypoints.size()
-		_play("idle")
+		_play(idle_anim)
 	else:
 		var step: Vector3 = to.normalized() * speed * d
 		position += step
