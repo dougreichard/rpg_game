@@ -95,6 +95,8 @@ func _build_level() -> void:
 	_high_extras()
 	_set_dressing()
 	_pond_clearing()
+	_trail_dressing()
+	_tower_dressing()
 	_hedges()
 	_forest_ring()
 	make_dialog()
@@ -368,6 +370,41 @@ func _pond_clearing() -> void:
 	prop(town + "park_seat.glb", Vector3(13.2, 0, 26.0), -PI * 0.5)
 	# trail sign at the landing→pond path mouth
 	prop("res://assets/models/props/trail_marker.glb", Vector3(8.0, 0, 23.8), deg_to_rad(60))
+
+# Wayfinding + flowers along the trails so the long paths between rooms feel tended.
+# All accents sit at room-side trail mouths (more room than the 4-wide path itself).
+func _trail_dressing() -> void:
+	var town := "res://assets/models/town/"
+	# hero directional signpost in the landing (points to the zip line / pond / exit)
+	prop("res://assets/models/props/park_sign.glb", Vector3(6.0, 0, 23.0), deg_to_rad(-30))
+	# flowerbeds + planters flanking the trail mouths (room side, clear of the path lanes)
+	var beds := [
+		["flowerbed", 3.5, 19.8], ["flowerbed", -3.5, 19.8],     # landing ← north trail mouth
+		["flowerbed", 3.5, 9.0], ["planter", -3.5, 9.0],         # mid → south trail mouth
+		["planter", 3.2, -8.8], ["planter", -3.2, -8.8],         # mid → north trail mouth
+		["flowerbed", -3.5, -19.5], ["flowerbed", 3.5, -19.5],   # high ← north trail mouth
+		["potplant", 7.2, 19.6], ["potplant", -7.2, 19.6],       # landing front corners
+	]
+	for b: Array in beds:
+		prop(town + str(b[0]) + ".glb", Vector3(b[1], 0, b[2]), deg_to_rad(int(b[1] * 17.0) % 360))
+
+# Make the three towers read as real launch decks: stacked crates, a leaning ladder, and
+# park-fence railing segments at their bases. Clear of the cable line + release puzzle spots.
+func _tower_dressing() -> void:
+	var town := "res://assets/models/town/"
+	# low tower (-6,6): supply crates + a fence rail
+	prop(town + "deck_crate.glb", Vector3(-7.8, 0, 4.6), 0.4)
+	prop(town + "wood_box.glb", Vector3(-7.4, 0, 7.6), 1.2)
+	prop(town + "park_fence.glb", Vector3(-8.0, 0, 6.0), deg_to_rad(90))
+	# mid tower (0,-2): a couple of crates off to the side (clear of the cable + winch)
+	prop(town + "deck_crate.glb", Vector3(2.4, 0, -3.6), -0.5)
+	prop(town + "wood_box.glb", Vector3(2.6, 0, -0.4), 0.3)
+	# high launch deck (tower at 0,-28): crates + fence rails, clear of release/clue/rhythm spots
+	prop(town + "deck_crate.glb", Vector3(-2.8, 0, -29.5), 0.6)
+	prop(town + "wood_box.glb", Vector3(2.8, 0, -29.6), -0.4)
+	prop(town + "park_fence.glb", Vector3(0, 0, -31.0), 0.0)
+	prop(town + "park_fence.glb", Vector3(-3.2, 0, -31.0), 0.0)
+	prop(town + "park_fence.glb", Vector3(3.2, 0, -31.0), 0.0)
 
 func _set_dressing() -> void:
 	# Outdoor-park dressing from the Synty town pack (scale 1.0, like the overworld), placed
