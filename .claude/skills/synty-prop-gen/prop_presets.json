@@ -118,5 +118,41 @@
     "height": 1.0,
     "poly": 2000,
     "ref_count": 1
+  },
+  "carousel": {
+    "prompt": "a carnival carousel merry-go-round, a round platform with a tall striped red-and-white conical canopy roof on a central pole, several colorful carved horses on golden poles spaced around it, gold scrollwork trim",
+    "seed": 15,
+    "track": "painted",
+    "angle": 6,
+    "height": 4.0,
+    "poly": 6000,
+    "ref_count": 1
+  },
+  "photo_booth": {
+    "prompt": "a vintage carnival photo booth, a small enclosed wooden cabinet with a dark curtain doorway on the front, a striped awning top and a small lit sign",
+    "seed": 16,
+    "track": "painted",
+    "angle": 6,
+    "height": 2.4,
+    "poly": 3000,
+    "ref_count": 1
+  },
+  "funhouse_facade": {
+    "prompt": "a carnival funhouse entrance kiosk, a brightly painted ornate front panel with a wide grinning clown-face doorway in the middle, round light bulbs around the edges",
+    "seed": 12,
+    "track": "painted",
+    "angle": 6,
+    "height": 3.4,
+    "poly": 4000,
+    "ref_count": 1
+  },
+  "ticket_booth": {
+    "prompt": "a carnival ticket booth kiosk, a small ornate booth with an arched service window, a red-and-white striped awning, and a TICKETS sign board on top",
+    "seed": 16,
+    "track": "painted",
+    "angle": 6,
+    "height": 2.6,
+    "poly": 3000,
+    "ref_count": 1
   }
 }

@@ -80,6 +80,7 @@ func _build_level() -> void:
 	_backstage()
 	make_dialog()
 	_build_hud()
+	prop("res://assets/models/props/ticket_booth.glb", Vector3(-5.0, 0, 24.5), PI)  # plaza ticket kiosk (Prop Farm)
 	_marco = spawn_npc("bellows", MARCO_POS, PI)     # burly gatekeeper
 	_pearl = spawn_npc("congregant_f", PEARL_POS, PI) # plaza barker
 	add_exit_portal(PLAZA_C + Vector3(0, 0, 5.0), Vector3(3, 3, 1.4))
@@ -143,25 +144,17 @@ func _backstage_gate() -> Node3D:
 	return sb
 
 func _carousel_ride() -> void:
+	# Generated Synty-style carousel (Prop Farm, painted) parented to a spin node so the whole
+	# ride turns once Quinn re-belts it (see _process). Collision stays primitive (none needed —
+	# it's a ride you stand near, not on); RIDE_POS proximity drives the repair.
 	_carousel = Node3D.new()
 	_carousel.position = RIDE_POS
-	add_child(box_mesh(Vector3(4.2, 0.2, 4.2), Color(0.3, 0.2, 0.3), RIDE_POS + Vector3(0, 0.1, 0)))
-	add_child(box_mesh(Vector3(0.3, 3.0, 0.3), Color(0.7, 0.6, 0.3), RIDE_POS + Vector3(0, 1.5, 0)))
-	var canopy := MeshInstance3D.new()
-	var cm := CylinderMesh.new(); cm.top_radius = 0.2; cm.bottom_radius = 2.2; cm.height = 0.9
-	var mat := StandardMaterial3D.new(); mat.albedo_color = Color(0.85, 0.25, 0.35)
-	cm.material = mat; canopy.mesh = cm; canopy.position = Vector3(0, 3.0, 0)
-	_carousel.add_child(canopy)
-	for i: int in range(4):
-		var a: float = TAU * float(i) / 4.0
-		_carousel.add_child(box_mesh(Vector3(0.5, 0.8, 1.0), RIDE_COLORS[i], Vector3(cos(a) * 1.6, 0.9, sin(a) * 1.6)))
-		_carousel.add_child(box_mesh(Vector3(0.06, 1.6, 0.06), Color(0.8, 0.8, 0.4), Vector3(cos(a) * 1.6, 1.6, sin(a) * 1.6)))
 	add_child(_carousel)
+	var c: Node3D = load("res://assets/models/props/carousel.glb").instantiate()
+	_carousel.add_child(c)
 
 func _photo_booth() -> void:
-	add_child(box_mesh(Vector3(1.4, 2.4, 1.4), Color(0.3, 0.25, 0.5), PHOTO_POS + Vector3(0, 1.2, 0)))
-	add_child(box_mesh(Vector3(1.0, 1.0, 0.1), Color(0.6, 0.8, 0.9), PHOTO_POS + Vector3(0, 1.4, 0.72), 0.4))  # curtain/screen
-	add_child(box_mesh(Vector3(1.5, 0.2, 1.5), Color(0.9, 0.85, 0.4), PHOTO_POS + Vector3(0, 2.5, 0)))
+	prop("res://assets/models/props/photo_booth.glb", PHOTO_POS, PI)   # generated booth (Prop Farm)
 
 func _string_lights() -> void:
 	# two strands of bulbs strung across the wider midway (north + south halves)
@@ -183,6 +176,8 @@ func _stalls() -> void:
 		prop(fs, Vector3(s[0], 0, s[1]), float(s[2]), 0.7)
 
 func _funhouse() -> void:
+	# clown-face entrance facade (Prop Farm) at the funhouse's east doorway, facing the midway
+	prop("res://assets/models/props/funhouse_facade.glb", Vector3(-16.3, 0, 0), -PI * 0.5)
 	for i: int in range(FUN_LEVERS.size()):
 		add_child(box_mesh(Vector3(0.2, 0.8, 0.2), Color(0.3, 0.3, 0.34), FUN_LEVERS[i] + Vector3(0, 0.9, 0)))
 		var glow := box_mesh(Vector3(0.12, 0.4, 0.12), Color(0.9, 0.3, 0.3), FUN_LEVERS[i] + Vector3(0, 1.3, 0), 1.5)
