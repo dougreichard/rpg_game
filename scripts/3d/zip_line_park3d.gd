@@ -178,10 +178,10 @@ func _release() -> void:
 	# Release POST (Ben times) + a separate control PANEL (Ethan arms), both in front of the
 	# high launch tower so neither is buried in it.
 	prop("res://assets/models/props/zip_release.glb", RELEASE_POS, 0.0)        # signal/gate post — Ben
-	prop("res://assets/models/props/zip_control_panel.glb", HIGH_PANEL_POS, PI)  # release control panel — Ethan
-	# matching button pips on the high panel's face (panel is yaw PI, so its front is at -Z)
+	prop("res://assets/models/props/zip_control_panel.glb", HIGH_PANEL_POS, 0.0)  # release control panel — Ethan (faces +Z, same as the mid panel)
+	# matching button pips on the high panel's face (yaw 0 → front at +Z, like the first panel)
 	for i: int in range(3):
-		var pip := box_mesh(Vector3(0.16, 0.06, 0.1), Color(0.85, 0.25, 0.2), HIGH_PANEL_POS + Vector3(-0.3 + float(i) * 0.3, 1.0, -0.28), 1.2)
+		var pip := box_mesh(Vector3(0.16, 0.06, 0.1), Color(0.85, 0.25, 0.2), HIGH_PANEL_POS + Vector3(-0.3 + float(i) * 0.3, 1.0, 0.28), 1.2)
 		add_child(pip)
 		_high_panel_lights.append(pip)
 	_release_light = box_mesh(Vector3(0.3, 0.3, 0.12), Color(0.6, 0.6, 0.2), RELEASE_POS + Vector3(0, 1.1, 0.22), 1.0)
