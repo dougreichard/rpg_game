@@ -91,6 +91,7 @@ func _build_level() -> void:
 	make_dialog()
 	_build_hud()
 	prop("res://assets/models/props/ticket_booth.glb", Vector3(-5.0, 0, 24.5), PI)  # plaza ticket kiosk (Prop Farm)
+	_carnival_crowd()
 	_marco = spawn_npc("bellows", MARCO_POS, PI)     # burly gatekeeper
 	_pearl = spawn_npc("congregant_f", PEARL_POS, PI) # plaza barker
 	add_exit_portal(PLAZA_C + Vector3(0, 0, 5.0), Vector3(3, 3, 1.4))
@@ -230,6 +231,33 @@ func _funhouse() -> void:
 
 func _backstage() -> void:
 	add_child(box_mesh(Vector3(1.4, 1.8, 0.1), Color(0.85, 0.8, 0.6), POSTER_POS + Vector3(0, 1.8, 0), 0.3))  # Doug poster
+
+# Carnival-goers waiting out the trouble in the safe plaza + sideshow (the roughnecks cleared the
+# midway, per Pearl). Animated Synty Kids (distinct meshes) + an adult chaperone, with bubbles.
+const KID_QUIPS := [
+	"I wanna ride the carousel!", "Cotton candy! Cotton candy!", "Is the funhouse open yet?",
+	"Win me a prize!", "When can we go on the rides?", "Those big kids took the midway...",
+]
+const ADULT_QUIPS := [
+	"Stay close -- the midway's not safe yet.", "We'll ride once they clear those toughs out.",
+	"Hold my hand in the crowd.", "Two tickets, please.",
+]
+func _carnival_crowd() -> void:
+	# plaza families (combat-free entrance)
+	spawn_npc("kid_casual", Vector3(2.0, 0, 18.5), 0.0, KID_QUIPS)   # excited, facing the midway (north)
+	spawn_npc("kid_adventure", Vector3(5.0, 0, 20.0), 0.0, KID_QUIPS, [
+		Vector3(5.0, 0, 20.0), Vector3(7.0, 0, 25.0), Vector3(4.0, 0, 26.0), Vector3(3.0, 0, 21.0),
+	])
+	spawn_npc("kid_dress", Vector3(-6.0, 0, 18.5), 0.0, KID_QUIPS, [
+		Vector3(-6.0, 0, 18.5), Vector3(-3.0, 0, 18.5), Vector3(-2.5, 0, 20.5), Vector3(-6.5, 0, 20.5),
+	])
+	spawn_npc("congregant_m", Vector3(3.0, 0, 20.0), PI, ADULT_QUIPS, [
+		Vector3(3.0, 0, 20.0), Vector3(5.0, 0, 21.0), Vector3(4.0, 0, 18.5), Vector3(1.5, 0, 19.5),
+	])
+	# a kid hanging around the sideshow games
+	spawn_npc("kid_explorer", Vector3(24.0, 0, 1.5), 0.0, KID_QUIPS, [
+		Vector3(24.0, 0, 1.5), Vector3(26.0, 0, 3.0), Vector3(25.5, 0, -1.0), Vector3(23.0, 0, 0.5),
+	])
 
 func _floating_label(txt: String, pos: Vector3, col: Color) -> void:
 	var l := Label3D.new()
