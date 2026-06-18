@@ -19,7 +19,7 @@ const FLOOR_GRASS := "res://assets/art/tiles/synty_floor_grass.png"
 const FLOOR_DIRT := "res://assets/art/tiles/synty_floor_dirt.png"
 const WALL_WOOD := "res://assets/art/tiles/synty_wall_wood.png"
 const FT_PARK := Color(0.74, 0.82, 0.66)
-const WT_PARK := Color(0.72, 0.6, 0.42)
+const WT_PARK := Color(0.34, 0.50, 0.28)   # deep hedge-green (walls use the grass tile → read as hedges)
 const CORNER_COL := Color(0.10, 0.30, 0.15)   # solid forest-green trim
 
 const PULSE_SPEED := 2.0    # slower pulse → easier to catch
@@ -74,6 +74,9 @@ func _build_level() -> void:
 	point_light(LANDING_C + Vector3(0, 2.6, 0), Color(0.85, 1.0, 0.9), 1.8, 11.0)
 	point_light(PANEL_POS + Vector3(0, 2.0, 0), Color(0.4, 0.7, 1.0), 1.4, 5.0)
 	point_light(RELEASE_POS + Vector3(0, 2.0, 0), Color(1.0, 0.7, 0.4), 1.4, 6.0)
+	# outer ground so the forest ring / perimeter foliage isn't floating over the void
+	set_theme(FLOOR_GRASS, FLOOR_GRASS)
+	floor_box(44, 66, FT_PARK.darkened(0.08), Vector3(0, -0.06, -1.0))
 	_rooms()
 	_towers()
 	_ziplines()
@@ -96,17 +99,17 @@ func _build_level() -> void:
 
 func _rooms() -> void:
 	# Mid platform — grass, wood rails. Combat. Openings: south (landing), north (high).
-	set_theme(FLOOR_GRASS, WALL_WOOD)
+	set_theme(FLOOR_GRASS, FLOOR_GRASS)
 	room(Vector3.ZERO, 16, 16, FT_PARK, WT_PARK, WALL_H, ["s", "n"], 3.0, true)
 	corridor(Vector3(0, 0, 8), "s", 1.0, FT_PARK, WT_PARK, 3.0, WALL_H, true, CORNER_COL)        # → landing
 	corridor(Vector3(0, 0, -8), "n", 1.0, FT_PARK, WT_PARK, 3.0, WALL_H, true, CORNER_COL)       # → high
 	_lock_wall = _gate_panel(LOCK_GATE, WALL_H)
 	# Landing — grass (combat-free). South vestibule = exit.
-	set_theme(FLOOR_GRASS, WALL_WOOD)
+	set_theme(FLOOR_GRASS, FLOOR_GRASS)
 	room(LANDING_C, 12, 8, FT_PARK, WT_PARK, WALL_H, ["n", "s"], 3.0, true)
 	corridor(LANDING_C + Vector3(0, 0, 4.0), "s", 2.0, FT_PARK, WT_PARK, 3.0, WALL_H, true, CORNER_COL)
 	# High platform — dirt landing pad up top.
-	set_theme(FLOOR_DIRT, WALL_WOOD)
+	set_theme(FLOOR_DIRT, FLOOR_GRASS)
 	room(HIGH_C, 12, 10, FT_PARK, WT_PARK, WALL_H, ["s"], 3.0, true)
 
 func _gate_panel(pos: Vector3, h: float) -> Node3D:
