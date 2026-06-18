@@ -171,9 +171,9 @@ func _release() -> void:
 	add_child(_release_light)
 
 func _high_extras() -> void:
-	# the snagged clue bag (on the high line) + a rhythm-rig crate
-	add_child(box_mesh(Vector3(0.5, 0.5, 0.5), Color(0.4, 0.55, 0.35), CLUE_POS + Vector3(0, 1.6, 0), 0.4))
-	add_child(box_mesh(Vector3(0.7, 0.7, 0.7), Color(0.45, 0.4, 0.25), RHYTHM_POS + Vector3(0, 0.35, 0)))
+	# the snagged clue bag (generated duffel, up on the high line) + a rhythm-rig crate (town barrel)
+	prop("res://assets/models/props/clue_bag.glb", CLUE_POS + Vector3(0, 1.5, 0), 0.5)
+	prop("res://assets/models/props/barrel.glb", RHYTHM_POS, 0.0)
 
 func _forest_ring() -> void:
 	# a denser tree/bush border OUTSIDE the room walls (taller trees peek over the 2.8m walls
@@ -223,6 +223,13 @@ func _set_dressing() -> void:
 	]
 	for it: Array in items:
 		prop(town + str(it[0]) + ".glb", Vector3(it[1], 0.0, it[2]), deg_to_rad(it[3]), 1.0)
+	# generated park-specific props (Prop Farm, real-sized)
+	prop("res://assets/models/props/warden_kiosk.glb", Vector3(3.5, 0.0, 15.6), PI)        # Lena's hut, back of landing
+	# (gear_rack dropped — "rack of helmets" is too abstract a subject; came out a blob twice)
+	# hay-bale crash pad under the low (landing) zip tower
+	prop("res://assets/models/props/hay_bale.glb", Vector3(-6.0, 0.0, 7.2), 0.0)
+	prop("res://assets/models/props/hay_bale.glb", Vector3(-5.1, 0.0, 7.0), 1.0)
+	prop("res://assets/models/props/hay_bale.glb", Vector3(-6.5, 0.0, 6.2), 2.2)
 
 func _floating_label(txt: String, pos: Vector3, col: Color) -> void:
 	var l := Label3D.new()

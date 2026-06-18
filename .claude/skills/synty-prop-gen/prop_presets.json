@@ -73,5 +73,32 @@
     "height": 0.5,
     "poly": 2000,
     "ref_count": 1
+  },
+  "warden_kiosk": {
+    "prompt": "a small outdoor warden ranger hut with a service-window counter and a shingled gable roof, timber walls with green-painted panels",
+    "seed": 707,
+    "track": "painted",
+    "angle": 6,
+    "height": 2.6,
+    "poly": 4000,
+    "ref_count": 1
+  },
+  "hay_bale": {
+    "prompt": "a single round straw hay bale, cylindrical, tightly wrapped",
+    "seed": 722,
+    "track": "painted",
+    "angle": 6,
+    "height": 0.7,
+    "poly": 1500,
+    "ref_count": 1
+  },
+  "clue_bag": {
+    "prompt": "a canvas duffel bag with buckled leather straps, closed, lying on its side",
+    "seed": 735,
+    "track": "painted",
+    "angle": 6,
+    "height": 0.6,
+    "poly": 2000,
+    "ref_count": 1
   }
 }
