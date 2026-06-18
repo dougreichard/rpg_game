@@ -13,6 +13,7 @@ const BRUTE := preload("res://data/enemies/brute.tres")
 const BackstagePassItem: ItemData = preload("res://data/items/backstage_pass.tres")
 const LibraryCardItem: ItemData = preload("res://data/items/library_card.tres")
 const PhotoStripItem: ItemData = preload("res://data/items/doug_photo_strip.tres")
+const TicketStubItem: ItemData = preload("res://data/items/ticket_stub_torn.tres")
 
 # --- thematic surfaces (dirt / bright wood / candy-red trim) ---
 const FLOOR_DIRT := "res://assets/art/tiles/synty_floor_dirt.png"
@@ -41,6 +42,10 @@ const POSTER_POS := Vector3(0.0, 0.0, -25.5)
 const FUN_C := Vector3(-21.0, 0, 0.0)
 const FUN_LEVERS := [Vector3(-21.0, 0, -2.0), Vector3(-21.0, 0, 0.0), Vector3(-21.0, 0, 2.0)]
 const FUN_VAULT := Vector3(-23.0, 0, 0.0)
+const SIDE_C := Vector3(22.0, 0, 0.0)             # Sideshow Alley (east of the midway)
+const POWER_POS := Vector3(10.0, 0.0, -8.0)       # midway power box — Quinn lights up the fair
+const FORTUNE_POS := Vector3(20.0, 0.0, 3.0)      # fortune wagon — Erin fast-talks
+const GAME_POS := Vector3(24.0, 0.0, -3.0)        # rigged ring-toss stall — Erin
 
 const RIDE_COLORS := [Color(0.9, 0.3, 0.3), Color(0.95, 0.8, 0.3), Color(0.3, 0.7, 0.9), Color(0.5, 0.85, 0.4)]
 
@@ -49,6 +54,10 @@ var _enemies_cleared := false
 var _ride_repaired := false
 var _backstage_talked := false
 var _photo_taken := false
+var _power_on := false
+var _fortune_done := false
+var _game_done := false
+var _lights: Array = []
 var _fun_seq: Array = []
 var _fun_open := false
 var _spawned := 0
@@ -76,6 +85,7 @@ func _build_level() -> void:
 	_photo_booth()
 	_string_lights()
 	_stalls()
+	_sideshow()
 	_funhouse()
 	_backstage()
 	make_dialog()
@@ -92,7 +102,7 @@ func _build_level() -> void:
 # A grassy ground plane under the whole fairground footprint (the carnival sits in a park
 # clearing) so the area outside the rooms reads as grass, not void.
 func _ground() -> void:
-	add_child(box_mesh(Vector3(60, 0.12, 78), Color(0.5, 0.55, 0.38), Vector3(-7, -0.06, 0.5)))
+	add_child(box_mesh(Vector3(76, 0.12, 78), Color(0.5, 0.55, 0.38), Vector3(-4, -0.06, 0.5)))
 
 # A tree/bush border around the fairground perimeter (taller trees peek over the walls for an
 # enclosed-park backdrop). Deterministic RNG so it's stable across runs.
@@ -103,9 +113,19 @@ func _tree_ring() -> void:
 	var z := -32.0
 	while z <= 33.0:                                    # east + west borders
 		for sx: float in [-30.0, 16.0]:
+			# Sideshow Alley pushes east to x~28 around z0 — skip east-ring trees in that band
+			# (they'd land in the room) and back the alley further out instead
+			if sx > 0 and z > -8.0 and z < 8.0:
+				continue
 			prop(town + kinds[rng.randi() % kinds.size()] + ".glb",
 				Vector3(sx + rng.randf_range(-1.4, 1.4), 0.0, z + rng.randf_range(-1.2, 1.2)), rng.randf() * TAU)
 		z += rng.randf_range(2.6, 3.6)
+	# back the Sideshow Alley with a tree line just east of its wall (x28)
+	var az := -7.0
+	while az <= 7.0:
+		prop(town + kinds[rng.randi() % kinds.size()] + ".glb",
+			Vector3(30.0 + rng.randf_range(-0.8, 0.8), 0.0, az + rng.randf_range(-0.8, 0.8)), rng.randf() * TAU)
+		az += rng.randf_range(2.6, 3.4)
 	for sz: float in [-32.0, 33.0]:                     # north + south caps
 		var x := -30.0
 		while x <= 16.0:
@@ -117,10 +137,14 @@ func _rooms() -> void:
 	# Midway — dirt floor, bright wood walls. Combat. Openings: south (plaza), north
 	# (backstage), west (funhouse). Long stall-lined lanes join the outer rooms.
 	set_theme(FLOOR_DIRT, WALL_WOOD)
-	room(Vector3.ZERO, 24, 20, FT_MID, WT_MID, WALL_H, ["s", "n", "w"], 4.0, true)
+	room(Vector3.ZERO, 24, 20, FT_MID, WT_MID, WALL_H, ["s", "n", "w", "e"], 4.0, true)
 	corridor(Vector3(0, 0, 10), "s", 6.0, FT_MID, WT_MID, 4.0, WALL_H, true, CORNER_COL)        # → plaza
 	corridor(Vector3(0, 0, -10), "n", 7.0, FT_MID, WT_MID, 4.0, WALL_H, true, CORNER_COL)       # → backstage
 	corridor(Vector3(-12, 0, 0), "w", 4.5, FT_MID, WT_MID, 4.0, WALL_H, true, CORNER_COL)       # → funhouse
+	corridor(Vector3(12, 0, 0), "e", 4.0, FT_MID, WT_MID, 4.0, WALL_H, true, CORNER_COL)        # → sideshow alley
+	# Sideshow Alley — a side plaza off the east of the midway (fortune wagon + rigged game).
+	set_theme(FLOOR_GROUND, WALL_WOOD)
+	room(SIDE_C, 12, 12, FT_PLAZA, WT_MID, 3.2, ["w"], 4.0, true)
 	_gate = _backstage_gate()
 	# Plaza — ground floor, wood walls (combat-free). South vestibule = exit.
 	set_theme(FLOOR_GROUND, WALL_WOOD)
@@ -157,13 +181,31 @@ func _photo_booth() -> void:
 	prop("res://assets/models/props/photo_booth.glb", PHOTO_POS, PI)   # generated booth (Prop Farm)
 
 func _string_lights() -> void:
-	# two strands of bulbs strung across the wider midway (north + south halves)
+	# two strands of bulbs strung across the wider midway (north + south halves). Start DARK —
+	# they blaze on once Quinn powers the box (see _set_power_lights).
 	for strand_z: float in [7.5, -7.5]:
 		for i: int in range(14):
 			var t: float = float(i) / 13.0
 			var x: float = lerp(-11.0, 11.0, t)
 			var y: float = 2.8 + 0.6 * sin(t * PI)
-			add_child(box_mesh(Vector3(0.12, 0.12, 0.12), RIDE_COLORS[i % RIDE_COLORS.size()], Vector3(x, y, strand_z), 1.6))
+			var bulb := box_mesh(Vector3(0.12, 0.12, 0.12), RIDE_COLORS[i % RIDE_COLORS.size()], Vector3(x, y, strand_z), 0.0)
+			add_child(bulb); _lights.append(bulb)
+
+func _set_power_lights(on: bool) -> void:
+	for bulb in _lights:
+		var m := ((bulb as MeshInstance3D).mesh as BoxMesh).material as StandardMaterial3D
+		m.emission_enabled = on
+		if on:
+			m.emission = m.albedo_color; m.emission_energy_multiplier = 2.0
+
+# Sideshow Alley dressing: Erin's fortune wagon + a rigged ring-toss game stall, plus a power
+# box on the midway that Quinn fixes to light the whole fair (and power the carousel).
+func _sideshow() -> void:
+	prop("res://assets/models/town/power_box.glb", POWER_POS, deg_to_rad(-90))           # Quinn's power box (midway)
+	prop("res://assets/models/town/fortune_wagon.glb", FORTUNE_POS + Vector3(0, 0, 1.0), -PI * 0.5)  # Erin's fortune wagon
+	prop("res://assets/models/town/fairstall.glb", GAME_POS + Vector3(0, 0, -1.0), 0.0, 0.7)         # rigged game stall
+	_floating_label("?", FORTUNE_POS + Vector3(0, 2.6, 0), Color(0.8, 0.6, 1.0))
+	_floating_label("PRIZES", GAME_POS + Vector3(0, 2.2, 0), Color(1.0, 0.8, 0.4))
 
 func _stalls() -> void:
 	# canopied vendor stalls (baked Synty fairstall) lining the midway + plaza perimeter,
@@ -207,7 +249,11 @@ func _restore() -> void:
 	_ride_repaired = GameManager.get_level_flag(location_id, "ride_repaired", false)
 	_backstage_talked = GameManager.get_level_flag(location_id, "backstage_talked", false)
 	_photo_taken = GameManager.get_level_flag(location_id, "photo_taken", false)
+	_power_on = GameManager.get_level_flag(location_id, "power_on", false)
+	_fortune_done = GameManager.get_level_flag(location_id, "fortune_done", false)
+	_game_done = GameManager.get_level_flag(location_id, "game_done", false)
 	_fun_open = GameManager.get_level_flag(location_id, "fun_open", false)
+	if _power_on: _set_power_lights(true)
 	if _backstage_talked: _open_gate(false)
 	if _fun_open:
 		for f in _fun_lights: f.visible = true
@@ -223,15 +269,34 @@ func _on_special(char_name: String) -> void:
 		_talk_pearl(char_name); return
 	if near3(pp, MARCO_POS, REACH):
 		_talk_marco(char_name); return
-	# carousel (Quinn)
-	if not _ride_repaired and near3(pp, RIDE_POS, REACH + 1.0):
+	# power box (Quinn) — lights the fair + powers the rides
+	if not _power_on and near3(pp, POWER_POS, REACH):
 		if char_name == "Quinn":
+			_power_on = true
+			GameManager.set_level_flag(location_id, "power_on", true)
+			_set_power_lights(true)
+			_hud_hint.text = "Quinn re-wires the junction box — the whole midway blazes to life with light."
+			Audio.play("special")
+		else:
+			_hud_hint.text = "The power box is dead — Quinn could rewire it."
+		return
+	# fortune wagon (Erin) — fast-talk the fortune teller
+	if not _fortune_done and near3(pp, FORTUNE_POS, REACH + 0.6):
+		_talk_fortune(char_name); return
+	# rigged ring-toss stall (Erin) — call out the rig for a "prize"
+	if not _game_done and near3(pp, GAME_POS, REACH):
+		_play_game(char_name); return
+	# carousel (Quinn) — needs power first, then a re-belt
+	if not _ride_repaired and near3(pp, RIDE_POS, REACH + 1.0):
+		if char_name != "Quinn":
+			_hud_hint.text = "The ride's motor needs Quinn's tools."
+		elif not _power_on:
+			_hud_hint.text = "The carousel's dead — no power. Find the midway power box (Quinn)."
+		else:
 			_ride_repaired = true
 			GameManager.set_level_flag(location_id, "ride_repaired", true)
 			_hud_hint.text = "Quinn re-belts the motor and winds the band-organ — the carousel spins to life."
 			Audio.play("special")
-		else:
-			_hud_hint.text = "The ride's motor needs Quinn's tools."
 		return
 	# photo booth (Quinn → Doug strip)
 	if not _photo_taken and near3(pp, PHOTO_POS, REACH):
@@ -249,9 +314,9 @@ func _on_special(char_name: String) -> void:
 func _talk_pearl(char_name: String) -> void:
 	var tree := {"start": {"lines": [
 		"A carnival barker leans out of the ticket booth, all teeth and sequins.",
-		"Pearl: \"Step right up! Bad news first -- some roughnecks took over the midway and stopped my carousel.\"",
-		"\"Quinn, sugar, you look handy -- get my ride spinning, and the photo booth too. Erin, sweet-talk Marco at the curtain.\"",
-		"\"And the funhouse? Pull the levers in order and the prize cage pops. Folks always forget the order.\""]}}
+		"Pearl: \"Step right up! Bad news first -- some roughnecks took over the midway and cut my power. Whole fair's gone dark.\"",
+		"\"Quinn, sugar, you look handy -- get the power box going, then my carousel and the photo booth. Erin, sweet-talk Marco at the curtain.\"",
+		"\"Side alley's got Madame Esme and the ring toss if you've a minute. And the funhouse? Pull the levers in order -- folks always forget it.\""]}}
 	GameManager.set_level_flag(location_id, "pearl_met", true)
 	open_dialog("Pearl", Color(0.7, 0.5, 0.6), tree, char_name)
 
@@ -264,6 +329,38 @@ func _fix_photo(char_name: String) -> void:
 			"Quinn clears the jam and the booth coughs up a forgotten strip of photos.",
 			"Four frames: Uncle Doug, grinning, holding a ticket stub -- \"GRAND MARQUEE, opening night.\"",
 			"Picked up: Photo-Booth Strip."]}}, char_name)
+	Audio.play("special")
+
+# Erin fast-talks the fortune teller → a Doug clue (lore) + a backstage pass (alt route past Marco).
+func _talk_fortune(char_name: String) -> void:
+	if char_name != "Erin":
+		_hud_hint.text = "The fortune teller only deals in 'destiny' — Erin could play along."
+		return
+	_fortune_done = true
+	GameManager.set_level_flag(location_id, "fortune_done", true)
+	GameManager.grant_item("Erin", BackstagePassItem.id)
+	open_dialog("Madame Esme", Color(0.6, 0.4, 0.7),
+		{"start": {"lines": [
+			"Erin: \"Read mine. And don't skimp -- I'll know.\" The teller's eyes narrow, then she grins.",
+			"Esme: \"A man came through... asked the same of me. Said he was bound for a picture palace -- the Grand Marquee.\"",
+			"\"For a performer like you? Take this -- a backstage pass. Esme always tips her own.\"",
+			"Picked up: Backstage Pass. (Marco's gate can be skipped now.)"]}}, char_name)
+	Audio.play("special")
+
+# Erin calls out the rigged ring-toss → a "prize" that's a worthless torn ticket stub (comedy).
+func _play_game(char_name: String) -> void:
+	if char_name != "Erin":
+		_hud_hint.text = "The ring-toss looks rigged. Erin might talk the barker into a fair throw."
+		return
+	_game_done = true
+	GameManager.set_level_flag(location_id, "game_done", true)
+	GameManager.grant_item("Erin", TicketStubItem.id)
+	open_dialog("Ring Toss", Color(0.9, 0.6, 0.3),
+		{"start": {"lines": [
+			"Erin leans in: \"Those pegs are shaved. Give me a fair set or I start telling the crowd.\"",
+			"The barker sweats, swaps the rings, and -- ting ting ting -- she clears the board.",
+			"\"Grand prize!\" he announces, handing over... a torn ticket stub. Erin squints. \"This isn't even ours.\"",
+			"Picked up: Torn Ticket Stub. (Looks like a Marquee ticket. It is not.)"]}}, char_name)
 	Audio.play("special")
 
 func _try_lever(char_name: String, i: int) -> void:
