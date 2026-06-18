@@ -22,8 +22,8 @@ const FT_PARK := Color(0.74, 0.82, 0.66)
 const WT_PARK := Color(0.72, 0.6, 0.42)
 const CORNER_COL := Color(0.10, 0.30, 0.15)   # solid forest-green trim
 
-const PULSE_SPEED := 2.4
-const PULSE_OPEN := 0.82
+const PULSE_SPEED := 2.0    # slower pulse → easier to catch
+const PULSE_OPEN := 0.72    # wider OPEN window (was 0.82 — too tight)
 const WALL_H := 2.8
 const REACH := 2.2
 
@@ -47,6 +47,7 @@ var _cleared := false
 var _enemies_cleared := false
 var _panel_hacked := false
 var _locks_done := false
+var _release_armed := false   # Ethan powered the release; Ben can now time it
 var _release_timed := false
 var _clue_taken := false
 var _winch_done := false
@@ -240,6 +241,7 @@ func _restore() -> void:
 	_enemies_cleared = GameManager.get_level_flag(location_id, "enemies_cleared", false)
 	_panel_hacked = GameManager.get_level_flag(location_id, "panel_hacked", false)
 	_locks_done = GameManager.get_level_flag(location_id, "locks_done", false)
+	_release_armed = GameManager.get_level_flag(location_id, "release_armed", false)
 	_release_timed = GameManager.get_level_flag(location_id, "release_timed", false)
 	_clue_taken = GameManager.get_level_flag(location_id, "clue_taken", false)
 	_winch_done = GameManager.get_level_flag(location_id, "winch_done", false)
@@ -248,6 +250,8 @@ func _restore() -> void:
 	if _locks_done:
 		for g in _lock_lights: ((g as MeshInstance3D).mesh as BoxMesh).material.albedo_color = Color(0.3, 0.95, 0.4)
 		_open_lock_gate(false)
+	if _release_armed and not _release_timed and _release_light != null:
+		((_release_light.mesh as BoxMesh).material as StandardMaterial3D).albedo_color = Color(0.95, 0.7, 0.2)  # armed (amber)
 	if _release_timed and _release_light != null:
 		((_release_light.mesh as BoxMesh).material as StandardMaterial3D).albedo_color = Color(0.3, 0.95, 0.4)
 		if _zip_rider != null: _zip_rider.position = ZIP_LOW + ZIP_HANG   # already zipped down
@@ -296,8 +300,22 @@ func _on_special(char_name: String) -> void:
 		else:
 			_hud_hint.text = "The winch motor's locked out — Ethan can drive it."
 		return
-	# Ben: high release (timing)
-	if char_name == "Ben" and _panel_hacked and not _release_timed and near3(pp, RELEASE_POS, REACH):
+	# High release — co-op: Ethan POWERS/arms it, then Ben TIMES the window.
+	if _panel_hacked and not _release_timed and near3(pp, RELEASE_POS, REACH):
+		if not _release_armed:
+			if char_name == "Ethan":
+				_release_armed = true
+				GameManager.set_level_flag(location_id, "release_armed", true)
+				((_release_light.mesh as BoxMesh).material as StandardMaterial3D).albedo_color = Color(0.95, 0.7, 0.2)  # amber: armed
+				_hud_hint.text = "Ethan powers up the release — now swap to Ben (Tab) and press G when the window reads OPEN."
+				Audio.play("special")
+			else:
+				_hud_hint.text = "The release has no power — Ethan has to activate it first."
+			return
+		# armed → Ben reads the timing window
+		if char_name != "Ben":
+			_hud_hint.text = "It's powered — swap to Ben (Tab) to time the release."
+			return
 		if _open():
 			_release_timed = true
 			GameManager.set_level_flag(location_id, "release_timed", true)
@@ -309,7 +327,10 @@ func _on_special(char_name: String) -> void:
 			Audio.play("hurt")
 		return
 	# Ben: snagged clue bag (timing → Doug carabiner)
-	if char_name == "Ben" and not _clue_taken and near3(pp, CLUE_POS, REACH):
+	if not _clue_taken and near3(pp, CLUE_POS, REACH):
+		if char_name != "Ben":
+			_hud_hint.text = "Ben has to grab the bag on the beat — Tab to swap to Ben."
+			return
 		if _open():
 			_clue_taken = true
 			GameManager.set_level_flag(location_id, "clue_taken", true)
@@ -410,7 +431,7 @@ func _process(d: float) -> void:
 		bits.append("panel " + ("OK" if _panel_hacked else "..."))
 		bits.append("locks " + ("OK" if _locks_done else "..."))
 		bits.append("release " + ("OK" if _release_timed else "..."))
-		_hud_goal.text = "Ethan hacks the panel + aligns the locks; Ben times the release. (G interact, Tab swap)\n[" + "  ".join(bits) + "]"
+		_hud_goal.text = "Ethan hacks the panel, aligns the locks + powers the release; then Ben times the release window. (G interact, Tab swap)\n[" + "  ".join(bits) + "]"
 		_update_pulse_hud()
 	if not _cleared and _enemies_cleared and _panel_hacked and _release_timed:
 		_win(true)
