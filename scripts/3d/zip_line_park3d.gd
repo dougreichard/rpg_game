@@ -34,6 +34,11 @@ const LOCKS := [Vector3(4.0, 0, -4.0), Vector3(4.0, 0, -2.0), Vector3(4.0, 0, 0.
 const WINCH_POS := Vector3(-6.0, 0, 3.0)
 const LOCK_GATE := Vector3(0.0, 0, -8.5)
 const HIGH_C := Vector3(0, 0, -14.0)
+# zip-line rider path (cable deck points, trolley hangs just under the cable): high -> mid -> low
+const ZIP_TOP := Vector3(0, 4.6, -15.0)
+const ZIP_MID := Vector3(0, 3.4, -2.0)
+const ZIP_LOW := Vector3(-6.0, 2.2, 6.0)
+const ZIP_HANG := Vector3(0, -0.32, 0)
 const RELEASE_POS := Vector3(0.0, 0.0, -15.5)
 const CLUE_POS := Vector3(-3.5, 0.0, -16.5)
 const RHYTHM_POS := Vector3(3.5, 0.0, -16.5)
@@ -53,6 +58,7 @@ var _lena = null
 var _panel_lights: Array = []
 var _lock_lights: Array = []
 var _release_light: MeshInstance3D = null
+var _zip_rider: Node3D = null    # trolley that sits on the high cable, ready, and zips on release
 var _lock_wall: Node3D = null
 var _hud_goal: Label = null
 var _hud_hint: Label = null
@@ -70,6 +76,7 @@ func _build_level() -> void:
 	_rooms()
 	_towers()
 	_ziplines()
+	_zip_rider = prop("res://assets/models/props/zip_trolley.glb", ZIP_TOP + ZIP_HANG, 0.0, 0.6)  # ready on the high cable
 	_panel()
 	_locks()
 	_winch()
@@ -166,6 +173,14 @@ func _high_extras() -> void:
 	add_child(box_mesh(Vector3(0.5, 0.5, 0.5), Color(0.4, 0.55, 0.35), CLUE_POS + Vector3(0, 1.6, 0), 0.4))
 	add_child(box_mesh(Vector3(0.7, 0.7, 0.7), Color(0.45, 0.4, 0.25), RHYTHM_POS + Vector3(0, 0.35, 0)))
 
+func _play_zip() -> void:
+	# the ready trolley zips the cable: high deck -> mid deck -> low deck
+	if _zip_rider == null:
+		return
+	var tw := create_tween().set_trans(Tween.TRANS_SINE)
+	tw.tween_property(_zip_rider, "position", ZIP_MID + ZIP_HANG, 1.2).set_ease(Tween.EASE_IN)
+	tw.tween_property(_zip_rider, "position", ZIP_LOW + ZIP_HANG, 1.2).set_ease(Tween.EASE_OUT)
+
 func _set_dressing() -> void:
 	# Outdoor-park dressing from the Synty town pack (scale 1.0, like the overworld), placed
 	# around each area's perimeter — clear of the puzzle spots, paths, spawn/exit and towers.
@@ -214,6 +229,8 @@ func _restore() -> void:
 		_open_lock_gate(false)
 	if _release_timed and _release_light != null:
 		((_release_light.mesh as BoxMesh).material as StandardMaterial3D).albedo_color = Color(0.3, 0.95, 0.4)
+		if _zip_rider != null: _zip_rider.position = ZIP_LOW + ZIP_HANG   # already zipped down
+
 	if _enemies_cleared and _panel_hacked and _release_timed:
 		_win(false)
 
@@ -255,7 +272,7 @@ func _on_special(char_name: String) -> void:
 			_release_timed = true
 			GameManager.set_level_flag(location_id, "release_timed", true)
 			((_release_light.mesh as BoxMesh).material as StandardMaterial3D).albedo_color = Color(0.3, 0.95, 0.4)
-			_hud_hint.text = "Perfect timing! The high line releases."
+			_hud_hint.text = "Perfect timing! The high line releases."; _play_zip()
 			Audio.play("special")
 		else:
 			_hud_hint.text = "Mistimed — wait for the window to read OPEN, then press G."
