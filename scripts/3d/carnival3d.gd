@@ -28,17 +28,19 @@ const CORNER_COL := Color(0.85, 0.18, 0.22)   # solid candy-red trim
 const WALL_H := 3.4
 const REACH := 2.4
 
-const PLAZA_C := Vector3(0, 0, 13.0)
-const PEARL_POS := Vector3(3.5, 0, 14.5)
+# Expanded fairground: midway at origin (24x20), plaza/backstage/funhouse pushed out and
+# joined by long stall-lined midway lanes (the old 1-2m stubs are now 4.5-7m).
+const PLAZA_C := Vector3(0, 0, 22.0)
+const PEARL_POS := Vector3(3.5, 0, 23.5)
 const RIDE_POS := Vector3(-3.5, 0.0, 0.0)
 const PHOTO_POS := Vector3(5.0, 0.0, 3.0)
-const MARCO_POS := Vector3(0.0, 0.0, -7.0)
-const GATE_POS := Vector3(0.0, 0.0, -8.5)
-const BACK_C := Vector3(0, 0, -13.0)
-const POSTER_POS := Vector3(0.0, 0.0, -16.5)
-const FUN_C := Vector3(-14.0, 0, 0.0)
-const FUN_LEVERS := [Vector3(-14.0, 0, -2.0), Vector3(-14.0, 0, 0.0), Vector3(-14.0, 0, 2.0)]
-const FUN_VAULT := Vector3(-16.0, 0, 0.0)
+const MARCO_POS := Vector3(0.0, 0.0, -12.0)
+const GATE_POS := Vector3(0.0, 0.0, -14.0)
+const BACK_C := Vector3(0, 0, -22.0)
+const POSTER_POS := Vector3(0.0, 0.0, -25.5)
+const FUN_C := Vector3(-21.0, 0, 0.0)
+const FUN_LEVERS := [Vector3(-21.0, 0, -2.0), Vector3(-21.0, 0, 0.0), Vector3(-21.0, 0, 2.0)]
+const FUN_VAULT := Vector3(-23.0, 0, 0.0)
 
 const RIDE_COLORS := [Color(0.9, 0.3, 0.3), Color(0.95, 0.8, 0.3), Color(0.3, 0.7, 0.9), Color(0.5, 0.85, 0.4)]
 
@@ -67,7 +69,9 @@ func _build_level() -> void:
 	point_light(PLAZA_C + Vector3(0, 3.0, 0), Color(0.7, 0.8, 1.0), 1.9, 11.0)
 	point_light(BACK_C + Vector3(0, 2.8, 0), Color(0.9, 0.5, 0.6), 1.6, 9.0)
 	point_light(FUN_C + Vector3(0, 2.6, 0), Color(0.6, 0.9, 0.7), 1.4, 7.0)
+	_ground()
 	_rooms()
+	_tree_ring()
 	_carousel_ride()
 	_photo_booth()
 	_string_lights()
@@ -84,32 +88,56 @@ func _build_level() -> void:
 	_spawn_enemies()
 	_restore()
 
+# A grassy ground plane under the whole fairground footprint (the carnival sits in a park
+# clearing) so the area outside the rooms reads as grass, not void.
+func _ground() -> void:
+	add_child(box_mesh(Vector3(60, 0.12, 78), Color(0.5, 0.55, 0.38), Vector3(-7, -0.06, 0.5)))
+
+# A tree/bush border around the fairground perimeter (taller trees peek over the walls for an
+# enclosed-park backdrop). Deterministic RNG so it's stable across runs.
+func _tree_ring() -> void:
+	var town := "res://assets/models/town/"
+	var rng := RandomNumberGenerator.new(); rng.seed = 8181
+	var kinds := ["tree", "tree", "tree_large", "bush"]
+	var z := -32.0
+	while z <= 33.0:                                    # east + west borders
+		for sx: float in [-30.0, 16.0]:
+			prop(town + kinds[rng.randi() % kinds.size()] + ".glb",
+				Vector3(sx + rng.randf_range(-1.4, 1.4), 0.0, z + rng.randf_range(-1.2, 1.2)), rng.randf() * TAU)
+		z += rng.randf_range(2.6, 3.6)
+	for sz: float in [-32.0, 33.0]:                     # north + south caps
+		var x := -30.0
+		while x <= 16.0:
+			prop(town + kinds[rng.randi() % kinds.size()] + ".glb",
+				Vector3(x + rng.randf_range(-1.0, 1.0), 0.0, sz + rng.randf_range(-1.0, 1.0)), rng.randf() * TAU)
+			x += rng.randf_range(2.6, 3.6)
+
 func _rooms() -> void:
 	# Midway — dirt floor, bright wood walls. Combat. Openings: south (plaza), north
-	# (backstage), west (funhouse).
+	# (backstage), west (funhouse). Long stall-lined lanes join the outer rooms.
 	set_theme(FLOOR_DIRT, WALL_WOOD)
-	room(Vector3.ZERO, 18, 16, FT_MID, WT_MID, WALL_H, ["s", "n", "w"], 3.0, true)
-	corridor(Vector3(0, 0, 8), "s", 1.0, FT_MID, WT_MID, 3.0, WALL_H, true, CORNER_COL)         # → plaza
-	corridor(Vector3(0, 0, -8), "n", 1.0, FT_MID, WT_MID, 3.0, WALL_H, true, CORNER_COL)        # → backstage
-	corridor(Vector3(-9, 0, 0), "w", 1.5, FT_MID, WT_MID, 3.0, WALL_H, true, CORNER_COL)        # → funhouse
+	room(Vector3.ZERO, 24, 20, FT_MID, WT_MID, WALL_H, ["s", "n", "w"], 4.0, true)
+	corridor(Vector3(0, 0, 10), "s", 6.0, FT_MID, WT_MID, 4.0, WALL_H, true, CORNER_COL)        # → plaza
+	corridor(Vector3(0, 0, -10), "n", 7.0, FT_MID, WT_MID, 4.0, WALL_H, true, CORNER_COL)       # → backstage
+	corridor(Vector3(-12, 0, 0), "w", 4.5, FT_MID, WT_MID, 4.0, WALL_H, true, CORNER_COL)       # → funhouse
 	_gate = _backstage_gate()
 	# Plaza — ground floor, wood walls (combat-free). South vestibule = exit.
 	set_theme(FLOOR_GROUND, WALL_WOOD)
-	room(PLAZA_C, 14, 8, FT_PLAZA, WT_MID, 3.2, ["n", "s"], 3.0, true)
-	corridor(PLAZA_C + Vector3(0, 0, 4.0), "s", 2.0, FT_PLAZA, WT_MID, 3.0, 3.2, true, CORNER_COL)
+	room(PLAZA_C, 16, 12, FT_PLAZA, WT_MID, 3.2, ["n", "s"], 4.0, true)
+	corridor(PLAZA_C + Vector3(0, 0, 6.0), "s", 2.0, FT_PLAZA, WT_MID, 4.0, 3.2, true, CORNER_COL)
 	# Backstage — dim, behind the curtain gate.
 	set_theme(FLOOR_DIRT, WALL_WOOD)
-	room(BACK_C, 12, 8, FT_BACK, WT_BACK, 3.2, ["s"], 3.0, true)
+	room(BACK_C, 14, 10, FT_BACK, WT_BACK, 3.2, ["s"], 4.0, true)
 	# Funhouse — the lever-sequence prize room.
-	room(FUN_C, 7, 8, FT_MID, WT_MID, 3.0, ["e"], 3.0, true)
+	room(FUN_C, 9, 10, FT_MID, WT_MID, 3.0, ["e"], 4.0, true)
 
 # Marco's curtain gate (between midway and backstage), opened by Erin / a backstage pass.
 func _backstage_gate() -> Node3D:
 	var sb := StaticBody3D.new()
 	sb.collision_layer = Combat3D.L_WORLD
 	var cs := CollisionShape3D.new(); var bs := BoxShape3D.new()
-	bs.size = Vector3(3.0, 2.8, 0.3); cs.shape = bs; cs.position = Vector3(0, 1.4, 0)
-	sb.add_child(cs); sb.add_child(box_mesh(Vector3(3.0, 2.8, 0.3), Color(0.5, 0.1, 0.15), Vector3(0, 1.4, 0)))
+	bs.size = Vector3(4.0, 2.8, 0.3); cs.shape = bs; cs.position = Vector3(0, 1.4, 0)
+	sb.add_child(cs); sb.add_child(box_mesh(Vector3(4.0, 2.8, 0.3), Color(0.5, 0.1, 0.15), Vector3(0, 1.4, 0)))
 	sb.position = GATE_POS
 	add_child(sb)
 	return sb
