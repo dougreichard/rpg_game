@@ -28,5 +28,50 @@
     "height": 3.0,
     "poly": 6000,
     "ref_count": 1
+  },
+  "zip_tower": {
+    "prompt": "a tall outdoor zip-line launch tower, a square wooden timber frame with diagonal cross-braces, a railed platform deck on top, a steel ladder up one side, weathered grey timber and galvanised steel",
+    "seed": 500,
+    "track": "painted",
+    "angle": 6,
+    "height": 4.5,
+    "poly": 5000,
+    "ref_count": 1
+  },
+  "zip_control_panel": {
+    "prompt": "a single outdoor control kiosk on a steel pedestal, a dark weatherproof metal box with a small glowing screen and a row of buttons",
+    "seed": 515,
+    "track": "painted",
+    "angle": 6,
+    "height": 1.2,
+    "poly": 3000,
+    "ref_count": 1
+  },
+  "zip_release": {
+    "prompt": "a launch gate post: a single vertical steel post with a horizontal swing-arm gate bar and a red-and-green signal light on top",
+    "seed": 602,
+    "track": "painted",
+    "angle": 6,
+    "height": 1.5,
+    "poly": 3000,
+    "ref_count": 1
+  },
+  "zip_winch": {
+    "prompt": "an industrial cable winch, a steel drum wound with cable on a yellow motor housing base",
+    "seed": 532,
+    "track": "painted",
+    "angle": 6,
+    "height": 0.8,
+    "poly": 2500,
+    "ref_count": 1
+  },
+  "zip_trolley": {
+    "prompt": "a zip-line pulley trolley: two grooved metal wheels side by side gripping a horizontal cable at the top, a curved steel handlebar hanging below",
+    "seed": 625,
+    "track": "painted",
+    "angle": 6,
+    "height": 0.5,
+    "poly": 2000,
+    "ref_count": 1
   }
 }
