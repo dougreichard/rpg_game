@@ -70,6 +70,7 @@ var _hud_banner: Label = null
 func _build_level() -> void:
 	location_id = "zip_line"
 	multi_room = true
+	walls_visible = false   # collision-only walls; the visible boundary is hedges + bushes (_hedges)
 	build_env(Color(0.53, 0.70, 0.90), Color(0.62, 0.66, 0.68), 0.95, 1.5)  # daytime park sky
 	point_light(Vector3(0, 3.4, 0), Color(0.9, 1.0, 0.95), 2.0, 16.0)
 	point_light(LANDING_C + Vector3(0, 2.6, 0), Color(0.85, 1.0, 0.9), 1.8, 11.0)
@@ -182,32 +183,59 @@ func _high_extras() -> void:
 	prop("res://assets/models/props/clue_bag.glb", CLUE_POS + Vector3(0, 1.5, 0), 0.5)
 	prop("res://assets/models/props/barrel.glb", RHYTHM_POS, 0.0)
 
-const HEDGE_LEN := 3.54   # zip hedge.glb length along its local Z
+
+const TOWN := "res://assets/models/town/"
+const BUSH_STEP := 1.45   # town bush is ~1.9m wide → ~1.45m spacing overlaps into a continuous hedge
 
 func _hedge_run(start: Vector3, axis: String, length: float) -> void:
-	# lay hedge segments end-to-end from start along +x or +z, each stretched to fill evenly
-	var n := maxi(1, int(ceil(length / HEDGE_LEN)))
+	# a continuous bushy hedge: overlapping Synty town bushes (~1.75m tall) along the wall line,
+	# with deterministic yaw/scale jitter so it reads natural (no generated hedge — looked bad)
+	if length <= 0.1:
+		return
+	var n := maxi(1, int(round(length / BUSH_STEP)))
 	var step := length / n
-	for i: int in range(n):
-		var off := step * (float(i) + 0.5)
+	for i: int in range(n + 1):
+		var off := step * float(i)
 		var pos := start + (Vector3(off, 0, 0) if axis == "x" else Vector3(0, 0, off))
-		var yaw := PI * 0.5 if axis == "x" else 0.0
-		var h := prop("res://assets/models/props/hedge.glb", pos, yaw, 1.0)
-		if h != null:
-			h.scale = Vector3(1.0, 1.3, step / HEDGE_LEN)   # ~1.7m tall (covers the 1.6m wall) + stretch length (Z) to fill
+		var seed := pos.x * 1.7 + pos.z * 2.3
+		prop(TOWN + "bush.glb", pos, fmod(absf(seed), 1.0) * TAU, 1.0 + 0.18 * sin(seed))
 
-func _hedge_room(c: Vector3, w: float, d: float, skip: Array) -> void:
-	# line a room's inner walls with hedges (in front of the green walls); skip opening sides
-	var hw := w * 0.5; var hd := d * 0.5; var inset := 0.5
-	if not skip.has("n"): _hedge_run(Vector3(c.x - hw, 0, c.z - hd + inset), "x", w)
-	if not skip.has("s"): _hedge_run(Vector3(c.x - hw, 0, c.z + hd - inset), "x", w)
-	if not skip.has("w"): _hedge_run(Vector3(c.x - hw + inset, 0, c.z - hd), "z", d)
-	if not skip.has("e"): _hedge_run(Vector3(c.x + hw - inset, 0, c.z - hd), "z", d)
+func _hedge_side(c: Vector3, side: String, w: float, d: float, open: bool, gap: float) -> void:
+	# hedge a wall side; on an opening side, hedge the two segments and leave the central gap
+	var horiz := side == "n" or side == "s"
+	var span := w if horiz else d
+	var inset := 0.5
+	var fixed := 0.0   # the run's fixed coordinate (z for n/s, x for e/w), inset inward
+	match side:
+		"n": fixed = -d * 0.5 + inset
+		"s": fixed = d * 0.5 - inset
+		"w": fixed = -w * 0.5 + inset
+		"e": fixed = w * 0.5 - inset
+	var segs := [[0.0, span]]
+	if open:
+		var seg := (span - gap) * 0.5
+		segs = [[0.0, seg], [(span + gap) * 0.5, seg]] if seg > 0.1 else []
+	for s: Array in segs:
+		var a: float = -span * 0.5 + float(s[0])
+		var L: float = float(s[1])
+		if horiz:
+			_hedge_run(Vector3(c.x + a, 0, c.z + fixed), "x", L)
+		else:
+			_hedge_run(Vector3(c.x + fixed, 0, c.z + a), "z", L)
+
+func _hedge_room(c: Vector3, w: float, d: float, openings: Array, gap := 3.0) -> void:
+	for side: String in ["n", "s", "e", "w"]:
+		_hedge_side(c, side, w, d, side in openings, gap)
+	# one bush at each corner to fill the right-angle seam where two runs meet
+	for sx: float in [-1.0, 1.0]:
+		for sz: float in [-1.0, 1.0]:
+			var corner := c + Vector3(sx * (w * 0.5 - 0.4), 0, sz * (d * 0.5 - 0.4))
+			prop(TOWN + "bush.glb", corner, (sx + sz) * 0.7, 1.1)
 
 func _hedges() -> void:
-	_hedge_room(Vector3.ZERO, 16, 16, ["s", "n"])      # mid: e/w (n/s are corridors)
-	_hedge_room(LANDING_C, 12, 8, ["n", "s"])          # landing: e/w
-	_hedge_room(HIGH_C, 12, 10, ["s"])                 # high: n/e/w
+	_hedge_room(Vector3.ZERO, 16, 16, ["s", "n"])
+	_hedge_room(LANDING_C, 12, 8, ["n", "s"])
+	_hedge_room(HIGH_C, 12, 10, ["s"])
 
 func _forest_ring() -> void:
 	# a denser tree/bush border OUTSIDE the room walls (taller trees peek over the 2.8m walls

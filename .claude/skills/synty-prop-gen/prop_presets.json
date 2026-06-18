@@ -100,14 +100,5 @@
     "height": 0.6,
     "poly": 2000,
     "ref_count": 1
-  },
-  "hedge": {
-    "prompt": "a freestanding section of a dense green garden hedge, entirely covered in green leafy foliage on the top and all four sides, trimmed flat, no flower pot, no planter box, no soil, no stone or concrete base, just the green shrub",
-    "seed": 955,
-    "track": "painted",
-    "angle": 6,
-    "height": 1.3,
-    "poly": 2500,
-    "ref_count": 1
   }
 }

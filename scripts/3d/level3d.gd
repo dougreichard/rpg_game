@@ -43,6 +43,9 @@ var multi_room: bool = false       # multi-phase levels exit via a portal, not f
 # they always read as distinct surfaces. Props (plain box_mesh) stay flat.
 var floor_tex: Texture2D = null
 var wall_tex: Texture2D = null
+# When false, wall()/corridor() build collision only (no visible mesh / corner posts) — for
+# levels that supply their own boundary visual (e.g. hedge props). Default true = unchanged.
+var walls_visible := true
 var _mat_cache: Dictionary = {}    # keyed by texture path + tint, so boxes share materials
 
 func _ready() -> void:
@@ -172,7 +175,8 @@ func wall(center: Vector3, size: Vector3, col: Color) -> void:
 	bs.size = size
 	cs.shape = bs
 	sb.add_child(cs)
-	sb.add_child(box_mesh(size, col, Vector3.ZERO, 0.0, wall_tex))
+	if walls_visible:
+		sb.add_child(box_mesh(size, col, Vector3.ZERO, 0.0, wall_tex))
 	sb.position = center
 	add_child(sb)
 
@@ -552,9 +556,10 @@ func corridor(start: Vector3, dir: String, length: float, floor_col: Color,
 	var perp := Vector3(0, 0, off) if horiz else Vector3(off, 0, 0)
 	var ph: float = h + 0.5
 	var post := Vector3(T + 0.3, ph, T + 0.3)
-	for end_c: Vector3 in [start, start + step * length]:
-		for s: float in [-1.0, 1.0]:
-			add_child(box_mesh(post, cc, end_c + perp * s + Vector3(0, ph * 0.5, 0)))
+	if walls_visible:
+		for end_c: Vector3 in [start, start + step * length]:
+			for s: float in [-1.0, 1.0]:
+				add_child(box_mesh(post, cc, end_c + perp * s + Vector3(0, ph * 0.5, 0)))
 	return start + step * length
 
 func add_room_portal(pos: Vector3, size: Vector3, dist: float, elev: float) -> void:
