@@ -39,7 +39,8 @@ const ZIP_TOP := Vector3(0, 4.6, -15.0)
 const ZIP_MID := Vector3(0, 3.4, -2.0)
 const ZIP_LOW := Vector3(-6.0, 2.2, 6.0)
 const ZIP_HANG := Vector3(0, -0.32, 0)
-const RELEASE_POS := Vector3(0.0, 0.0, -15.5)
+const RELEASE_POS := Vector3(-1.5, 0.0, -12.0)    # release post (Ben TIMES) — in FRONT of the high tower
+const HIGH_PANEL_POS := Vector3(1.5, 0.0, -12.0)  # release control panel (Ethan ARMS) — beside the post
 const CLUE_POS := Vector3(-3.5, 0.0, -16.5)
 const RHYTHM_POS := Vector3(3.5, 0.0, -16.5)
 
@@ -74,6 +75,7 @@ func _build_level() -> void:
 	point_light(LANDING_C + Vector3(0, 2.6, 0), Color(0.85, 1.0, 0.9), 1.8, 11.0)
 	point_light(PANEL_POS + Vector3(0, 2.0, 0), Color(0.4, 0.7, 1.0), 1.4, 5.0)
 	point_light(RELEASE_POS + Vector3(0, 2.0, 0), Color(1.0, 0.7, 0.4), 1.4, 6.0)
+	point_light(HIGH_PANEL_POS + Vector3(0, 2.0, 0), Color(0.4, 0.7, 1.0), 1.3, 5.0)
 	# outer ground so the forest ring / perimeter foliage isn't floating over the void
 	set_theme(FLOOR_GRASS, FLOOR_GRASS)
 	floor_box(44, 66, FT_PARK.darkened(0.08), Vector3(0, -0.06, -1.0))
@@ -167,9 +169,10 @@ func _winch() -> void:
 	prop("res://assets/models/props/zip_winch.glb", WINCH_POS, 0.0)  # generated cable winch (painted)
 
 func _release() -> void:
-	prop("res://assets/models/props/zip_release.glb", RELEASE_POS, 0.0)  # generated signal/gate post (painted)
-	# staged trolley resting beside the release station (its grounded base reads fine here)
-	prop("res://assets/models/props/zip_trolley.glb", RELEASE_POS + Vector3(1.2, 0, 0.4), 0.6)
+	# Release POST (Ben times) + a separate control PANEL (Ethan arms), both in front of the
+	# high launch tower so neither is buried in it.
+	prop("res://assets/models/props/zip_release.glb", RELEASE_POS, 0.0)        # signal/gate post — Ben
+	prop("res://assets/models/props/zip_control_panel.glb", HIGH_PANEL_POS, PI)  # release control panel — Ethan
 	_release_light = box_mesh(Vector3(0.3, 0.3, 0.12), Color(0.6, 0.6, 0.2), RELEASE_POS + Vector3(0, 1.1, 0.22), 1.0)
 	add_child(_release_light)
 
@@ -310,19 +313,22 @@ func _on_special(char_name: String) -> void:
 		else:
 			_hud_hint.text = "The winch motor's locked out — Ethan can drive it."
 		return
-	# High release — co-op: Ethan POWERS/arms it, then Ben TIMES the window.
-	if _panel_hacked and not _release_timed and near3(pp, RELEASE_POS, REACH):
-		if not _release_armed:
-			if char_name == "Ethan":
-				_release_armed = true
-				GameManager.set_level_flag(location_id, "release_armed", true)
-				((_release_light.mesh as BoxMesh).material as StandardMaterial3D).albedo_color = Color(0.95, 0.7, 0.2)  # amber: armed
-				_hud_hint.text = "Ethan powers up the release — now swap to Ben (Tab) and press G when the window reads OPEN."
-				Audio.play("special")
-			else:
-				_hud_hint.text = "The release has no power — Ethan has to activate it first."
-			return
-		# armed → Ben reads the timing window
+	# High release — co-op: Ethan ARMS it at the control PANEL, then Ben TIMES the release POST.
+	if _panel_hacked and not _release_armed and near3(pp, HIGH_PANEL_POS, REACH):
+		if char_name == "Ethan":
+			_release_armed = true
+			GameManager.set_level_flag(location_id, "release_armed", true)
+			((_release_light.mesh as BoxMesh).material as StandardMaterial3D).albedo_color = Color(0.95, 0.7, 0.2)  # amber: armed
+			_hud_hint.text = "Ethan powers the release from the panel — now swap to Ben (Tab) and time the post."
+			Audio.play("special")
+		else:
+			_hud_hint.text = "The release panel is Ethan's — swap to Ethan to power it."
+		return
+	if _panel_hacked and not _release_armed and near3(pp, RELEASE_POS, REACH):
+		_hud_hint.text = "The release post is dead — Ethan has to power it at the control panel first."
+		return
+	# armed → Ben reads the timing window at the post
+	if _panel_hacked and _release_armed and not _release_timed and near3(pp, RELEASE_POS, REACH):
 		if char_name != "Ben":
 			_hud_hint.text = "It's powered — swap to Ben (Tab) to time the release."
 			return
