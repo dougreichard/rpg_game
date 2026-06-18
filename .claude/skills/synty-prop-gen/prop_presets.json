@@ -154,5 +154,23 @@
     "height": 2.6,
     "poly": 3000,
     "ref_count": 1
+  },
+  "prize_cabinet": {
+    "prompt": "a carnival prize cabinet, a tall glass-fronted display case on a wooden base, shelves of colorful stuffed-toy prizes inside, a striped top valance",
+    "seed": 12,
+    "track": "painted",
+    "angle": 6,
+    "height": 1.8,
+    "poly": 3500,
+    "ref_count": 1
+  },
+  "poster_board": {
+    "prompt": "a carnival A-frame sandwich-board sign, two wooden boards hinged at the top standing like an easel, a blank poster panel on the front with a decorative scalloped header",
+    "seed": 15,
+    "track": "painted",
+    "angle": 6,
+    "height": 1.6,
+    "poly": 2500,
+    "ref_count": 1
   }
 }

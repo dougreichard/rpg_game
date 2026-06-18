@@ -228,10 +228,13 @@ func _funhouse() -> void:
 		add_child(glow)
 		_fun_lights.append(glow)
 		_floating_label(str(i + 1), FUN_LEVERS[i] + Vector3(0, 1.7, 0), Color(1.0, 0.8, 0.4))
-	add_child(box_mesh(Vector3(0.8, 1.2, 0.8), Color(0.5, 0.4, 0.2), FUN_VAULT + Vector3(0, 0.6, 0)))
+	prop("res://assets/models/props/prize_cabinet.glb", FUN_VAULT, PI * 0.5)  # glass prize case (Prop Farm)
 
 func _backstage() -> void:
-	add_child(box_mesh(Vector3(1.4, 1.8, 0.1), Color(0.85, 0.8, 0.6), POSTER_POS + Vector3(0, 1.8, 0), 0.3))  # Doug poster
+	# Doug's poster on a Synty-style easel (Prop Farm), facing south toward the player entering
+	# backstage; the coloured panel sits on the easel's canvas as the printed image.
+	prop("res://assets/models/props/poster_board.glb", POSTER_POS, 0.0)
+	add_child(box_mesh(Vector3(0.78, 0.98, 0.06), Color(0.85, 0.8, 0.6), POSTER_POS + Vector3(0, 1.25, 0.18), 0.3))  # Doug image
 
 # Carnival-goers waiting out the trouble in the safe plaza + sideshow (the roughnecks cleared the
 # midway, per Pearl). Animated Synty Kids (distinct meshes) + an adult chaperone, with bubbles.
