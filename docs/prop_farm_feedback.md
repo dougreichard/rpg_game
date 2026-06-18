@@ -287,3 +287,18 @@ diffuse texture, no metal).
 texture). Keep the baseColorTexture as-is. Then painted props import matte and the Mac just
 `prop(...)`s them — no per-prop material override needed. (Flat track is unaffected — it's tinted in
 Godot already.) Mac can apply a temporary roughness override in the meantime if needed.
+
+### Refinement — fix the metallic=1.0 at the EARLIEST stage (paint export), exact locations
+Doug wants it fixed as early in the pipeline as possible. Pinpointed it:
+- **`gen_prop_paint_cuda.py`** already has `conf.gen_mr = False` (no metallic-roughness *map*), so
+  ONLY the scalar `metallicFactor` matters — and the obj→glb export (~line 51, `glb =
+  out_obj.replace(".obj",".glb")` / the conversion + `exported`) writes it **without setting
+  metallic → glTF default 1.0**. **Earliest fix:** when writing that GLB, set the material's
+  **`metallicFactor = 0.0`** and **`roughnessFactor ≈ 0.9`** (e.g. on the trimesh/pygltflib
+  material, or the Blender converter's Principled BSDF before export).
+- **Fallback / belt-and-braces:** `finalize_painted.py` re-exports via Blender
+  (`export_scene.gltf`, ~line 69) — set the Principled BSDF **Metallic=0, Roughness=0.9** on each
+  material there too, so even older painted meshes come out matte.
+
+Either single spot fixes it; doing it at the paint export means the matte material is "born"
+correct and never carries metallic=1 downstream. Flat track unaffected (tinted in Godot).
