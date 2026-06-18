@@ -32,8 +32,10 @@ reference fast (pixel-identical). All candidates tiled → a clean `reference FA
   sized via `normalize_prop.py` (~few-k tris).
 - `painted` — Hunyuan paints the prop; `finalize_painted.py` keeps the baked **DIFFUSE texture**
   (real reference colours) and **keeps the mesh EXACTLY as-is** — only downsizes the texture to
-  512px and applies the real-world size + base-align. In Godot use a **standard material sampling
-  the GLB's `baseColorTexture`** (NOT `vertex_color_use_as_albedo`); no double-siding needed.
+  512px, applies the real-world size + base-align, and forces a **matte material** (`metallicFactor=0`,
+  `roughnessFactor=0.9` — Hunyuan leaves metallic unset → glTF default 1.0 → imports as shiny metal).
+  In Godot use a **standard material sampling the GLB's `baseColorTexture`** (NOT
+  `vertex_color_use_as_albedo`); ships matte, no double-siding needed.
   - **Poly budget** = the **`poly` param** (default 4000): the paint stage's internal **quadric
     remesh** is reduced to that target *before* painting, so the prop is low-poly with **clean
     topology** and the texture carries the detail. Synty ref: Quinn=1,830, church=6,629,

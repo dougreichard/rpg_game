@@ -9,10 +9,12 @@ geometry processing corrupts it:
   - auto-smooth writes custom split normals that read as dented on the low-poly result.
 (We learned this the hard way — every one of those steps made the bench/barrel look bad.)
 
-So this stage does ONLY the safe, transform/texture work the Mac needs:
+So this stage does ONLY the safe, transform/texture/material work the Mac needs:
   - downsize the baked diffuse texture (2048 -> 512: sharp on a low-poly prop, tiny to commit),
-  - normalize: scale bbox height to target metres, centre X/Y, base at floor (min up -> 0).
-No dissolve, no normals recalc, no shading change, no weld.
+  - normalize: scale bbox height to target metres, centre X/Y, base at floor (min up -> 0),
+  - matte material: force metallic=0 / roughness=0.9 (Hunyuan leaves metallicFactor unset -> glTF
+    default 1.0 -> imports as polished metal in Godot; the diffuse texture carries all the colour).
+No dissolve, no normals recalc, no shading change, no weld — geometry is untouched.
 
   blender --background --python finalize_painted.py -- <painted.glb> <out.glb> [tex=512] [target_height_m=1.0]
 """
@@ -65,6 +67,17 @@ obj.location.x -= (mn[0] + mx[0]) / 2
 obj.location.y -= (mn[1] + mx[1]) / 2
 obj.location.z -= mn[2]
 bpy.ops.object.transform_apply(location=True)
+
+# matte Synty material: kill the glTF default metallic=1.0 (polished metal) + low roughness so the
+# painted prop imports matte (the baked diffuse carries the colour). Every Principled BSDF.
+for mat in bpy.data.materials:
+    if not (mat.use_nodes and mat.node_tree):
+        continue
+    for node in mat.node_tree.nodes:
+        if node.type == "BSDF_PRINCIPLED":
+            node.inputs["Metallic"].default_value = 0.0
+            node.inputs["Roughness"].default_value = 0.9
+            print("matte material:", mat.name)
 
 bpy.ops.export_scene.gltf(filepath=OUT, export_format="GLB")
 print("final tris:", len(obj.data.polygons), "-> saved", OUT)

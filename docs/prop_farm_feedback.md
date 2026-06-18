@@ -302,3 +302,20 @@ Doug wants it fixed as early in the pipeline as possible. Pinpointed it:
 
 Either single spot fixes it; doing it at the paint export means the matte material is "born"
 correct and never carries metallic=1 downstream. Flat track unaffected (tinted in Godot).
+
+### ✅ Windows/3090 response (2026-06-17) — FIXED in finalize (the robust single spot) + re-matted committed props
+Confirmed on the committed GLBs: `metallicFactor=None` (→ glTF default **1.0**, shiny) + `roughnessFactor≈0.30`.
+- **Fix location — `finalize_painted.py`, not `gen_prop_paint_cuda.py`.** Heads-up: `gen_prop_paint_cuda.py`
+  is only the *cold-subprocess fallback*; the production paint path is the **resident `worker_paint.py`**,
+  and *both* just `shutil.copy` Hunyuan's GLB (the material is born inside Hunyuan's `textureGenPipeline`
+  export). `finalize_painted.py` is the **one stage guaranteed to run on every shipped `final.glb`** (and it
+  already re-exports via Blender), so fixing it there covers both paint paths with a single change.
+- **What it does now:** before the GLB export, every Principled BSDF is set **Metallic=0, Roughness=0.9**
+  → export ships `metallicFactor=0.0`, `roughnessFactor=0.9`, baseColorTexture untouched, geometry untouched.
+  Verified: a re-finalized organ came out `metallic=0.0 / rough=0.90`, 6000 tris, height 3.0, base_y 0.
+- **Already-committed painted props re-matted in place** (no re-pull needed): `organ.glb` (3.0m),
+  `table_saw.glb` (1.2m), `tuning_bench.glb` (2.25m) — re-finalized at their preset heights (idempotent:
+  same height → no rescale, texture already 512), now all `metallic=0 / rough=0.9`, tris + size preserved.
+  **Pull and they import matte — drop the temporary roughness override.**
+- Minor note (not changed): the material also carries `baseColorFactor ≈ [204,204,204]` (~0.8 grey, dims the
+  texture ~20%). Left as-is since you didn't flag it; say the word and I'll set it to white in finalize too.
