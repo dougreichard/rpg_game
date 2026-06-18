@@ -4,7 +4,7 @@
   "_size_convention": "height = real-world bbox height in metres (GLB ships true-sized \u2192 wire with prop(path,pos,yaw) scale 1.0). poly = painted pre-paint tri budget (set-dressing ~1500-2500, hero ~4000-6000).",
   "tuning_bench": {
     "prompt": "a sturdy wooden carpenter's workbench with a dark walnut top and four turned legs, a low back rack holding a row of upright slim silver steel rods, a black iron vise clamped to one end, and brass and chrome hand tools lying flat on the top",
-    "seed": 404,
+    "seed": 11,
     "track": "painted",
     "angle": 6,
     "height": 2.25,
