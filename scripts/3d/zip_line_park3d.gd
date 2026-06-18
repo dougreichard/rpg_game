@@ -324,9 +324,10 @@ func _park_visitors() -> void:
 	spawn_npc("kid_dress", Vector3(-5.0, 0, 22.0), 0.0, KID_QUIPS, [
 		Vector3(-5.0, 0, 22.0), Vector3(-7.5, 0, 27.0), Vector3(-4.0, 0, 31.0), Vector3(-2.0, 0, 24.0),
 	])
-	# strolling adult (chaperone) near the entrance fences, south of the landing
-	spawn_npc("congregant_m", Vector3(2.5, 0, 33.0), PI, ADULT_QUIPS, [
-		Vector3(2.5, 0, 33.0), Vector3(-2.5, 0, 33.5), Vector3(-1.0, 0, 30.0), Vector3(2.0, 0, 30.5),
+	# strolling adult (chaperone) — small interior loop near the centre, clear of the exit
+	# door (z31), the south hedge (z33), the spawn (z27) and the north trail mouth (z19)
+	spawn_npc("congregant_m", Vector3(0, 0, 23.0), PI, ADULT_QUIPS, [
+		Vector3(-2.5, 0, 22.0), Vector3(2.5, 0, 22.0), Vector3(2.5, 0, 24.0), Vector3(-2.5, 0, 24.0),
 	])
 
 func _set_dressing() -> void:
