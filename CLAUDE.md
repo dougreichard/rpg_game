@@ -440,10 +440,13 @@ Loft. Still-single-room levels inherit this as they're converted to multi-room.)
 
 ### 12. The Drop — `TheDrop3D.tscn`
 - **Unlock condition:** Late-game, after a credible lead on Uncle Doug's location
-- **Key puzzle(s):** Evan clears landing-site wreckage (or William & Mary two-point puzzle); Ethan hacks jammed chute release in Snag Grove; Rio confirms the marquee sign points to the endgame
-- **Enemy types:** Grunt + Runner + Brute (hostile ground crew)
-- **Level progress flags:** `enemies_cleared` / `chute_hacked` / `landing_cleared`
+- **Entering duo:** Evan + Ethan
+- **Key puzzle(s):** Evan clears the landing-site **wreckage** gate (clearing→grove); Ethan hacks the jammed **chute release**; Evan (with the dogs) hauls the fallen **mast beam** off the **signal dish**, then Ethan **re-aims the dish** → endgame pointer + `doug_flyer`. **Optional:** Ethan jams the **lookout radio** (→ `animal_treat`) and cracks the **supply drone** (→ `bies_charm`); **Evan pries open the crashed drop pod** in the west crash-site sub-area (→ `faded_treasure_map`, comedic 'mislabeled supply' junk). Rio confirms the marquee sign points to the endgame.
+- **3D build:** expanded grove (Zip/Carnival bar): big SNAG GROVE (combat) at origin + a long tree-lined trail south to the combat-free TOUCHDOWN CLEARING (Rio + exit) + a west **crash-site sub-area** (drop pod). Real Synty trees (replacing primitive pine cones) + dense forest ring + grass ground slab (top y=-0.1, below room floors). **Hero props are Prop-Farm painted** (`signal_dish`/`drop_pod`/`supply_drone`); wreckage pile glammed with Synty crates. Grass/stone surfaces, olive trim. **No civilian crowd** (hostile drop site — Rio is the lone friendly).
+- **Enemy types:** Grunt + Runner + Brute (hostile ground crew; grove only)
+- **Level progress flags:** `enemies_cleared` / `chute_hacked` / `landing_cleared` / `beam_done` / `dish_aimed` / `lookout_done` / `drone_done` / `pod_done` / `rio_met`
 - **NPCs:** Rio (ex-crew, stationary in Touchdown Clearing)
+- **Notes:** Win = enemies cleared + landing cleared (wreckage) + chute hacked (beam/dish/lookout/drone/pod are bonuses).
 
 ---
 
