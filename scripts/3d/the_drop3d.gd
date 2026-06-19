@@ -27,14 +27,17 @@ const CORNER_COL := Color(0.30, 0.34, 0.16)   # solid olive trim
 const WALL_H := 3.0
 const REACH := 2.4
 
-const CLEAR_C := Vector3(0, 0, 13.0)
-const RIO_POS := Vector3(3.5, 0, 14.0)
-const WRECK_POS := Vector3(0.0, 0.0, 8.5)              # gate: clearing → grove
-const CHUTE_POS := Vector3(3.0, 0.0, -6.0)
-const BEAM_POS := Vector3(-3.0, 0.0, -4.5)
-const DISH_POS := Vector3(-3.0, 0.0, -6.5)
-const LOOKOUT_POS := Vector3(-6.5, 0.0, -2.0)
-const DRONE_POS := Vector3(6.5, 0.0, -2.0)
+# Expanded grove: combat grove at origin (24x20), touchdown clearing pushed south and joined
+# by a long tree-lined trail; a west crash-site sub-area holds the drop pod.
+const CLEAR_C := Vector3(0, 0, 22.0)
+const RIO_POS := Vector3(3.5, 0, 23.0)
+const WRECK_POS := Vector3(0.0, 0.0, 13.0)             # gate: clearing → grove (mid-trail)
+const CHUTE_POS := Vector3(4.0, 0.0, -6.0)
+const BEAM_POS := Vector3(-4.0, 0.0, -4.5)
+const DISH_POS := Vector3(-4.0, 0.0, -7.0)
+const LOOKOUT_POS := Vector3(-8.5, 0.0, -2.0)
+const DRONE_POS := Vector3(8.5, 0.0, -2.0)
+const POD_C := Vector3(-22.0, 0.0, 0.0)                # crash-site sub-area (west of the grove)
 
 var _cleared := false
 var _enemies_cleared := false
@@ -61,7 +64,9 @@ func _build_level() -> void:
 	point_light(CLEAR_C + Vector3(0, 2.8, 0), Color(0.8, 0.9, 0.75), 1.8, 11.0)
 	point_light(CHUTE_POS + Vector3(0, 2.0, 0), Color(0.4, 0.8, 1.0), 1.4, 5.0)
 	point_light(DISH_POS + Vector3(0, 2.0, 0), Color(1.0, 0.8, 0.5), 1.4, 6.0)
+	_ground()
 	_rooms()
+	_forest_ring()
 	_tree_line()
 	_parachute()
 	_wreckage()
@@ -80,29 +85,48 @@ func _build_level() -> void:
 	_restore()
 
 func _rooms() -> void:
-	# Snag grove — grass floor, stone walls. Combat. Opening south (clearing).
+	# Snag grove — grass floor, stone walls. Combat. Openings south (clearing), west (crash site).
 	set_theme(FLOOR_GRASS, WALL_STONE)
-	room(Vector3.ZERO, 18, 16, FT_GROVE, WT_GROVE, WALL_H, ["s"], 3.0, true)
-	corridor(Vector3(0, 0, 8), "s", 1.0, FT_GROVE, WT_GROVE, 3.0, WALL_H, true, CORNER_COL)        # → clearing
+	room(Vector3.ZERO, 24, 20, FT_GROVE, WT_GROVE, WALL_H, ["s", "w"], 4.0, true)
+	corridor(Vector3(0, 0, 10), "s", 6.0, FT_GROVE, WT_GROVE, 4.0, WALL_H, true, CORNER_COL)        # → clearing (long trail)
+	corridor(Vector3(-12, 0, 0), "w", 4.0, FT_GROVE, WT_GROVE, 4.0, WALL_H, true, CORNER_COL)       # → crash site
 	# Touchdown clearing — combat-free. South vestibule = exit.
 	set_theme(FLOOR_DIRT, WALL_STONE)
-	room(CLEAR_C, 14, 8, FT_CLEAR, WT_GROVE, WALL_H, ["n", "s"], 3.0, true)
-	corridor(CLEAR_C + Vector3(0, 0, 4.0), "s", 2.0, FT_CLEAR, WT_GROVE, 3.0, WALL_H, true, CORNER_COL)
+	room(CLEAR_C, 16, 12, FT_CLEAR, WT_GROVE, WALL_H, ["n", "s"], 4.0, true)
+	corridor(CLEAR_C + Vector3(0, 0, 6.0), "s", 2.0, FT_CLEAR, WT_GROVE, 4.0, WALL_H, true, CORNER_COL)
+	# Crash-site sub-area — the drop pod (Evan pries it open).
+	room(POD_C, 12, 12, FT_GROVE, WT_GROVE, WALL_H, ["e"], 4.0, true)
 
 func _tree_line() -> void:
-	for spot: Vector3 in [Vector3(-5.5, 0, -3.0), Vector3(-3.0, 0, -6.5), Vector3(5.0, 0, -5.0),
-			Vector3(-7.5, 0, 3.0), Vector3(7.5, 0, 2.0), Vector3(4.0, 0, 5.0)]:
-		_pine(spot)
+	# real Synty trees/bushes scattered inside the grove (snags) — clear of the puzzle spots
+	var town := "res://assets/models/town/"
+	for s: Array in [["tree", -9.0, -7.0], ["tree_large", 9.5, -7.5], ["tree", 10.0, 5.0],
+			["tree", -10.0, 6.0], ["bush", -8.0, 2.0], ["bush", 7.0, 4.5], ["tree", 6.0, -8.5]]:
+		prop(town + str(s[0]) + ".glb", Vector3(s[1], 0, s[2]), float(s[1]) * 0.6, 1.0)
 
-func _pine(pos: Vector3) -> void:
-	add_child(box_mesh(Vector3(0.3, 1.2, 0.3), Color(0.25, 0.16, 0.10), pos + Vector3(0, 0.6, 0)))
-	for i: int in range(3):
-		var r: float = 1.0 - float(i) * 0.25
-		var cone := MeshInstance3D.new()
-		var cm := CylinderMesh.new(); cm.top_radius = 0.0; cm.bottom_radius = r; cm.height = 1.0
-		var mat := StandardMaterial3D.new(); mat.albedo_color = Color(0.15, 0.34, 0.18)
-		cm.material = mat; cone.mesh = cm; cone.position = pos + Vector3(0, 1.4 + float(i) * 0.6, 0)
-		add_child(cone)
+# A grass ground plane (top y=-0.1, BELOW the room floors so it never z-fights) under the whole
+# drop-site footprint, so the area outside the rooms reads as forest floor, not void.
+func _ground() -> void:
+	add_child(box_mesh(Vector3(56, 0.5, 54), Color(0.42, 0.5, 0.34), Vector3(-8, -0.35, 9.0)))
+
+# A dense tree/bush border around the footprint (it's a forest grove) — taller trees peek over
+# the walls for an enclosed-woods backdrop. Deterministic RNG so it's stable across runs.
+func _forest_ring() -> void:
+	var town := "res://assets/models/town/"
+	var rng := RandomNumberGenerator.new(); rng.seed = 7373
+	var kinds := ["tree", "tree", "tree_large", "bush"]
+	var z := -14.0
+	while z <= 32.0:                                    # east + west borders
+		for sx: float in [-32.0, 16.0]:
+			prop(town + kinds[rng.randi() % kinds.size()] + ".glb",
+				Vector3(sx + rng.randf_range(-1.4, 1.4), -0.1, z + rng.randf_range(-1.2, 1.2)), rng.randf() * TAU)
+		z += rng.randf_range(2.4, 3.2)
+	for sz: float in [-14.0, 32.0]:                     # north + south caps
+		var x := -32.0
+		while x <= 16.0:
+			prop(town + kinds[rng.randi() % kinds.size()] + ".glb",
+				Vector3(x + rng.randf_range(-1.0, 1.0), -0.1, sz + rng.randf_range(-1.0, 1.0)), rng.randf() * TAU)
+			x += rng.randf_range(2.4, 3.2)
 
 func _parachute() -> void:
 	var canopy := MeshInstance3D.new()
@@ -115,11 +139,11 @@ func _wreckage() -> void:
 	_wreck = StaticBody3D.new()
 	(_wreck as StaticBody3D).collision_layer = Combat3D.L_WORLD
 	var cs := CollisionShape3D.new(); var bs := BoxShape3D.new()
-	bs.size = Vector3(3.0, 1.8, 1.4); cs.shape = bs; cs.position = Vector3(0, 0.9, 0)
+	bs.size = Vector3(4.2, 1.8, 1.4); cs.shape = bs; cs.position = Vector3(0, 0.9, 0)
 	_wreck.add_child(cs)
-	for i: int in range(6):
+	for i: int in range(9):
 		var r := box_mesh(Vector3(0.8, 0.7, 0.7), Color(0.3, 0.3, 0.32).darkened(randf() * 0.2),
-			Vector3(randf_range(-1.1, 1.1), randf_range(0.3, 1.3), randf_range(-0.4, 0.4)))
+			Vector3(randf_range(-1.9, 1.9), randf_range(0.3, 1.3), randf_range(-0.4, 0.4)))
 		r.rotation = Vector3(randf() * 0.5, randf(), randf() * 0.5)
 		_wreck.add_child(r)
 	_wreck.position = WRECK_POS
