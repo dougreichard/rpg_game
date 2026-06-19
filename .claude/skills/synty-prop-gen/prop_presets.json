@@ -172,5 +172,32 @@
     "height": 1.6,
     "poly": 2500,
     "ref_count": 1
+  },
+  "signal_dish": {
+    "prompt": "a satellite communications dish on a tripod stand, a large white parabolic dish on a swiveling yoke mount atop three metal legs, a small feed arm at the dish center",
+    "seed": 15,
+    "track": "painted",
+    "angle": 6,
+    "height": 2.6,
+    "poly": 3500,
+    "ref_count": 1
+  },
+  "drop_pod": {
+    "prompt": "a crashed cargo drop pod, a dented scorched metal capsule with a hinged side hatch and four stubby fins at the base, a tattered parachute harness bundled on top",
+    "seed": 15,
+    "track": "painted",
+    "angle": 6,
+    "height": 2.0,
+    "poly": 4000,
+    "ref_count": 1
+  },
+  "supply_drone": {
+    "prompt": "a crashed quadcopter supply drone, four rotor arms with propellers around a boxy cargo body, landing skids, one rotor arm bent",
+    "seed": 14,
+    "track": "painted",
+    "angle": 6,
+    "height": 0.9,
+    "poly": 3000,
+    "ref_count": 1
   }
 }

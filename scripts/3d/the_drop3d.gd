@@ -14,6 +14,7 @@ const BRUTE := preload("res://data/enemies/brute.tres")
 const TreatItem: ItemData = preload("res://data/items/animal_treat.tres")
 const BiesCharmItem: ItemData = preload("res://data/items/bies_charm.tres")
 const FlyerItem: ItemData = preload("res://data/items/doug_flyer.tres")
+const TreasureMapItem: ItemData = preload("res://data/items/faded_treasure_map.tres")
 
 # --- thematic surfaces (grass / dirt / stone, olive trim) ---
 const FLOOR_GRASS := "res://assets/art/tiles/synty_floor_grass.png"
@@ -47,6 +48,7 @@ var _beam_done := false
 var _dish_aimed := false
 var _lookout_done := false
 var _drone_done := false
+var _pod_done := false
 var _spawned := 0
 var _rio = null
 var _wreck: Node3D = null
@@ -75,6 +77,7 @@ func _build_level() -> void:
 	_dish()
 	_lookout()
 	_drone()
+	_pod()
 	make_dialog()
 	_build_hud()
 	_rio = spawn_npc("bellows", RIO_POS, PI)
@@ -146,6 +149,11 @@ func _wreckage() -> void:
 			Vector3(randf_range(-1.9, 1.9), randf_range(0.3, 1.3), randf_range(-0.4, 0.4)))
 		r.rotation = Vector3(randf() * 0.5, randf(), randf() * 0.5)
 		_wreck.add_child(r)
+	# a couple of Synty supply crates in the debris (sink with the pile when Evan clears it)
+	for cs2: Array in [["deck_crate", -1.2, 0.0], ["wood_box", 1.1, 0.3]]:
+		var crate: Node3D = load("res://assets/models/town/" + str(cs2[0]) + ".glb").instantiate()
+		crate.position = Vector3(cs2[1], 0.3, float(cs2[2])); crate.rotation.y = float(cs2[1])
+		_wreck.add_child(crate)
 	_wreck.position = WRECK_POS
 	add_child(_wreck)
 
@@ -163,20 +171,27 @@ func _beam_rig() -> void:
 
 # Marquee signal dish — Ethan re-aims it (after the beam's off) → the endgame pointer.
 func _dish() -> void:
-	add_child(box_mesh(Vector3(0.3, 1.6, 0.3), Color(0.4, 0.42, 0.46), DISH_POS + Vector3(0, 0.8, 0)))
-	var dish := MeshInstance3D.new()
-	var cm := CylinderMesh.new(); cm.top_radius = 0.9; cm.bottom_radius = 0.2; cm.height = 0.4
-	var m := StandardMaterial3D.new(); m.albedo_color = Color(0.7, 0.72, 0.75); m.metallic = 0.4
-	cm.material = m; dish.mesh = cm; dish.rotation.x = deg_to_rad(50)
-	dish.position = DISH_POS + Vector3(0, 1.8, 0)
-	add_child(dish)
+	prop("res://assets/models/props/signal_dish.glb", DISH_POS, 0.0)   # generated parabolic dish (Prop Farm)
 
 func _lookout() -> void:
 	add_child(box_mesh(Vector3(0.6, 1.2, 0.6), Color(0.3, 0.32, 0.28), LOOKOUT_POS + Vector3(0, 0.6, 0)))
 	add_child(box_mesh(Vector3(0.1, 0.7, 0.1), Color(0.6, 0.2, 0.2), LOOKOUT_POS + Vector3(0, 1.5, 0), 1.0))  # antenna light
 
 func _drone() -> void:
-	add_child(box_mesh(Vector3(0.7, 0.5, 0.7), Color(0.4, 0.4, 0.45), DRONE_POS + Vector3(0, 0.3, 0)))
+	prop("res://assets/models/props/supply_drone.glb", DRONE_POS, 0.6)   # crashed supply drone (Prop Farm)
+
+# Crashed drop pod in the west crash-site sub-area — Evan pries the seized hatch open for loot.
+func _pod() -> void:
+	prop("res://assets/models/props/drop_pod.glb", POD_C, PI * 0.5)   # generated drop pod (Prop Farm)
+	_floating_label("?", POD_C + Vector3(0, 2.4, 0), Color(0.8, 0.9, 0.6))
+
+func _floating_label(txt: String, pos: Vector3, col: Color) -> void:
+	var l := Label3D.new()
+	l.text = txt; l.font = UITheme.font(); l.font_size = 40; l.outline_size = 12
+	l.modulate = col; l.outline_modulate = Color(0, 0, 0, 0.95)
+	l.billboard = BaseMaterial3D.BILLBOARD_ENABLED; l.no_depth_test = true
+	l.fixed_size = true; l.pixel_size = 0.001; l.position = pos
+	add_child(l)
 
 func _spawn_enemies() -> void:
 	spawn_enemy(GRUNT, Vector3(-2.0, 0.1, -1.0), "res://assets/models/enemies/grunt.glb"); _spawned += 1
@@ -191,6 +206,7 @@ func _restore() -> void:
 	_dish_aimed = GameManager.get_level_flag(location_id, "dish_aimed", false)
 	_lookout_done = GameManager.get_level_flag(location_id, "lookout_done", false)
 	_drone_done = GameManager.get_level_flag(location_id, "drone_done", false)
+	_pod_done = GameManager.get_level_flag(location_id, "pod_done", false)
 	if _landing_cleared: _clear_wreck(false)
 	if _chute_hacked: _set_chute_solved()
 	if _beam_done and _beam != null: _beam.position.y = -2.0
@@ -253,6 +269,21 @@ func _on_special(char_name: String) -> void:
 		GameManager.grant_item(char_name, BiesCharmItem.id)
 		_hud_hint.text = "Ethan cracks the crashed supply drone — a Bies charm inside. (Found Bies Charm)"
 		Audio.play("special"); return
+	# crashed drop pod (Evan pries the seized hatch, optional → comedic junk)
+	if not _pod_done and near3(pp, POD_C, REACH + 0.8):
+		if char_name == "Evan":
+			_pod_done = true; GameManager.set_level_flag(location_id, "pod_done", true)
+			GameManager.grant_item(char_name, TreasureMapItem.id)
+			open_dialog("Drop Pod", Color(0.5, 0.5, 0.42),
+				{"start": {"lines": [
+					"Evan jams his fingers under the seized hatch and peels it open with a groan of metal.",
+					"Inside the 'priority supply drop': one (1) faded treasure map, covered in confident X's.",
+					"Evan: \"...Huh. Guess somebody mislabeled the crate.\"",
+					"Picked up: Faded Treasure Map. (It matches nothing.)"]}}, char_name)
+			Audio.play("special")
+		else:
+			_hud_hint.text = "The pod's hatch is seized shut — Evan could pry it."
+		return
 
 func _aim_dish(char_name: String) -> void:
 	_dish_aimed = true
