@@ -28,15 +28,20 @@ const CORNER_COL := Color(0.08, 0.08, 0.10)   # solid matte-black trim
 const WALL_H := 3.2
 const REACH := 2.2
 
-const LOBBY_C := Vector3(0, 0, 13.0)
-const SASHA_POS := Vector3(3.5, 0, 14.5)
-const REEL_POS := Vector3(5.5, 0, -3.0)
-const FEEDBACK_POS := Vector3(-5.5, 0, 3.0)
-const CONTROL_C := Vector3(0, 0, -13.0)
-const CONSOLE_POS := Vector3(1.5, 0, -11.5)
-const PATCH_POS := Vector3(4.0, 0, -15.0)
-const ETHAN_POS := Vector3(-3.0, 0, -15.0)
-const DOOR_POS := Vector3(-0.9, 0.0, -13.0)
+# Enlarged layout (indoor recipe): live room 18x16 at origin, lobby/control pushed out to z+-18
+# behind longer corridors; a new Iso Booth / Tape Archive east of the live room.
+const LOBBY_C := Vector3(0, 0, 18.0)
+const SASHA_POS := Vector3(3.5, 0, 19.5)
+const REEL_POS := Vector3(6.5, 0, -3.0)
+const FEEDBACK_POS := Vector3(-6.5, 0, 3.0)
+const CONTROL_C := Vector3(0, 0, -18.0)
+const CONSOLE_POS := Vector3(1.5, 0, -16.5)
+const PATCH_POS := Vector3(4.0, 0, -20.0)
+const ETHAN_POS := Vector3(-3.0, 0, -20.0)
+const DOOR_POS := Vector3(-0.9, 0.0, -18.0)
+const ISO_C := Vector3(18.0, 0, 0.0)                # Iso Booth / Tape Archive (east of live room)
+const TONE_PADS := [Vector3(16.0, 0, -2.5), Vector3(18.0, 0, -2.5), Vector3(20.0, 0, -2.5)]  # Ben's tone-match
+const ARCHIVE_POS := Vector3(18.0, 0, 3.5)          # tape-archive cabinet (opens on the tone match)
 
 const ETHAN_QUIPS := [
 	"Every channel's inverted -- retune it from the console!",
@@ -69,6 +74,7 @@ func _build_level() -> void:
 	point_light(LOBBY_C + Vector3(0, 2.8, 0), Color(0.85, 0.8, 0.9), 1.9, 11.0)
 	point_light(ETHAN_POS + Vector3(0, 2.6, 0), Color(0.5, 0.9, 0.8), 1.8, 6.0)        # booth glow
 	point_light(CONSOLE_POS + Vector3(0, 1.6, 0.5), Color(0.4, 0.7, 1.0), 1.4, 5.0)    # console glow
+	point_light(ISO_C + Vector3(0, 2.8, 0), Color(0.85, 0.8, 0.9), 1.7, 8.0)           # iso booth
 	_rooms()
 	_acoustic_foam()
 	_booth()
@@ -93,22 +99,27 @@ func _rooms() -> void:
 	# Live room — carpet floor, concrete (acoustic) walls. Combat. Openings: south
 	# (lobby), north (control room).
 	set_theme(FLOOR_CARPET, WALL_CONCRETE)
-	room(Vector3.ZERO, 14, 16, FT_STUDIO, WT_STUDIO, WALL_H, ["s", "n"], 3.0, true)
-	corridor(Vector3(0, 0, 8), "s", 1.0, FT_STUDIO, WT_STUDIO, 3.0, WALL_H, true, CORNER_COL)    # → lobby (1 m gap)
-	corridor(Vector3(0, 0, -8), "n", 1.0, FT_STUDIO, WT_STUDIO, 3.0, WALL_H, true, CORNER_COL)   # → control (1 m gap)
+	room(Vector3.ZERO, 18, 16, FT_STUDIO, WT_STUDIO, WALL_H, ["s", "n", "e"], 4.0, true)
+	corridor(Vector3(0, 0, 8), "s", 4.5, FT_STUDIO, WT_STUDIO, 4.0, WALL_H, true, CORNER_COL)    # → lobby
+	corridor(Vector3(0, 0, -8), "n", 4.5, FT_STUDIO, WT_STUDIO, 4.0, WALL_H, true, CORNER_COL)   # → control
+	corridor(Vector3(9, 0, 0), "e", 4.0, FT_STUDIO, WT_STUDIO, 4.0, WALL_H, true, CORNER_COL)    # → iso booth
 	# Lobby — carpet, concrete. Combat-free entry; south vestibule = exit.
 	set_theme(FLOOR_CARPET, WALL_CONCRETE)
-	room(LOBBY_C, 12, 8, FT_STUDIO, WT_STUDIO, 3.2, ["n", "s"], 3.0, true)
-	corridor(LOBBY_C + Vector3(0, 0, 4.0), "s", 2.0, FT_STUDIO, WT_STUDIO, 3.0, 3.2, true, CORNER_COL)
+	room(LOBBY_C, 14, 11, FT_STUDIO, WT_STUDIO, 3.2, ["n", "s"], 4.0, true)
+	corridor(LOBBY_C + Vector3(0, 0, 5.5), "s", 2.0, FT_STUDIO, WT_STUDIO, 4.0, 3.2, true, CORNER_COL)
 	# Control room — tile floor, concrete walls (the booth + console).
 	set_theme(FLOOR_TILE, WALL_CONCRETE)
-	room(CONTROL_C, 12, 8, FT_CONTROL, WT_STUDIO, 3.2, ["s"], 3.0, true)
+	room(CONTROL_C, 14, 11, FT_CONTROL, WT_STUDIO, 3.2, ["s"], 4.0, true)
+	# Iso Booth / Tape Archive — carpet + concrete; Ben's tone-match + amp storage.
+	set_theme(FLOOR_CARPET, WALL_CONCRETE)
+	room(ISO_C, 10, 10, FT_STUDIO, WT_STUDIO, 3.2, ["w"], 4.0, true)
 
 func _acoustic_foam() -> void:
-	for i: int in range(6):
+	# wall acoustic panels (the indoor 'boundary' detail) — west wall of the live room
+	for i: int in range(7):
 		var z: float = -6.0 + float(i) * 2.0
 		var c: Color = Color(0.13, 0.12, 0.15) if i % 2 == 0 else Color(0.18, 0.17, 0.2)
-		add_child(box_mesh(Vector3(0.12, 1.6, 1.4), c, Vector3(7.0 - 0.25, 1.8, z)))
+		add_child(box_mesh(Vector3(0.12, 1.6, 1.4), c, Vector3(-9.0 + 0.25, 1.8, z)))
 
 func _booth() -> void:
 	# glass booth in the back-left of the control room; a sliding door rises when tuned.
