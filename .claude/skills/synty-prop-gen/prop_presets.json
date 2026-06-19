@@ -199,5 +199,32 @@
     "height": 0.9,
     "poly": 3000,
     "ref_count": 1
+  },
+  "pipe_rack": {
+    "prompt": "a tall wooden rack holding a row of upright organ pipes of varying heights, polished brass and grey pewter pipes in a timber frame stand",
+    "seed": 15,
+    "track": "painted",
+    "angle": 6,
+    "height": 2.4,
+    "poly": 3500,
+    "ref_count": 1
+  },
+  "bellows_engine": {
+    "prompt": "a large workshop bellows blower engine, a big folded leather accordion bellows beside a cast-iron flywheel and piston on a riveted metal frame, a round brass pressure gauge",
+    "seed": 16,
+    "track": "painted",
+    "angle": 6,
+    "height": 1.8,
+    "poly": 4500,
+    "ref_count": 1
+  },
+  "lumber_stack": {
+    "prompt": "a neat stack of sawn timber planks and wooden boards piled on the floor, a few offcuts on top",
+    "seed": 13,
+    "track": "painted",
+    "angle": 6,
+    "height": 0.9,
+    "poly": 2000,
+    "ref_count": 1
   }
 }

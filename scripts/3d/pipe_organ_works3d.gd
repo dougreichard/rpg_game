@@ -26,6 +26,7 @@ const TuningKeyItem: ItemData = preload("res://data/items/tuning_key.tres")
 const SpareGearItem: ItemData = preload("res://data/items/spare_clockwork_gear.tres")
 const TicketQuinn: ItemData = preload("res://data/items/ticket_quinn.tres")
 const TicketErin: ItemData = preload("res://data/items/ticket_erin.tres")
+const BentSpoonItem: ItemData = preload("res://data/items/bent_spoon.tres")
 const Station := preload("res://scripts/3d/work_station3d.gd")
 
 # Per-room thematic surfaces — each space gets its own floor + wall texture so the
@@ -84,11 +85,15 @@ var _store_grunts: Array = []
 var _secret_wall: Node3D = null
 var _gear_box: Node3D = null
 
+var _saw_station: Node3D = null
+var _bench_station: Node3D = null
 var _organ_repaired := false
 var _secret_revealed := false
 var _gear_bonus_open := false
 var _erin_recruited := false
 var _storeroom_done := false
+var _power_on := false
+var _cabinet_done := false
 var _cleared := false
 var _enemies_cleared := false
 var _spawned := 0
@@ -141,6 +146,7 @@ func _floor1() -> void:
 	point_light(F1 + Vector3(-19, 2.8, 0), Color(0.8, 0.9, 1.0), 1.9, 9.0)
 	_organ()
 	_workshop_tools()
+	_timber_store()
 	prop("res://assets/models/props/desk.glb", F1 + BELLOWS + Vector3(0, 0, -0.9), deg_to_rad(180))
 	prop("res://assets/models/props/shelf.glb", F1 + Vector3(6.8, 0, -6.2), 0.0)
 	# Storeroom: crates Erin hides behind + a barrel cluster
@@ -224,7 +230,9 @@ func _workshop_tools() -> void:
 	saw.set("recipes", [
 		{"in": "rough_plank", "out": "windchest_board"},
 		{"in": "rough_organ_pipe", "out": "cut_organ_pipe"}])
-	_register_station(saw)
+	_register_station(saw); _saw_station = saw
+	# Bellows blower engine — Quinn restarts it to power the tools (see _on_special).
+	prop("res://assets/models/props/bellows_engine.glb", F1 + ENGINE, deg_to_rad(90))
 	# Tuning bench — VISUAL ONLY: Prop Farm "painted" mesh. The painted track now ships a baked
 	# diffuse TEXTURE on the GLB's own material (base-aligned, height-1.0, normals-correct), so
 	# just instance it and use its material as-is — no _apply_vcolor / recenter / double-sided.
@@ -233,7 +241,17 @@ func _workshop_tools() -> void:
 	bench.set("recipes", [
 		{"in": "cut_organ_pipe", "out": "brass_organ_pipe"},
 		{"in": "gear_blank", "out": "trued_gear"}])
-	_register_station(bench)
+	_register_station(bench); _bench_station = bench
+
+# Materials/Timber Store annex — a supplier's locked cabinet Erin fast-talks open, plus stock
+# dressing. (Lumber/tool-board props are added in the dressing pass once they finish baking.)
+func _timber_store() -> void:
+	point_light(STORE_C + Vector3(0, 2.8, 0), Color(0.9, 0.85, 0.7), 1.6, 8.0)
+	# the supplier cabinet (Erin's beat) — a tall locked cupboard
+	add_child(box_mesh(Vector3(1.6, 2.2, 0.8), WOOD.darkened(0.1), F1 + CABINET + Vector3(0, 1.1, 0)))
+	add_child(box_mesh(Vector3(0.12, 0.3, 0.1), BRASS, F1 + CABINET + Vector3(0.7, 1.2, 0.42), 1.0))  # lock/handle
+	# brass pipe stock on a rack (landed prop)
+	prop("res://assets/models/props/pipe_rack.glb", F1 + STORE_C + Vector3(-3.0, 0, -2.5), deg_to_rad(90))
 
 func _register_station(s: Node3D) -> void:
 	_stations.append(s)
@@ -324,6 +342,8 @@ func _restore() -> void:
 	_secret_revealed = GameManager.get_level_flag(location_id, "secret_revealed", false)
 	_gear_bonus_open = GameManager.get_level_flag(location_id, "gear_bonus_open", false)
 	_erin_recruited = GameManager.get_level_flag(location_id, "erin_recruited", false)
+	_power_on = GameManager.get_level_flag(location_id, "power_on", false)
+	_cabinet_done = GameManager.get_level_flag(location_id, "cabinet_done", false)
 	# raw sources already collected → dim their markers
 	if GameManager.get_level_flag(location_id, "plank_taken", false): _restore_source("rough_plank")
 	if GameManager.get_level_flag(location_id, "pipe_taken", false): _restore_source("rough_organ_pipe")
@@ -356,8 +376,21 @@ func _on_special(char_name: String) -> void:
 	# Raw materials are shared across the duo (whoever grabbed them), so pass the
 	# party names — the active operator can mill/fit a part Erin is carrying.
 	var party: Array = player.duo_names() if player.has_method("duo_names") else [char_name]
+	# bellows blower engine (Quinn) — restart it to power the workshop tools
+	if not _power_on and near3(pp, F1 + ENGINE, REACH + 0.6):
+		if char_name == "Quinn":
+			_power_on = true
+			GameManager.set_level_flag(location_id, "power_on", true)
+			_hud_hint.text = "Quinn cranks the bellows engine over — it catches, and the workshop tools hum to life."
+			Audio.play("special")
+		else:
+			_hud_hint.text = "The bellows engine is seized — Quinn's the one to restart it."
+		return
+	# Erin fast-talks the locked supplier cabinet (optional → bonus)
+	if not _cabinet_done and near3(pp, F1 + CABINET, REACH):
+		_talk_cabinet(char_name); return
 	# crafting stations (sources / tools / organ) — the organ stays locked until
-	# Erin gets the tuning key from Bellows.
+	# Erin gets the tuning key from Bellows; the saw/bench need the bellows engine running.
 	for s: Node3D in _stations:
 		if s == _organ_station:
 			if not _key_given():
@@ -365,6 +398,11 @@ func _on_special(char_name: String) -> void:
 					_hud_hint.text = "The organ console is locked -- Erin needs Mr. Bellows' tuning key first."
 					return
 				continue
+		if (s == _saw_station or s == _bench_station) and not _power_on:
+			if near3(pp, s.global_position, REACH + 0.4):
+				_hud_hint.text = "The tool's dead -- Quinn needs to restart the bellows engine first."
+				return
+			continue
 		if s.call("try_use", char_name, pp, party):
 			return
 	# secret lever → reveal the spare-gear nook
@@ -381,6 +419,21 @@ func _on_special(char_name: String) -> void:
 	# Mr. Bellows
 	if near3(pp, F1 + BELLOWS, REACH + 0.6):
 		_talk_bellows(char_name); return
+
+func _talk_cabinet(char_name: String) -> void:
+	if char_name != "Erin":
+		_hud_hint.text = "A supplier's cabinet, locked tight. Erin could talk it open."
+		return
+	_cabinet_done = true
+	GameManager.set_level_flag(location_id, "cabinet_done", true)
+	GameManager.grant_item("Erin", BentSpoonItem.id)
+	open_dialog("Supplier Cabinet", Color(0.5, 0.42, 0.3),
+		{"start": {"lines": [
+			"Erin raps the cabinet. \"Bellows & Sons account -- the back-order's been paid, you can open up.\"",
+			"The lock clicks. Inside: offcuts, a ledger... and one bent spoon someone clearly treasured.",
+			"Erin: \"Quinn'll want this. He'll say it 'has a story.'\"",
+			"Picked up: Bent Spoon."]}}, char_name)
+	Audio.play("special")
 
 func _key_given() -> bool:
 	return GameManager.get_level_flag(location_id, "tuning_key_given", false)
@@ -489,11 +542,12 @@ func _process(d: float) -> void:
 		var parts_n: int = _organ_station.call("placed_count")
 		var bits := []
 		bits.append("Erin " + ("OK" if _erin_recruited else "..."))
+		bits.append("blower " + ("OK" if _power_on else "..."))
 		bits.append("key " + ("OK" if _key_given() else "..."))
 		bits.append("parts %d/3" % parts_n)
 		bits.append("organ " + ("OK" if _organ_repaired else "..."))
 		bits.append("workers " + ("OK" if _enemies_cleared else "..."))
-		_hud_goal.text = "Find Erin (back room), gather wood/pipe/gear, mill them at the workshop tools, get the key (Erin -> Bellows), fit the parts, clear the workers. (G interact, Tab swap)\n[" + "  ".join(bits) + "]"
+		_hud_goal.text = "Find Erin (back room), restart the bellows blower (Quinn), gather wood/pipe/gear, mill them at the tools, get the key (Erin -> Bellows), fit the parts, clear the workers. (G interact, Tab swap)\n[" + "  ".join(bits) + "]"
 	if not _cleared and _enemies_cleared and _organ_repaired:
 		_win(true)
 
