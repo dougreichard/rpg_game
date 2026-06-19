@@ -53,21 +53,26 @@ const STEEL := Color(0.55, 0.57, 0.62)
 const F1 := Vector3(0, 0, 0)             # workshop floor
 const F2 := Vector3(60, 0, 0)            # pipe loft
 
-const ORGAN := Vector3(-3.5, 0, -4.8)    # F1 lobby: console visual anchor
-const ORGAN_HIT := Vector3(-3.5, 0, -3.6)  # F1 lobby: organ interaction point
-const BELLOWS := Vector3(3.5, 0, -3.5)   # F1 lobby
-const PLANK_SRC := Vector3(15.5, 0, 3.0) # F1 storeroom: warped plank
-const ERIN_HIDE := Vector3(15.5, 0, -3.0)  # F1 storeroom: Erin behind crates
-const SAW := Vector3(-13.0, 0, -2.5)     # F1 workshop: table saw
-const BENCH := Vector3(-13.0, 0, 2.5)    # F1 workshop: tuning bench
-const PIPE_SRC := Vector3(-3.0, 0, -11.0)  # F2 loft: out-of-tune pipe
-const GEAR_SRC := Vector3(3.0, 0, -13.0)   # F2 loft: gear blank
-const LEVER := Vector3(5.5, 0, -11.0)    # F2 loft: secret lever
-const GEAR_BONUS := Vector3(0, 0, -20.0) # F2 nook: spare clockwork gear (secret)
+# Enlarged (+~40%) layout — lobby 16x14, storeroom/workshop 12x12 pushed out to x+-19, pipe
+# hall 18x14. Crafting-chain anchors repositioned to match; store annex north of the storeroom.
+const ORGAN := Vector3(-4.5, 0, -5.0)    # F1 lobby: console visual anchor
+const ORGAN_HIT := Vector3(-4.5, 0, -3.8)  # F1 lobby: organ interaction point
+const BELLOWS := Vector3(4.5, 0, -4.5)   # F1 lobby
+const PLANK_SRC := Vector3(21.5, 0, 3.5) # F1 storeroom: warped plank
+const ERIN_HIDE := Vector3(21.5, 0, -3.0)  # F1 storeroom: Erin behind crates
+const SAW := Vector3(-19.0, 0, -3.0)     # F1 workshop: table saw
+const BENCH := Vector3(-19.0, 0, 3.0)    # F1 workshop: tuning bench
+const ENGINE := Vector3(-23.0, 0, -3.5)  # F1 workshop: bellows blower engine (Quinn powers it)
+const STORE_C := Vector3(19, 0, -15)     # F1 Materials/Timber Store (annex north of storeroom)
+const CABINET := Vector3(22.0, 0, -17.5) # F1 store: supplier cabinet (Erin fast-talks)
+const PIPE_SRC := Vector3(-3.0, 0, -15.0)  # F2 loft: out-of-tune pipe
+const GEAR_SRC := Vector3(3.0, 0, -17.0)   # F2 loft: gear blank
+const LEVER := Vector3(5.5, 0, -15.0)    # F2 loft: secret lever
+const GEAR_BONUS := Vector3(0, 0, -25.0) # F2 nook: spare clockwork gear (secret)
 
 const REACH := 2.2
-const F_WORK := Vector2(8.5, 50.0)
-const F_LOFT := Vector2(9.5, 52.0)
+const F_WORK := Vector2(10.0, 55.0)
+const F_LOFT := Vector2(11.0, 56.0)
 
 const ORGAN_PARTS := ["windchest_board", "brass_organ_pipe", "trued_gear"]
 
@@ -103,7 +108,7 @@ func _build_level() -> void:
 	make_dialog()
 	_build_hud()
 	spawn_npc("bellows", F1 + BELLOWS, deg_to_rad(180))
-	var p := spawn_duo([QUINN], F1 + Vector3(0, 0.1, 4.0))   # Quinn arrives ALONE
+	var p := spawn_duo([QUINN], F1 + Vector3(0, 0.1, 5.0))   # Quinn arrives ALONE
 	p.special_used.connect(_on_special)
 	reframe_camera(F_WORK.x, F_WORK.y)
 	_spawn_enemies()
@@ -113,33 +118,36 @@ func _build_level() -> void:
 func _floor1() -> void:
 	# Lobby — marble-floored entry hall with brick walls (the grand first room)
 	set_theme(MARBLE_FLOOR, BRICK_WALL)
-	room(F1, 12, 12, FT_WARM, WT_WARM, 3.2, ["s", "e", "w", "n"], 3.0, true)            # lobby
+	room(F1, 16, 14, FT_WARM, WT_WARM, 3.2, ["s", "e", "w", "n"], 4.0, true)            # lobby
 	# Service passages — plain concrete floor + walls, so the corridors read as
 	# connectors rather than rooms. Each carries its own floor (no global slab now).
 	set_theme(CONCRETE_FLOOR, CONCRETE_WALL)
-	corridor(F1 + Vector3(0, 0, 6), "s", 2.5, FT_COOL, WT_COOL, 3.0, 3.2, true, CORNER_COL)   # entrance vestibule (exit portal)
-	corridor(F1 + Vector3(6, 0, 0), "e", 3.0, FT_COOL, WT_COOL, 3.0, 3.2, true, CORNER_COL)   # → storeroom
-	corridor(F1 + Vector3(-6, 0, 0), "w", 3.0, FT_COOL, WT_COOL, 3.0, 3.2, true, CORNER_COL)  # → workshop
-	corridor(F1 + Vector3(0, 0, -6), "n", 3.0, FT_COOL, WT_COOL, 3.0, 3.2, true, CORNER_COL)  # → stair alcove
-	room(F1 + Vector3(0, 0, -12.5), 5, 7, FT_COOL, WT_COOL, 3.2, ["s"], 3.0, true)      # stair alcove
-	# Storeroom — utilitarian concrete floor, brick walls
+	corridor(F1 + Vector3(0, 0, 7), "s", 2.5, FT_COOL, WT_COOL, 4.0, 3.2, true, CORNER_COL)   # entrance vestibule (exit portal)
+	corridor(F1 + Vector3(8, 0, 0), "e", 5.0, FT_COOL, WT_COOL, 4.0, 3.2, true, CORNER_COL)   # → storeroom
+	corridor(F1 + Vector3(-8, 0, 0), "w", 5.0, FT_COOL, WT_COOL, 4.0, 3.2, true, CORNER_COL)  # → workshop
+	corridor(F1 + Vector3(0, 0, -7), "n", 5.0, FT_COOL, WT_COOL, 4.0, 3.2, true, CORNER_COL)  # → stair alcove
+	room(F1 + Vector3(0, 0, -16), 6, 8, FT_COOL, WT_COOL, 3.2, ["s"], 4.0, true)        # stair alcove
+	# Storeroom — utilitarian concrete floor, brick walls. North opening → timber store annex.
 	set_theme(CONCRETE_FLOOR, BRICK_WALL)
-	room(F1 + Vector3(13, 0, 0), 8, 10, FT_COOL, WT_WARM, 3.2, ["w"], 3.0, true)        # storeroom
+	room(F1 + Vector3(19, 0, 0), 12, 12, FT_COOL, WT_WARM, 3.2, ["w", "n"], 4.0, true)  # storeroom
+	corridor(F1 + Vector3(19, 0, -6), "n", 4.0, FT_COOL, WT_WARM, 4.0, 3.2, true, CORNER_COL)  # → timber store
+	room(STORE_C, 10, 10, FT_COOL, WT_WARM, 3.2, ["s"], 4.0, true)                      # Materials/Timber Store
 	# Workshop — wood-plank floor + wood-panel walls (the working room)
 	set_theme(WOOD_FLOOR, WOOD_WALL)
-	room(F1 + Vector3(-13, 0, 0), 8, 10, FT_WARM, WT_WARM, 3.2, ["e"], 3.0, true)       # workshop
-	point_light(F1 + Vector3(0, 3.0, -2), Color(1.0, 0.85, 0.6), 2.6, 12.0)
-	point_light(F1 + Vector3(13, 2.8, 0), Color(0.9, 0.85, 0.7), 1.8, 8.0)
-	point_light(F1 + Vector3(-13, 2.8, 0), Color(0.8, 0.9, 1.0), 1.8, 8.0)
+	room(F1 + Vector3(-19, 0, 0), 12, 12, FT_WARM, WT_WARM, 3.2, ["e"], 4.0, true)      # workshop
+	point_light(F1 + Vector3(0, 3.0, -2), Color(1.0, 0.85, 0.6), 2.8, 14.0)
+	point_light(F1 + Vector3(19, 2.8, 0), Color(0.9, 0.85, 0.7), 1.9, 9.0)
+	point_light(F1 + Vector3(19, 2.8, -15), Color(0.85, 0.82, 0.7), 1.7, 8.0)
+	point_light(F1 + Vector3(-19, 2.8, 0), Color(0.8, 0.9, 1.0), 1.9, 9.0)
 	_organ()
 	_workshop_tools()
 	prop("res://assets/models/props/desk.glb", F1 + BELLOWS + Vector3(0, 0, -0.9), deg_to_rad(180))
-	prop("res://assets/models/props/shelf.glb", F1 + Vector3(5.5, 0, -5.6), 0.0)
+	prop("res://assets/models/props/shelf.glb", F1 + Vector3(6.8, 0, -6.2), 0.0)
 	# Storeroom: crates Erin hides behind + a barrel cluster
-	prop("res://assets/models/props/barrel.glb", F1 + Vector3(14.3, 0, -3.0))
-	prop("res://assets/models/props/barrel.glb", F1 + Vector3(14.6, 0, -3.7))
-	add_child(box_mesh(Vector3(1.2, 1.4, 1.2), WOOD, F1 + Vector3(14.4, 0.7, -2.4)))
-	add_child(box_mesh(Vector3(1.0, 1.0, 1.0), WOOD.lightened(0.05), F1 + Vector3(16.0, 0.5, -3.2)))
+	prop("res://assets/models/props/barrel.glb", F1 + Vector3(20.3, 0, -3.0))
+	prop("res://assets/models/props/barrel.glb", F1 + Vector3(20.6, 0, -3.7))
+	add_child(box_mesh(Vector3(1.2, 1.4, 1.2), WOOD, F1 + Vector3(20.4, 0.7, -2.4)))
+	add_child(box_mesh(Vector3(1.0, 1.0, 1.0), WOOD.lightened(0.05), F1 + Vector3(22.0, 0.5, -3.2)))
 	# Erin hiding behind the crates (non-combat NPC until recruited)
 	_erin_npc = spawn_npc("erin", F1 + ERIN_HIDE, deg_to_rad(180))
 	# raw material: warped plank (storeroom)
@@ -155,7 +163,7 @@ func _floor1() -> void:
 	_organ_station.connect("produced", func(id: String) -> void:
 		GameManager.set_level_flag(location_id, "organ_part_" + id, true))
 	_organ_station.connect("completed", _on_organ_complete)
-	add_exit_portal(F1 + Vector3(0, 0, 6.3), Vector3(3, 3, 1.4))
+	add_exit_portal(F1 + Vector3(0, 0, 8.0), Vector3(3, 3, 1.4))
 
 func _organ() -> void:
 	# Prop Farm "painted" organ — ONE complete textured mesh (real-sized 3.0m, base-aligned).
@@ -238,22 +246,22 @@ func _on_station_message(text: String) -> void:
 func _floor2() -> void:
 	# Landing — wood floor + wood walls (top of the stairs)
 	set_theme(WOOD_FLOOR, WOOD_WALL)
-	room(F2, 6, 8, FT_WARM, WT_WARM, 3.0, ["n"], 3.0, true)                        # landing
-	corridor(F2 + Vector3(0, 0, -4), "n", 1.0, FT_WARM, WT_WARM, 3.0, 3.0, true, CORNER_COL)  # landing → pipe hall
+	room(F2, 8, 8, FT_WARM, WT_WARM, 3.0, ["n"], 3.0, true)                        # landing
+	corridor(F2 + Vector3(0, 0, -4), "n", 4.0, FT_WARM, WT_WARM, 3.0, 3.0, true, CORNER_COL)  # landing → pipe hall
 	# Pipe loft — grand tiled floor + stone walls (the showpiece room)
 	set_theme(TILE_FLOOR, STONE_WALL)
 	# "n" opening (gap 3) is the doorway to the secret nook — the removable _secret_wall
 	# fills exactly that gap, so dropping it actually opens a passage (see _reveal_secret).
-	room(F2 + Vector3(0, 0, -11), 14, 12, FT_WARM, WT_WARM, 4.0, ["s", "n"], 3.0, true)  # pipe hall
-	point_light(F2 + Vector3(0, 3.4, -11), Color(1.0, 0.85, 0.6), 2.6, 13.0)
-	# tall organ pipes rising through the loft
-	for i: int in range(9):
-		var x: float = -2.0 + float(i) * 0.5
+	room(F2 + Vector3(0, 0, -15), 18, 14, FT_WARM, WT_WARM, 4.0, ["s", "n"], 3.0, true)  # pipe hall
+	point_light(F2 + Vector3(0, 3.4, -15), Color(1.0, 0.85, 0.6), 2.8, 15.0)
+	# tall organ pipes rising through the loft (back wall)
+	for i: int in range(11):
+		var x: float = -2.5 + float(i) * 0.5
 		var h: float = 2.6 + 1.4 * abs(sin(float(i)))
 		var pipe := MeshInstance3D.new()
 		var cm := CylinderMesh.new(); cm.top_radius = 0.16; cm.bottom_radius = 0.16; cm.height = h
 		var mat := StandardMaterial3D.new(); mat.albedo_color = BRASS.darkened(0.05); mat.metallic = 0.6; mat.roughness = 0.35
-		cm.material = mat; pipe.mesh = cm; pipe.position = F2 + Vector3(x + 2.5, 1.4 + h * 0.5, -15.0)
+		cm.material = mat; pipe.mesh = cm; pipe.position = F2 + Vector3(x + 2.5, 1.4 + h * 0.5, -20.5)
 		add_child(pipe)
 	# raw material: out-of-tune long pipe
 	var pipe_src := add_station(Station.Kind.SOURCE, F2 + PIPE_SRC, "Out-of-Tune Pipe")
@@ -278,7 +286,7 @@ func _floor2() -> void:
 	# width) so it builds no south wall to overlap/z-fight the pipe-hall north wall;
 	# the pipe hall's "n" segments + the removable _secret_wall are the only walls at z=-17.
 	set_theme(CONCRETE_FLOOR, STONE_WALL)
-	room(F2 + Vector3(0, 0, -20), 6, 6, FT_COOL, WT_WARM, 2.8, ["s"], 6.0, true)  # nook
+	room(F2 + Vector3(0, 0, -25), 6, 6, FT_COOL, WT_WARM, 2.8, ["s"], 6.0, true)  # nook
 	_gear_box = box_mesh(Vector3(0.7, 0.7, 0.7), Color(0.45, 0.32, 0.18), F2 + GEAR_BONUS + Vector3(0, 0.35, 0))
 	add_child(_gear_box)
 	# the removable panel — fills the pipe-hall "n" gap (3 wide), full pipe-hall height
@@ -289,13 +297,13 @@ func _floor2() -> void:
 	var cs := CollisionShape3D.new(); var bs := BoxShape3D.new()
 	bs.size = Vector3(3.0, 4.0, 0.4); cs.shape = bs; cs.position = Vector3(0, 2.0, 0)
 	_secret_wall.add_child(cs); _secret_wall.add_child(box_mesh(Vector3(3.0, 4.0, 0.4), WALL_COL, Vector3(0, 2.0, 0), 0.0, wall_tex))
-	_secret_wall.position = F2 + Vector3(0, 0, -17)
+	_secret_wall.position = F2 + Vector3(0, 0, -22)
 	add_child(_secret_wall)
 
 func _links() -> void:
 	add_floor_link(
-		F1 + Vector3(0, 0, -15.0), F1 + Vector3(0, 0.1, -12.0), F_WORK,
-		F2 + Vector3(0, 0, 3.5), F2 + Vector3(0, 0.1, 0.0), F_LOFT,
+		F1 + Vector3(0, 0, -17.5), F1 + Vector3(0, 0.1, -13.0), F_WORK,
+		F2 + Vector3(0, 0, 3.0), F2 + Vector3(0, 0.1, 0.0), F_LOFT,
 		WOOD.lightened(0.1))
 
 func _spawn_enemies() -> void:
@@ -304,11 +312,11 @@ func _spawn_enemies() -> void:
 	if GameManager.get_level_flag(location_id, "enemies_cleared", false):
 		return
 	if not GameManager.get_level_flag(location_id, "erin_recruited", false):
-		_store_grunts.append(spawn_enemy(GRUNT, F1 + Vector3(11.5, 0.1, -2.0), "res://assets/models/enemies/grunt.glb"))
-		_store_grunts.append(spawn_enemy(GRUNT, F1 + Vector3(14.5, 0.1, 2.0), "res://assets/models/enemies/grunt.glb"))
+		_store_grunts.append(spawn_enemy(GRUNT, F1 + Vector3(17.5, 0.1, -2.0), "res://assets/models/enemies/grunt.glb"))
+		_store_grunts.append(spawn_enemy(GRUNT, F1 + Vector3(20.5, 0.1, 2.0), "res://assets/models/enemies/grunt.glb"))
 		_spawned += 2
-	spawn_enemy(RUNNER, F2 + Vector3(-1.0, 0.1, -9.0), "res://assets/models/enemies/runner.glb"); _spawned += 1
-	spawn_enemy(RUNNER, F2 + Vector3(4.0, 0.1, -12.0), "res://assets/models/enemies/runner.glb"); _spawned += 1
+	spawn_enemy(RUNNER, F2 + Vector3(-1.0, 0.1, -13.0), "res://assets/models/enemies/runner.glb"); _spawned += 1
+	spawn_enemy(RUNNER, F2 + Vector3(4.0, 0.1, -16.0), "res://assets/models/enemies/runner.glb"); _spawned += 1
 
 func _restore() -> void:
 	_organ_repaired = GameManager.get_level_flag(location_id, "organ_repaired", false)
