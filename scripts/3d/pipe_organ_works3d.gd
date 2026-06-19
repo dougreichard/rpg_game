@@ -110,6 +110,7 @@ func _build_level() -> void:
 	_floor1()
 	_floor2()
 	_links()
+	_dressing()
 	make_dialog()
 	_build_hud()
 	spawn_npc("bellows", F1 + BELLOWS, deg_to_rad(180))
@@ -252,6 +253,23 @@ func _timber_store() -> void:
 	add_child(box_mesh(Vector3(0.12, 0.3, 0.1), BRASS, F1 + CABINET + Vector3(0.7, 1.2, 0.42), 1.0))  # lock/handle
 	# brass pipe stock on a rack (landed prop)
 	prop("res://assets/models/props/pipe_rack.glb", F1 + STORE_C + Vector3(-3.0, 0, -2.5), deg_to_rad(90))
+
+# Workshop/store/loft set-dressing from the new Prop-Farm props — lumber stacks on the floor,
+# wall tool-boards (the indoor 'boundary' detail), and pipe racks lining the loft.
+func _dressing() -> void:
+	var P := "res://assets/models/props/"
+	# workshop — lumber + a wall tool-board behind the tools
+	prop(P + "lumber_stack.glb", F1 + Vector3(-23.0, 0, 4.0), deg_to_rad(20))
+	prop(P + "tool_board.glb", F1 + Vector3(-22.0, 0, -5.7), 0.0)
+	# storeroom — lumber stock
+	prop(P + "lumber_stack.glb", F1 + Vector3(23.0, 0, 4.0), deg_to_rad(-15))
+	# timber store — lumber stacks + a wall tool-board
+	prop(P + "lumber_stack.glb", F1 + STORE_C + Vector3(-3.0, 0, 3.0), 0.0)
+	prop(P + "lumber_stack.glb", F1 + STORE_C + Vector3(1.5, 0, 3.2), deg_to_rad(30))
+	prop(P + "tool_board.glb", F1 + STORE_C + Vector3(0, 0, -4.7), 0.0)
+	# loft — organ-pipe racks flanking the back of the hall
+	prop(P + "pipe_rack.glb", F2 + Vector3(-7.0, 0, -19.0), deg_to_rad(20))
+	prop(P + "pipe_rack.glb", F2 + Vector3(7.0, 0, -19.0), deg_to_rad(-20))
 
 func _register_station(s: Node3D) -> void:
 	_stations.append(s)

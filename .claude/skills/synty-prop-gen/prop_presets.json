@@ -226,5 +226,14 @@
     "height": 0.9,
     "poly": 2000,
     "ref_count": 1
+  },
+  "tool_board": {
+    "prompt": "a wall-mounted wooden pegboard tool rack with hand tools hanging on it - a saw, chisels, a mallet, clamps - a workshop tool board",
+    "seed": 15,
+    "track": "painted",
+    "angle": 6,
+    "height": 1.5,
+    "poly": 2500,
+    "ref_count": 1
   }
 }
