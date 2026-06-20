@@ -280,5 +280,41 @@
     "height": 1.6,
     "poly": 2500,
     "ref_count": 1
+  },
+  "film_projector": {
+    "prompt": "a vintage cinema film projector, a large black projector head on a single pedestal stand with two round film reels mounted on top and a lens at the front",
+    "seed": 14,
+    "track": "painted",
+    "angle": 6,
+    "height": 1.5,
+    "poly": 3500,
+    "ref_count": 1
+  },
+  "cinema_marquee": {
+    "prompt": "an ornate illuminated cinema theatre marquee sign, a projecting canopy with rows of round light bulbs along its edges and blank white letter-board panels, gold art-deco trim",
+    "seed": 15,
+    "track": "painted",
+    "angle": 6,
+    "height": 2.4,
+    "poly": 3500,
+    "ref_count": 1
+  },
+  "chandelier": {
+    "prompt": "an ornate gold crystal chandelier, a hanging tiered light fixture with many small candle bulbs and dangling crystal drops on a gold frame",
+    "seed": 12,
+    "track": "painted",
+    "angle": 6,
+    "height": 1.4,
+    "poly": 3000,
+    "ref_count": 1
+  },
+  "cinema_seats": {
+    "prompt": "a row of four joined red velvet cinema theatre seats, folding seats with wooden armrests on a low base",
+    "seed": 14,
+    "track": "painted",
+    "angle": 6,
+    "height": 1.0,
+    "poly": 3000,
+    "ref_count": 1
   }
 }

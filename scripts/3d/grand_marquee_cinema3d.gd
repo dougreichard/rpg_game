@@ -57,6 +57,7 @@ var _doug = null
 var _projector_light: MeshInstance3D = null
 var _organ_node: MeshInstance3D = null
 var _booth_wall: Node3D = null
+var _chandeliers: Array = []
 var _hud_goal: Label = null
 var _hud_hint: Label = null
 var _hud_banner: Label = null
@@ -75,6 +76,9 @@ func _build_level() -> void:
 	_projector_booth()
 	_organ()
 	_lights_rig()
+	_chandeliers_rig()
+	_marquee()
+	_lobby_dressing()
 	_clue_board()
 	make_dialog()
 	_build_hud()
@@ -121,35 +125,63 @@ func _screen() -> void:
 	add_child(box_mesh(Vector3(12.0, 0.8, 0.6), GOLD.darkened(0.1), Vector3(0, 4.8, -9.5)))   # proscenium pelmet
 
 func _seating() -> void:
-	for row: int in range(5):
-		var z: float = -3.5 + float(row) * 1.8
-		for sx: float in [-3.2, 3.2]:
-			add_child(box_mesh(Vector3(2.2, 0.5, 0.6), Color(0.35, 0.10, 0.12), Vector3(sx, 0.4, z)))
-			add_child(box_mesh(Vector3(2.2, 0.8, 0.2), Color(0.30, 0.08, 0.10), Vector3(sx, 0.7, z - 0.35)))
+	# rows of theatre seats (Prop-Farm cinema_seats — a 4-seat row) flanking the aisle
+	for row: int in range(6):
+		var z: float = -4.0 + float(row) * 2.0
+		prop("res://assets/models/props/cinema_seats.glb", Vector3(-4.6, 0, z), 0.0)
+		prop("res://assets/models/props/cinema_seats.glb", Vector3(4.6, 0, z), 0.0)
 
 func _projector_booth() -> void:
-	add_child(box_mesh(Vector3(2.0, 1.2, 1.2), Color(0.18, 0.10, 0.10), PROJECTOR_POS + Vector3(0, 0.6, 0)))
-	add_child(box_mesh(Vector3(0.8, 0.6, 1.0), Color(0.25, 0.25, 0.28), PROJECTOR_POS + Vector3(0, 1.4, 0)))
-	_projector_light = box_mesh(Vector3(0.2, 0.2, 0.2), Color(0.7, 0.2, 0.2), PROJECTOR_POS + Vector3(0, 1.4, -0.6), 1.2)
+	# Prop-Farm film projector (Quinn repairs it); keep the status pip as the solved indicator
+	prop("res://assets/models/props/film_projector.glb", PROJECTOR_POS, deg_to_rad(180))
+	_projector_light = box_mesh(Vector3(0.16, 0.16, 0.16), Color(0.7, 0.2, 0.2), PROJECTOR_POS + Vector3(0, 1.5, 0.4), 1.2)
 	add_child(_projector_light)
 
 func _organ() -> void:
-	var wood := Color(0.30, 0.16, 0.12)
-	add_child(box_mesh(Vector3(2.4, 1.4, 0.7), wood, ORGAN_POS + Vector3(0, 0.7, 0)))
-	for i: int in range(7):
-		var x: float = -0.9 + float(i) * 0.3
-		var h: float = 0.8 + 0.5 * sin(float(i))
-		var pipe := MeshInstance3D.new()
-		var cm := CylinderMesh.new(); cm.top_radius = 0.09; cm.bottom_radius = 0.09; cm.height = h
-		var mat := StandardMaterial3D.new(); mat.albedo_color = GOLD; mat.metallic = 0.6
-		cm.material = mat; pipe.mesh = cm; pipe.position = ORGAN_POS + Vector3(x, 1.6 + h * 0.5, -0.2)
-		add_child(pipe)
-	_organ_node = box_mesh(Vector3(2.0, 0.08, 0.35), Color(0.9, 0.88, 0.82), ORGAN_POS + Vector3(0, 1.46, 0.3))
+	# the house organ (reuse the Prop-Farm organ.glb) + brass pipe ranks; keep the glow strip
+	prop("res://assets/models/props/organ.glb", ORGAN_POS, deg_to_rad(180))
+	prop("res://assets/models/props/pipe_rack.glb", ORGAN_POS + Vector3(-2.0, 0, -0.4), deg_to_rad(180))
+	_organ_node = box_mesh(Vector3(1.4, 0.06, 0.3), Color(0.9, 0.88, 0.82), ORGAN_POS + Vector3(0, 1.0, 0.5))
 	add_child(_organ_node)
 
 func _lights_rig() -> void:
 	add_child(box_mesh(Vector3(0.5, 1.4, 0.4), Color(0.2, 0.12, 0.12), LIGHTS_POS + Vector3(0, 0.7, 0)))
 	add_child(box_mesh(Vector3(0.16, 0.5, 0.1), Color(0.85, 0.25, 0.2), LIGHTS_POS + Vector3(0.28, 1.0, 0), 1.0))  # dead breaker
+
+# Gold chandeliers hung from the ceiling — dark until Quinn throws the house-lights breaker.
+func _chandeliers_rig() -> void:
+	var spots := [Vector3(0, WALL_H - 0.8, -3.0), Vector3(0, WALL_H - 0.8, 4.0), LOBBY_C + Vector3(0, WALL_H - 0.8, 0)]
+	for s: Vector3 in spots:
+		var c: Node3D = prop("res://assets/models/props/chandelier.glb", s, 0.0)
+		_chandeliers.append(c)
+	_set_chandeliers(_lights_on)
+
+func _set_chandeliers(on: bool) -> void:
+	for c in _chandeliers:
+		if c == null: continue
+		for mi: Node in (c as Node).find_children("*", "MeshInstance3D"):
+			var src: Material = (mi as MeshInstance3D).get_active_material(0)
+			var m := (src.duplicate() if src != null else StandardMaterial3D.new()) as StandardMaterial3D
+			if m == null: continue
+			m.emission_enabled = on
+			if on: m.emission = GOLD; m.emission_energy_multiplier = 1.6
+			(mi as MeshInstance3D).material_override = m
+
+# An ornate "now showing" marquee board standing in the lobby (faces the entrance).
+func _marquee() -> void:
+	prop("res://assets/models/props/cinema_marquee.glb", LOBBY_C + Vector3(-6.0, 0, 3.0), deg_to_rad(30))
+
+# Lobby dressing: velvet-rope stanchions either side of the auditorium doorway + poster frames.
+func _lobby_dressing() -> void:
+	for sx: float in [-2.6, 2.6]:
+		for dz: float in [-3.0, -1.4]:
+			add_child(box_mesh(Vector3(0.12, 1.0, 0.12), GOLD, LOBBY_C + Vector3(sx, 0.5, dz)))   # stanchion post
+			add_child(box_mesh(Vector3(0.16, 0.16, 0.16), GOLD.lightened(0.1), LOBBY_C + Vector3(sx, 1.02, dz)))  # ball top
+		add_child(box_mesh(Vector3(0.06, 0.06, 1.6), CARPET, LOBBY_C + Vector3(sx, 0.85, -2.2)))   # rope swag
+	# framed posters on the lobby side walls
+	for p: Vector3 in [LOBBY_C + Vector3(-7.6, 1.8, 1.0), LOBBY_C + Vector3(7.6, 1.8, -1.0), LOBBY_C + Vector3(7.6, 1.8, 2.0)]:
+		add_child(box_mesh(Vector3(0.12, 1.6, 1.1), GOLD.darkened(0.2), p))
+		add_child(box_mesh(Vector3(0.06, 1.3, 0.85), Color(0.8, 0.78, 0.6), p + Vector3(0.1, 0, 0), 0.2))
 
 func _clue_board() -> void:
 	add_child(box_mesh(Vector3(0.2, 2.2, 2.6), Color(0.2, 0.12, 0.12), BOARD_POS + Vector3(0, 1.3, 0)))
@@ -168,6 +200,9 @@ func _restore() -> void:
 	_booth_forced = GameManager.get_level_flag(location_id, "booth_forced", false)
 	if _projector_repaired: _set_projector_solved()
 	if _organ_played: _organ_node.material_override = _glow()
+	if _lights_on:
+		point_light(Vector3(0, 4.4, 2.0), GOLD, 2.2, 20.0)
+		_set_chandeliers(true)
 	if _booth_forced: _open_booth(false)
 	_maybe_reveal_doug()
 	if _all_done():
@@ -214,6 +249,7 @@ func _on_special(char_name: String) -> void:
 		_lights_on = true
 		GameManager.set_level_flag(location_id, "lights_on", true)
 		point_light(Vector3(0, 4.4, 2.0), GOLD, 2.2, 20.0)
+		_set_chandeliers(true)
 		_hud_hint.text = "Quinn throws the house-lights breaker — the chandeliers blaze back on."
 		Audio.play("special"); return
 	# jammed booth door (Quinn forces it open → the way to Doug)
