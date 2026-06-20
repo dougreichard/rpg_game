@@ -61,6 +61,7 @@ dialog text. Do A1 first (cheap, no Blender); then batch A2–A4 in ONE re-bake 
 ---
 
 ## Plan B — World dressing: lobby NPCs + overworld
+**Status:** B1 ✅ (c42c6df — lobby-NPC props) · B2 ✅ (88775c8 — overworld last-played duo) · B3 ⬜ (optional).
 **Context:** level scripts (`scripts/3d/*3d.gd`), `overworld3d.gd`, `GameManager`, prop placement +
 Prop Farm. GDScript-only (no Blender); independent of Plan A.
 
