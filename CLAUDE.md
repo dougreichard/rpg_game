@@ -333,8 +333,8 @@ Loft. Still-single-room levels inherit this as they're converted to multi-room.)
 - **Unlocks:** Evan
 - **Key puzzle(s):** Quinn's respectful demeanor earns the congregation's trust; Erin's skepticism lets her see through deception — neither can solve it alone
 - **Enemy types:** None (dialogue-heavy)
-- **3D build:** multi-room — NAVE (lobby: Aldric + 4 congregants + choir leader + exit) → corridor → **VESTRY** (Quinn lights the candle sconces 1→2→3 → opens it; holds the memorial register = Doug objective) and → **CRYPT** (Erin spots the forged plaque among three → opens it). Church/marble + stone surfaces, dark-wood trim. Doug clue: `pressed_flower` from the register.
-- **Level progress flags:** `quinn_done` / `erin_done` / `secret_revealed` / `father_aldric_impression` / `manager_met` / `candles_lit` / `register_read`
+- **3D build:** expanded multi-room — grand NAVE (16×22; lobby: Aldric + 4 congregants + choir leader + exit) with a north **ORGAN LOFT & CHOIR chancel** (the organ on a dais flanked by tall pipe-rank racks + choir stalls, altar centred) → corridor → **VESTRY** (Quinn lights the candle sconces 1→2→3 → opens it; holds the memorial register = Doug objective) and → **CRYPT** (Erin spots the forged plaque among three → opens it). **NEW Quinn beat:** repair the organ's wind-chest → a hymn swells and a hidden niche grinds open behind it → `embroidered_handkerchief` (Doug lore, optional). Church/marble + stone surfaces, dark-wood trim. Reuses existing props (organ/pipe_rack/pew/altar/candles). Doug clue: `pressed_flower` from the register.
+- **Level progress flags:** `quinn_done` / `erin_done` / `secret_revealed` / `father_aldric_impression` / `manager_met` / `candles_lit` / `register_read` / `organ_played` / `niche_taken`
 - **NPCs:** Father Aldric (dialog-choice NPC at the altar; `father_aldric_impression` → `"good"` / `"cool"`)
 
 ---
