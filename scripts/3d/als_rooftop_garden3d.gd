@@ -28,6 +28,12 @@ var _hud_goal: Label = null
 var _hud_hint: Label = null
 var _hud_banner: Label = null
 
+func _ready() -> void:
+	super._ready()
+	# We're reached THROUGH the Arcade building, so a return to the overworld should
+	# drop the duo at the Arcade door (Level3D._ready set this to our own location_id).
+	GameManager.last_location_id = "gimme_dat_spoon"
+
 func _build_level() -> void:
 	location_id = "als_rooftop"
 	multi_room = false
