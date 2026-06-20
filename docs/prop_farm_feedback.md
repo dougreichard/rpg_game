@@ -365,3 +365,53 @@ today's matte look. Verified it compiles; farm reachable (`:7860` → 200).
   rigging of *generated* meshes isn't solved (UniRig auto-rig fallback); `/retarget` of an
   already-Synty-proportioned mesh is drop-in. Will use `tests/validate_character.gd` to gate any
   character GLB before wiring it.
+
+---
+## Mac request (2026-06-20) — REST endpoint: ADD a motion clip to EXISTING character(s)
+Natural Mac asks we want to support directly:
+- *"add some.fbx (Mixamo) to Quinn"*
+- *"add jump.fbx (Mixamo) to all the main player characters"*
+
+Today only the LOCAL Blender tools (`retarget_anim.py` + a graft) can do this — there's no REST
+endpoint. `/retarget` conforms a whole character + grafts the FIXED canonical library, so it can't
+add an arbitrary new clip, and it would clobber per-character clips (see ⚠ below). Please expose
+motion-ingest over REST so the **farm** does it end-to-end and pushes; the Mac just `git pull`.
+
+**Proposed endpoint `/add_clip`:**
+```
+predict(handle_file(anim_source), role, targets, do_commit, api_name="/add_clip")
+```
+- `anim_source` — a Mixamo FBX / BVH / GLB animation file (uploaded via `handle_file`), OR a repo
+  path under `assets/animations/sources/` if that's easier for reproducible batch.
+- `role` — the Godot clip name to register it as (e.g. `"jump"`); this is the name `player_3d.gd`
+  plays. Re-running with the same role REPLACES just that clip (idempotent).
+- `targets` — which repo character GLBs to apply to: `"quinn"` (single), `"leads"`
+  (quinn/erin/evan/ben/ethan), or `"all"` (+ enemies/npcs). You already pull the repo, so you have
+  the GLBs under `assets/models/characters/`.
+
+**Flow (optimal — the leads share ONE Synty skeleton, so retarget once):**
+1. Retarget `anim_source` onto the canonical Synty skeleton ONCE (`retarget_anim.py` + the existing
+   `mixamo` bone map) → a single clip named `role`.
+2. For EACH target character GLB: import it, **APPEND** the `role` clip to its existing clips,
+   re-export. (The clip is identical across leads because the skeleton is identical.)
+3. Auto-commit + push the updated character GLBs. Mac pulls.
+
+**⚠ Must-handle (these are why we want the pipeline to own it):**
+- **ADDITIVE PER-CHARACTER — do NOT re-graft the shared library.** Each lead now carries a UNIQUE
+  `special` clip (Quinn=HA laugh, Erin=fast-talk, Evan=whistle, Ben=keytar riff, Ethan=hack — see the
+  A4 work). `synty_clips.glb` was extracted from quinn.glb, so the current replace-all graft would
+  overwrite Erin's fast-talk with Quinn's laugh. The op must keep every existing clip
+  (idle/walk/run/attack/special/hurt/down/dash/sit + each lead's own special) and just add `role`.
+- **PRESERVE THE MESH incl. JOINED ACCESSORIES.** The lead GLBs have accessories merged into the body
+  mesh + weighted to bones (Quinn cap+wrench, Erin tome, Ben keytar, Ethan tablet, Doug laptop). The
+  op must not touch geometry — verify accessories survive and still ride their bones after.
+- **Mixamo proportion cleanup:** cross-proportion sources need the foot-IK / hip-height bake you
+  flagged as a follow-up — apply it (or flag when a clip needs it) so feet don't slide.
+
+**Mac side after pull:** wire the clip into gameplay if it's interactive (e.g. a `jump` needs
+`player_3d.gd` to actually play `"jump"`). Adding the CLIP is the pipeline's job; TRIGGERING it is
+Mac code. We'll extend `tests/validate_character.gd` to assert the new `role` clip is present on each
+target.
+
+Net: one Mac call ("add jump.fbx to leads") → farm retargets once, appends to all 5 lead GLBs,
+pushes → Mac pulls + wires the trigger. No local Blender, no clobbered specials, accessories intact.
