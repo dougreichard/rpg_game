@@ -25,7 +25,7 @@ const WT_HOUSE := Color(0.72, 0.5, 0.45)
 const FT_LOBBY := Color(0.78, 0.4, 0.4)
 const CARPET := Color(0.45, 0.10, 0.12)
 const GOLD := Color(0.8, 0.65, 0.25)
-const WALL_H := 4.0
+const WALL_H := 5.0   # grand cinema ceiling
 const REACH := 2.4
 
 # Uncle-Doug clue trail (assembled at the lobby board)
@@ -33,15 +33,16 @@ const DOUG_CLUES := ["faded_photograph", "pressed_flower", "doug_locker_tag", "d
 	"doug_pocketwatch", "doug_crate_tag", "doug_checkout_card", "doug_photo_strip",
 	"doug_flashlight", "doug_carabiner", "doug_vr_log", "doug_flyer"]
 
-const LOBBY_C := Vector3(0, 0, 14.0)
-const USHER_POS := Vector3(3.5, 0, 15.0)
-const BOARD_POS := Vector3(-5.0, 0, 15.5)
-const PROJECTOR_POS := Vector3(-5.0, 0.0, 5.0)
-const ORGAN_POS := Vector3(5.0, 0.0, -5.0)
-const LIGHTS_POS := Vector3(-6.0, 0.0, -4.0)
-const BOOTH_DOOR := Vector3(9.5, 0.0, 0.0)
-const BOOTH_C := Vector3(14.0, 0.0, 0.0)
-const DOUG_POS := Vector3(14.0, 0.0, 0.0)
+# Enlarged grand house: auditorium 22x20 at origin, lobby/booth pushed out behind longer halls.
+const LOBBY_C := Vector3(0, 0, 20.0)
+const USHER_POS := Vector3(3.5, 0, 21.0)
+const BOARD_POS := Vector3(-5.5, 0, 21.5)
+const PROJECTOR_POS := Vector3(-7.0, 0.0, 7.0)   # projector at the back of the house
+const ORGAN_POS := Vector3(6.0, 0.0, -6.0)       # house organ by the stage
+const LIGHTS_POS := Vector3(-8.0, 0.0, -5.0)
+const BOOTH_DOOR := Vector3(15.0, 0.0, 0.0)
+const BOOTH_C := Vector3(20.0, 0.0, 0.0)
+const DOUG_POS := Vector3(20.0, 0.0, 0.0)
 
 var _cleared := false
 var _enemies_cleared := false
@@ -89,20 +90,20 @@ func _build_level() -> void:
 func _rooms() -> void:
 	# Auditorium — red carpet, brick walls. Combat. Openings: south (lobby), east (booth).
 	set_theme(FLOOR_CARPET, WALL_BRICK)
-	room(Vector3.ZERO, 18, 18, FT_HOUSE, WT_HOUSE, WALL_H, ["s", "e"], 3.0, true)
-	add_child(box_mesh(Vector3(5.0, 0.04, 18.0), CARPET, Vector3(0, 0.05, 0)))     # aisle runner
-	corridor(Vector3(0, 0, 9), "s", 1.0, FT_HOUSE, WT_HOUSE, 3.0, WALL_H, true, GOLD)       # → lobby
-	corridor(Vector3(9, 0, 0), "e", 1.0, FT_HOUSE, WT_HOUSE, 3.0, WALL_H, true, GOLD)       # → booth
+	room(Vector3.ZERO, 22, 20, FT_HOUSE, WT_HOUSE, WALL_H, ["s", "e"], 4.0, true)
+	add_child(box_mesh(Vector3(5.0, 0.04, 20.0), CARPET, Vector3(0, 0.05, 0)))     # aisle runner
+	corridor(Vector3(0, 0, 10), "s", 4.5, FT_HOUSE, WT_HOUSE, 4.0, WALL_H, true, GOLD)      # → lobby
+	corridor(Vector3(11, 0, 0), "e", 4.0, FT_HOUSE, WT_HOUSE, 4.0, WALL_H, true, GOLD)      # → booth
 	_booth_wall = _gate_panel(BOOTH_DOOR, WALL_H)
 	# Grand lobby — carpet, brick (combat-free). South vestibule = exit.
 	set_theme(FLOOR_CARPET, WALL_BRICK)
-	room(LOBBY_C, 14, 8, FT_LOBBY, WT_HOUSE, WALL_H, ["n", "s"], 3.0, true)
-	corridor(LOBBY_C + Vector3(0, 0, 4.0), "s", 2.0, FT_LOBBY, WT_HOUSE, 3.0, WALL_H, true, GOLD)
+	room(LOBBY_C, 16, 11, FT_LOBBY, WT_HOUSE, WALL_H, ["n", "s"], 4.0, true)
+	corridor(LOBBY_C + Vector3(0, 0, 5.5), "s", 2.0, FT_LOBBY, WT_HOUSE, 4.0, WALL_H, true, GOLD)
 	# Projection booth — where Doug is.
-	room(BOOTH_C, 8, 8, FT_HOUSE, WT_HOUSE, 3.2, ["w"], 3.0, true)
+	room(BOOTH_C, 10, 8, FT_HOUSE, WT_HOUSE, 3.4, ["w"], 4.0, true)
 
 func _gate_panel(pos: Vector3, h: float) -> Node3D:
-	var size := Vector3(0.4, h, 3.0)   # doorway runs along Z (panel thin in X)
+	var size := Vector3(0.4, h, 4.0)   # doorway runs along Z (panel thin in X)
 	var sb := StaticBody3D.new()
 	sb.collision_layer = Combat3D.L_WORLD
 	var cs := CollisionShape3D.new(); var bs := BoxShape3D.new()
@@ -113,9 +114,11 @@ func _gate_panel(pos: Vector3, h: float) -> Node3D:
 	return sb
 
 func _screen() -> void:
-	add_child(box_mesh(Vector3(7.0, 3.4, 0.2), Color(0.92, 0.92, 0.95), Vector3(0, 2.0, -8.6), 0.5))
-	add_child(box_mesh(Vector3(0.8, 3.8, 0.6), CARPET.darkened(0.1), Vector3(-3.8, 1.9, -8.4)))
-	add_child(box_mesh(Vector3(0.8, 3.8, 0.6), CARPET.darkened(0.1), Vector3(3.8, 1.9, -8.4)))
+	# big silver screen on the north wall + a proscenium frame of velvet drapes
+	add_child(box_mesh(Vector3(10.0, 4.4, 0.2), Color(0.92, 0.92, 0.95), Vector3(0, 2.6, -9.7), 0.5))
+	add_child(box_mesh(Vector3(1.0, 4.8, 0.6), CARPET.darkened(0.1), Vector3(-5.4, 2.5, -9.5)))
+	add_child(box_mesh(Vector3(1.0, 4.8, 0.6), CARPET.darkened(0.1), Vector3(5.4, 2.5, -9.5)))
+	add_child(box_mesh(Vector3(12.0, 0.8, 0.6), GOLD.darkened(0.1), Vector3(0, 4.8, -9.5)))   # proscenium pelmet
 
 func _seating() -> void:
 	for row: int in range(5):
