@@ -23,10 +23,12 @@ _PROP = (", a single isolated object, ONE object only, the complete whole object
          "blocking, minimal geometric detail, Synty low-poly 3D game asset style, soft "
          "even studio lighting, plain light grey background")
 _CHARACTER = (", a single full-body humanoid game character standing in a symmetrical T-pose with "
-              "both arms straight out to the sides, front view, the entire body visible from head to "
-              "feet, feet flat on the ground, neutral expression, flat shading, distinct flat colours "
-              "per material, clean colour blocking, Synty low-poly 3D game character style, soft even "
-              "studio lighting, plain light grey background")
+              "both arms straight out horizontally to the sides, legs straight and slightly apart, "
+              "front view, the entire body visible from head to feet, feet flat on the ground, "
+              "neutral expression, AVERAGE ADULT HUMAN BODY PROPORTIONS, standard balanced anatomy, "
+              "about seven and a half heads tall, normal head size, full-length legs and arms, "
+              "flat shading, distinct flat colours per material, clean colour blocking, Synty "
+              "low-poly 3D game character style, soft even studio lighting, plain light grey background")
 _CREATURE = (", a single full-body creature, the entire body visible head to tail, standing in a "
              "neutral relaxed pose, front three-quarter view, flat shading, distinct flat colours, "
              "Synty low-poly 3D game style, soft even studio lighting, plain light grey background")
@@ -38,7 +40,10 @@ _NEG = ("grid, tiled, tiling, pattern, repeated, repeating, multiple objects, ma
         "clutter, text, watermark, harsh shadows, dark background, cropped, cut off")
 _NEG_FIG = (", sitting, crouching, kneeling, action pose, dynamic pose, walking, running, "
             "cropped legs, cut off feet, cut off head, close-up, portrait crop")
-NEGS = {"prop": _NEG, "character": _NEG + _NEG_FIG + ", multiple characters, two people, crowd",
+_NEG_PROP_FIG = (", dwarf, chibi, child, toddler, baby, giant, big head, oversized head, short legs, "
+                 "stubby limbs, exaggerated proportions, stylized cartoon proportions, funko pop, bobblehead")
+NEGS = {"prop": _NEG,
+        "character": _NEG + _NEG_FIG + _NEG_PROP_FIG + ", multiple characters, two people, crowd",
         "creature": _NEG + _NEG_FIG + ", multiple creatures, herd"}
 # back-compat aliases
 STYLE = _PROP
