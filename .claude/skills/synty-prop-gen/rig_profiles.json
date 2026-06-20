@@ -1,0 +1,94 @@
+{
+  "_comment": "Retarget targets for the Character Farm. UniRig rigs a mesh to its own skeleton (generic 'bone_N' for arbitrary meshes, or the trained 'vroid'/J_Bip humanoid). The retarget stage (Blender, retarget_char.py) renames/reorients/reskins that onto one of these named profiles and grafts animation clips. 'synty' is THE rig type THIS Godot project understands (drop-in for player_3d.gd) and is the default. Other profiles are for shipping the same character to other engines. Add a profile to support another rig.",
+  "default_profile": "synty",
+
+  "profiles": {
+    "synty": {
+      "description": "Hunkle Bunkle's own rig — the Synty POLYGON character skeleton + the game's 9 shared animation clips. A character on this profile is drop-in for scripts/3d/player_3d.gd / enemy_3d.gd (they find the AnimationPlayer and play clips by name).",
+      "engine": "godot",
+      "container": "glb",
+      "up_axis": "Y",
+      "scale_units": "m",
+      "target_height_m": 1.7,
+      "target_skeleton": [
+        "Root", "Hips", "Spine_01", "Spine_02", "Spine_03", "Neck", "Head", "Eyes", "Eyebrows",
+        "Clavicle_L", "Shoulder_L", "Elbow_L", "Hand_L",
+        "Thumb_01", "Thumb_02", "Thumb_03",
+        "IndexFinger_01", "IndexFinger_02", "IndexFinger_03", "IndexFinger_04",
+        "Finger_01", "Finger_02", "Finger_03", "Finger_04",
+        "Clavicle_R", "Shoulder_R", "Elbow_R", "Hand_R",
+        "Thumb_01.001", "Thumb_02.001", "Thumb_03.001",
+        "IndexFinger_01.001", "IndexFinger_02.001", "IndexFinger_03.001", "IndexFinger_04.001",
+        "Finger_01.001", "Finger_02.001", "Finger_03.001", "Finger_04.001",
+        "UpperLeg_R", "LowerLeg_R", "Ankle_R", "Ball_R", "Toes_R",
+        "UpperLeg_L", "LowerLeg_L", "Ankle_L", "Ball_L", "Toes_L"
+      ],
+      "anim_clips": ["idle", "walk", "run", "attack", "dash", "down", "hurt", "sit", "special"],
+      "clip_source": "assets/animations/synty_clips.glb",
+      "clip_reuse_note": "Canonical mesh-free clip library (make_clip_library.py, extracted from quinn.glb). All characters carry these 9 clips on this identical skeleton, so the retarget grafts them verbatim (no re-authoring). Regenerate the library if the clips change.",
+      "bone_map": {
+        "_note": "Keyed by SOURCE profile -> {source_bone: synty_bone}. Used to rename a source rig's bones to Synty (retarget_char.py) and to drive motion retarget (retarget_anim.py). UniRig humanoids land here as 'vrm' (trained vroid/J_Bip class) — verify in the gen pipeline.",
+        "mixamo": {
+          "mixamorig:Hips": "Hips",
+          "mixamorig:Spine": "Spine_01", "mixamorig:Spine1": "Spine_02", "mixamorig:Spine2": "Spine_03",
+          "mixamorig:Neck": "Neck", "mixamorig:Head": "Head",
+          "mixamorig:LeftShoulder": "Clavicle_L", "mixamorig:LeftArm": "Shoulder_L", "mixamorig:LeftForeArm": "Elbow_L", "mixamorig:LeftHand": "Hand_L",
+          "mixamorig:RightShoulder": "Clavicle_R", "mixamorig:RightArm": "Shoulder_R", "mixamorig:RightForeArm": "Elbow_R", "mixamorig:RightHand": "Hand_R",
+          "mixamorig:LeftUpLeg": "UpperLeg_L", "mixamorig:LeftLeg": "LowerLeg_L", "mixamorig:LeftFoot": "Ankle_L", "mixamorig:LeftToeBase": "Ball_L",
+          "mixamorig:RightUpLeg": "UpperLeg_R", "mixamorig:RightLeg": "LowerLeg_R", "mixamorig:RightFoot": "Ankle_R", "mixamorig:RightToeBase": "Ball_R",
+          "mixamorig:LeftHandThumb1": "Thumb_01", "mixamorig:LeftHandThumb2": "Thumb_02", "mixamorig:LeftHandThumb3": "Thumb_03",
+          "mixamorig:LeftHandIndex1": "IndexFinger_01", "mixamorig:LeftHandIndex2": "IndexFinger_02", "mixamorig:LeftHandIndex3": "IndexFinger_03",
+          "mixamorig:LeftHandMiddle1": "Finger_01", "mixamorig:LeftHandMiddle2": "Finger_02", "mixamorig:LeftHandMiddle3": "Finger_03",
+          "mixamorig:RightHandThumb1": "Thumb_01.001", "mixamorig:RightHandThumb2": "Thumb_02.001", "mixamorig:RightHandThumb3": "Thumb_03.001",
+          "mixamorig:RightHandIndex1": "IndexFinger_01.001", "mixamorig:RightHandIndex2": "IndexFinger_02.001", "mixamorig:RightHandIndex3": "IndexFinger_03.001",
+          "mixamorig:RightHandMiddle1": "Finger_01.001", "mixamorig:RightHandMiddle2": "Finger_02.001", "mixamorig:RightHandMiddle3": "Finger_03.001"
+        },
+        "vrm": {
+          "J_Bip_C_Hips": "Hips", "J_Bip_C_Spine": "Spine_01", "J_Bip_C_Chest": "Spine_02", "J_Bip_C_UpperChest": "Spine_03",
+          "J_Bip_C_Neck": "Neck", "J_Bip_C_Head": "Head",
+          "J_Bip_L_Shoulder": "Clavicle_L", "J_Bip_L_UpperArm": "Shoulder_L", "J_Bip_L_LowerArm": "Elbow_L", "J_Bip_L_Hand": "Hand_L",
+          "J_Bip_R_Shoulder": "Clavicle_R", "J_Bip_R_UpperArm": "Shoulder_R", "J_Bip_R_LowerArm": "Elbow_R", "J_Bip_R_Hand": "Hand_R",
+          "J_Bip_L_UpperLeg": "UpperLeg_L", "J_Bip_L_LowerLeg": "LowerLeg_L", "J_Bip_L_Foot": "Ankle_L", "J_Bip_L_ToeBase": "Ball_L",
+          "J_Bip_R_UpperLeg": "UpperLeg_R", "J_Bip_R_LowerLeg": "LowerLeg_R", "J_Bip_R_Foot": "Ankle_R", "J_Bip_R_ToeBase": "Ball_R"
+        }
+      }
+    },
+
+    "godot_generic": {
+      "description": "Any-skeleton Godot Skeleton3D — ship the rig as-is (renamed lightly), let the game assign a BoneMap in-editor. For non-Synty Godot projects.",
+      "engine": "godot", "container": "glb", "up_axis": "Y", "scale_units": "m",
+      "bone_map": {}
+    },
+
+    "mixamo": {
+      "description": "Mixamo humanoid (mixamorig:*). Interchange hub; Mixamo animation library applies directly.",
+      "engine": "any", "container": "glb", "up_axis": "Y",
+      "bone_map": {},
+      "_note": "UniRig defines a mixamo skeleton but its checkpoint marks mixamo 'untrained, do not use' — so we reach Mixamo via Blender rename from vroid/generic, not natively."
+    },
+
+    "unreal": {
+      "description": "Unreal Engine 5 Mannequin (pelvis, spine_01.., upperarm_l, thigh_l, foot_l ...). FBX, cm, for UE skeletal-mesh import + IK Retargeter.",
+      "engine": "unreal", "container": "fbx", "up_axis": "Z", "scale_units": "cm",
+      "bone_map": {}
+    },
+
+    "unity": {
+      "description": "Unity Humanoid (Avatar). FBX/GLB; Unity maps via the Humanoid avatar.",
+      "engine": "unity", "container": "fbx", "up_axis": "Y", "scale_units": "m",
+      "bone_map": {}
+    },
+
+    "vrm": {
+      "description": "VRM / VRoid humanoid (J_Bip_*). UniRig's trained 'vroid' class can emit this natively — passthrough/minimal remap.",
+      "engine": "vrm", "container": "glb", "up_axis": "Y",
+      "bone_map": {}
+    },
+
+    "raw": {
+      "description": "UniRig output untouched (generic bone_N). For quadrupeds/creatures with no humanoid standard — ship the rig + bones as-is.",
+      "engine": "any", "container": "glb", "up_axis": "Y",
+      "bone_map": {}
+    }
+  }
+}

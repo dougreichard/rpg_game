@@ -1,0 +1,43 @@
+{
+  "_comment": "Character Farm templates. Each bundles the reference style/pose + texture + rig target so one '--template' produces a game-ready (or engine-ready) character. 'synty_humanoid' is the default and the drop-in for THIS game (canonical Synty skeleton + 9 clips via fit_synty_rig.py). Add a template for other looks/skeletons. ref_kind selects the SDXL style/framing in gen_prop_ref_comfy.py (prop|character|creature).",
+  "default_template": "synty_humanoid",
+
+  "templates": {
+    "synty_humanoid": {
+      "description": "Low-poly Synty humanoid for Hunkle Bunkle — drop-in (Synty skeleton + 9 game clips).",
+      "ref_kind": "character",
+      "pose": "t-pose",
+      "texture_mode": "diffuse_matte",
+      "poly": 6000,
+      "height_m": 1.7,
+      "rig": "synty"
+    },
+    "realistic_humanoid": {
+      "description": "More realistic humanoid proportions; still rigged to the Synty skeleton (drop-in) but PBR-textured.",
+      "ref_kind": "character",
+      "pose": "t-pose",
+      "texture_mode": "pbr",
+      "poly": 9000,
+      "height_m": 1.8,
+      "rig": "synty"
+    },
+    "quadruped": {
+      "description": "Four-legged creature — no humanoid standard, so UniRig auto-rig and ship raw (bone_N).",
+      "ref_kind": "creature",
+      "pose": "neutral",
+      "texture_mode": "diffuse_matte",
+      "poly": 5000,
+      "height_m": 1.0,
+      "rig": "unirig"
+    },
+    "creature": {
+      "description": "Arbitrary creature/biped-ish — UniRig auto-rig, raw (retarget to an engine profile later if needed).",
+      "ref_kind": "creature",
+      "pose": "neutral",
+      "texture_mode": "diffuse_matte",
+      "poly": 6000,
+      "height_m": 1.6,
+      "rig": "unirig"
+    }
+  }
+}

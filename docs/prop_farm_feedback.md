@@ -319,3 +319,37 @@ Confirmed on the committed GLBs: `metallicFactor=None` (→ glTF default **1.0**
   **Pull and they import matte — drop the temporary roughness override.**
 - Minor note (not changed): the material also carries `baseColorFactor ≈ [204,204,204]` (~0.8 grey, dims the
   texture ~20%). Left as-is since you didn't flag it; say the word and I'll set it to white in finalize too.
+
+---
+## 🔔 Windows/3090 (2026-06-20) — REST API changed + NEW endpoints (Character Farm). Pull + update prop_pull.
+Big batch landed (prop flexibility + a whole Character Farm). `git pull` first. Two things for the Mac:
+
+**1. ⚠ `/generate` signature changed — `prop_pull.py` will break until updated.** Two NEW trailing
+inputs were added (both have safe defaults, so just append them):
+```
+predict(name, prompt, seed, track, angle, height_m, poly, ref_count, style_img, do_commit,
+        texture_mode, remesh_preset, api_name="/generate")
+```
+- `texture_mode`: `"flat"`-track is unaffected; painted = `"diffuse_matte"` (default, current matte look)
+  or `"pbr"` (bakes a real metallic-roughness map). Pass `"diffuse_matte"` to keep today's behaviour.
+- `remesh_preset`: `"custom"` (default, uses your `poly`) or `set-dressing ~2k`/`standard ~4k`/`hero ~6k`/`high ~10k`.
+
+**2. NEW endpoints (also new web tabs: Character, Retarget/Animate):**
+- `predict(name, prompt, template, seed, ref_count, do_commit, api_name="/generate_character")` — generate
+  a rigged character. `template` ∈ synty_humanoid (default) / realistic_humanoid / quadruped / creature
+  (see `.claude/skills/synty-prop-gen/character_templates.json`). Ships a rigged+textured GLB.
+- `predict(handle_file(glb), to_profile, with_clips, api_name="/retarget")` — conform ANY rigged GLB to a
+  rig profile (default `synty`) + graft its clips. CPU lane (runs alongside GPU). Profiles in `rig_profiles.json`.
+
+**3. Character rigging status (important):** the gen FRONT (ref→shape→paint) is solid and characters
+generate + texture + rig end-to-end. BUT **drop-in Synty rigging of GENERATED meshes isn't solved yet** —
+the canonical Synty skeleton only binds to Synty-PROPORTIONED bodies (bone-heat needs the bones inside the
+limbs; a generated body's pose/proportions don't match closely enough; not a topology issue). So
+`/generate_character` currently ships a **UniRig auto-rig (generic bone_N, robust on any anatomy) — NOT the
+9-clip drop-in** when the Synty fit doesn't bind. The `synty` *retarget* of an already-Synty-proportioned
+mesh (e.g. our existing characters) IS drop-in (verified game-ready: Skeleton3D + 9 named clips). True
+drop-in for arbitrary generated characters needs landmark skeleton-fitting (future R&D).
+- New Godot check for the Mac: `godot --headless -s tests/validate_character.gd -- <character.glb>`
+  (asserts Skeleton3D + AnimationPlayer + the 9 clips). Godot isn't on the 3090 box, so run it your side.
+
+Farm is up (app :7860, shape :8200, paint :8201, ComfyUI :8188, render server). Have at it.

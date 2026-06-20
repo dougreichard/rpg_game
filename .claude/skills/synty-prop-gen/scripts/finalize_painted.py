@@ -22,9 +22,11 @@ import bpy, sys
 from mathutils import Vector
 
 argv = sys.argv[sys.argv.index("--") + 1:]
-IN, OUT = argv[0], argv[1]
-TEX = int(argv[2]) if len(argv) > 2 else 512
-TARGET_HEIGHT = float(argv[3]) if len(argv) > 3 else 1.0   # bbox height in metres (1 unit = 1 m)
+pos = [a for a in argv if not a.startswith("--")]
+IN, OUT = pos[0], pos[1]
+TEX = int(pos[2]) if len(pos) > 2 else 512
+TARGET_HEIGHT = float(pos[3]) if len(pos) > 3 else 1.0   # bbox height in metres (1 unit = 1 m)
+PBR = "--pbr" in argv   # keep Hunyuan's baked metallic-roughness map (don't force matte)
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
 bpy.ops.import_scene.gltf(filepath=IN)
@@ -68,16 +70,40 @@ obj.location.y -= (mn[1] + mx[1]) / 2
 obj.location.z -= mn[2]
 bpy.ops.object.transform_apply(location=True)
 
-# matte Synty material: kill the glTF default metallic=1.0 (polished metal) + low roughness so the
-# painted prop imports matte (the baked diffuse carries the colour). Every Principled BSDF.
-for mat in bpy.data.materials:
-    if not (mat.use_nodes and mat.node_tree):
-        continue
-    for node in mat.node_tree.nodes:
-        if node.type == "BSDF_PRINCIPLED":
-            node.inputs["Metallic"].default_value = 0.0
-            node.inputs["Roughness"].default_value = 0.9
-            print("matte material:", mat.name)
+# matte Synty material (default): kill the glTF default metallic=1.0 (polished metal) + low roughness
+# so the painted prop imports matte (the baked diffuse carries the colour). In --pbr mode, KEEP
+# Hunyuan's baked metallic-roughness map/factors instead (full PBR look).
+import os
+_mr_path = os.path.abspath(IN[:-4] + "_mr.png")   # combined glTF MR map written by the paint stage (gen_mr)
+if PBR and os.path.exists(_mr_path):
+    # wire the combined metallic-roughness map: glTF G=roughness, B=metallic. Blender's exporter
+    # detects Roughness<-Green / Metallic<-Blue of one Non-Color image and writes metallicRoughnessTexture.
+    img = bpy.data.images.load(_mr_path); img.colorspace_settings.name = "Non-Color"
+    for mat in bpy.data.materials:
+        if not (mat.use_nodes and mat.node_tree):
+            continue
+        bsdf = next((n for n in mat.node_tree.nodes if n.type == "BSDF_PRINCIPLED"), None)
+        if not bsdf:
+            continue
+        nt = mat.node_tree
+        tex = nt.nodes.new("ShaderNodeTexImage"); tex.image = img; tex.image.colorspace_settings.name = "Non-Color"
+        sep = nt.nodes.new("ShaderNodeSeparateColor")
+        nt.links.new(tex.outputs["Color"], sep.inputs["Color"])
+        nt.links.new(sep.outputs["Green"], bsdf.inputs["Roughness"])
+        nt.links.new(sep.outputs["Blue"], bsdf.inputs["Metallic"])
+        print("PBR: packed metallic-roughness map ->", mat.name)
+else:
+    if PBR:
+        print("PBR requested but no _mr.png — falling back to matte (avoids shiny metallic=1.0 default)")
+    # matte Synty material: kill the glTF default metallic=1.0 + low roughness (baked diffuse carries colour)
+    for mat in bpy.data.materials:
+        if not (mat.use_nodes and mat.node_tree):
+            continue
+        for node in mat.node_tree.nodes:
+            if node.type == "BSDF_PRINCIPLED":
+                node.inputs["Metallic"].default_value = 0.0
+                node.inputs["Roughness"].default_value = 0.9
+                print("matte material:", mat.name)
 
 bpy.ops.export_scene.gltf(filepath=OUT, export_format="GLB")
 print("final tris:", len(obj.data.polygons), "-> saved", OUT)

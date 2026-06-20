@@ -22,6 +22,8 @@ ap.add_argument("--views", type=int, default=6)
 ap.add_argument("--resolution", type=int, default=512)
 ap.add_argument("--remesh-target", type=int, default=40000,
                 help="quadric reduce BEFORE paint -> final tri budget (Synty: ~1.5-6k). No post-paint reduce.")
+ap.add_argument("--gen-mr", action="store_true",
+                help="full PBR: also bake the metallic-roughness map (default off = diffuse only)")
 a = ap.parse_args()
 
 try:
@@ -37,7 +39,7 @@ conf.realesrgan_ckpt_path = os.path.join(PAINT, "ckpt", "RealESRGAN_x4plus.pth")
 conf.texture_size = 1536  # default 4096 is wasted — finalize_painted downsizes to 512; 1536->512
 # is visually identical but ~11s faster paint (the bake atlas is smaller; diffusion is unchanged).
 # Lean knobs (need the gates in hy3dpaint/textureGenPipeline.py; harmless no-op if absent):
-conf.gen_mr = False         # metallic-roughness map is discarded downstream -> skip it
+conf.gen_mr = a.gen_mr      # diffuse-only by default; --gen-mr bakes the metallic-roughness map (PBR)
 conf.skip_super_res = True  # RealESRGAN 4x is lost in the 512 downsize -> skip it (~9s, no loss)
 conf.remesh_target = a.remesh_target  # quadric reduce pre-paint -> low-poly Synty budget (texture carries detail)
 

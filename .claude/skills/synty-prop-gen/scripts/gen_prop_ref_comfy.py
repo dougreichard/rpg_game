@@ -16,21 +16,45 @@ import argparse, json, os, sys, time, uuid, urllib.request, urllib.parse, io, mi
 # IMPORTANT: image-to-3D needs ONE centered object. SDXL otherwise tends to TILE the subject
 # into a grid (a field of barrels / pins), which Hunyuan then reconstructs as a featureless cube.
 # The single-object emphasis + strong anti-tiling negatives below are load-bearing.
-STYLE = (", a single isolated object, ONE object only, the complete whole object centered "
+_PROP = (", a single isolated object, ONE object only, the complete whole object centered "
          "with a small margin of empty background around it, full object visible, not "
          "cropped, not cut off, front three-quarter view, flat shading, distinct flat "
          "colours per material, clear colour separation between parts, clean colour "
          "blocking, minimal geometric detail, Synty low-poly 3D game asset style, soft "
          "even studio lighting, plain light grey background")
-NEG = ("grid, tiled, tiling, pattern, repeated, repeating, multiple objects, many objects, "
-       "two objects, several, collection, set, array, rows, columns, collage, montage, "
-       "contact sheet, sprite sheet, thumbnails, duplicated, photorealistic, busy texture, "
-       "clutter, text, watermark, harsh shadows, dark background, cropped, cut off")
+_CHARACTER = (", a single full-body humanoid game character standing in a symmetrical T-pose with "
+              "both arms straight out horizontally to the sides, legs straight and slightly apart, "
+              "front view, the entire body visible from head to feet, feet flat on the ground, "
+              "neutral expression, AVERAGE ADULT HUMAN BODY PROPORTIONS, standard balanced anatomy, "
+              "about seven and a half heads tall, normal head size, full-length legs and arms, "
+              "flat shading, distinct flat colours per material, clean colour blocking, Synty "
+              "low-poly 3D game character style, soft even studio lighting, plain light grey background")
+_CREATURE = (", a single full-body creature, the entire body visible head to tail, standing in a "
+             "neutral relaxed pose, front three-quarter view, flat shading, distinct flat colours, "
+             "Synty low-poly 3D game style, soft even studio lighting, plain light grey background")
+STYLES = {"prop": _PROP, "character": _CHARACTER, "creature": _CREATURE}
+
+_NEG = ("grid, tiled, tiling, pattern, repeated, repeating, multiple objects, many objects, "
+        "two objects, several, collection, set, array, rows, columns, collage, montage, "
+        "contact sheet, sprite sheet, thumbnails, duplicated, photorealistic, busy texture, "
+        "clutter, text, watermark, harsh shadows, dark background, cropped, cut off")
+_NEG_FIG = (", sitting, crouching, kneeling, action pose, dynamic pose, walking, running, "
+            "cropped legs, cut off feet, cut off head, close-up, portrait crop")
+_NEG_PROP_FIG = (", dwarf, chibi, child, toddler, baby, giant, big head, oversized head, short legs, "
+                 "stubby limbs, exaggerated proportions, stylized cartoon proportions, funko pop, bobblehead")
+NEGS = {"prop": _NEG,
+        "character": _NEG + _NEG_FIG + _NEG_PROP_FIG + ", multiple characters, two people, crowd",
+        "creature": _NEG + _NEG_FIG + ", multiple creatures, herd"}
+# back-compat aliases
+STYLE = _PROP
+NEG = _NEG
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--name", required=True)
 ap.add_argument("--prompt", required=True)
-ap.add_argument("--negative", default=NEG)
+ap.add_argument("--kind", choices=["prop", "character", "creature"], default="prop",
+                help="style/framing: prop (3/4 object) · character (full-body T-pose) · creature")
+ap.add_argument("--negative", default=None)
 ap.add_argument("--seed", type=int, default=11)
 # 16 steps (was 30): the reference is throwaway — it only needs a clean, single-object,
 # colour-blocked silhouette for Hunyuan, not finished art. dpmpp_2m karras converges fast.
@@ -84,8 +108,8 @@ def upload_image(path):
 # ---- build the API prompt graph ----
 g = {}
 g["4"] = {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": a.ckpt}}
-g["6"] = {"class_type": "CLIPTextEncode", "inputs": {"text": a.prompt + STYLE, "clip": ["4", 1]}}
-g["7"] = {"class_type": "CLIPTextEncode", "inputs": {"text": a.negative, "clip": ["4", 1]}}
+g["6"] = {"class_type": "CLIPTextEncode", "inputs": {"text": a.prompt + STYLES[a.kind], "clip": ["4", 1]}}
+g["7"] = {"class_type": "CLIPTextEncode", "inputs": {"text": a.negative or NEGS[a.kind], "clip": ["4", 1]}}
 g["5"] = {"class_type": "EmptyLatentImage", "inputs": {"width": a.width, "height": a.height, "batch_size": 1}}
 
 model_ref = ["4", 0]
