@@ -2,25 +2,23 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://c04mycs6rlxx0"
-path.s3tc="res://.godot/imported/zip_tower_Image_0.png-d086a452a5e433b24cfe8499ef1ad447.s3tc.ctex"
-path.etc2="res://.godot/imported/zip_tower_Image_0.png-d086a452a5e433b24cfe8499ef1ad447.etc2.ctex"
+uid="uid://bjv71cpcheq3t"
+path="res://.godot/imported/library_globe_Image_0.png-3239edd4722c9a0dfeb58a3440cda773.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc", "etc2_astc"],
-"vram_texture": true
+"vram_texture": false
 }
 generator_parameters={
-"md5": "873e8ab388598a794fb317d4ba07bef2"
+"md5": "6205893726697f83a1b64b381aca8ab4"
 }
 
 [deps]
 
-source_file="res://assets/models/props/zip_tower_Image_0.png"
-dest_files=["res://.godot/imported/zip_tower_Image_0.png-d086a452a5e433b24cfe8499ef1ad447.s3tc.ctex", "res://.godot/imported/zip_tower_Image_0.png-d086a452a5e433b24cfe8499ef1ad447.etc2.ctex"]
+source_file="res://assets/models/props/library_globe_Image_0.png"
+dest_files=["res://.godot/imported/library_globe_Image_0.png-3239edd4722c9a0dfeb58a3440cda773.ctex"]
 
 [params]
 
-compress/mode=2
+compress/mode=0
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
@@ -42,4 +40,4 @@ process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
 process/size_limit=0
-detect_3d/compress_to=0
+detect_3d/compress_to=1

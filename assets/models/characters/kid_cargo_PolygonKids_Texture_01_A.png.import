@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://dsysfg67tusfo"
-path="res://.godot/imported/kid_cargo_PolygonKids_Texture_01_A.png-46074b568a2c3b14a31db531da7d019a.ctex"
+path.s3tc="res://.godot/imported/kid_cargo_PolygonKids_Texture_01_A.png-46074b568a2c3b14a31db531da7d019a.s3tc.ctex"
+path.etc2="res://.godot/imported/kid_cargo_PolygonKids_Texture_01_A.png-46074b568a2c3b14a31db531da7d019a.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "1e280e670fd950969d1f00e31e4c5b24"
@@ -14,11 +16,11 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/models/characters/kid_cargo_PolygonKids_Texture_01_A.png"
-dest_files=["res://.godot/imported/kid_cargo_PolygonKids_Texture_01_A.png-46074b568a2c3b14a31db531da7d019a.ctex"]
+dest_files=["res://.godot/imported/kid_cargo_PolygonKids_Texture_01_A.png-46074b568a2c3b14a31db531da7d019a.s3tc.ctex", "res://.godot/imported/kid_cargo_PolygonKids_Texture_01_A.png-46074b568a2c3b14a31db531da7d019a.etc2.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
@@ -40,4 +42,4 @@ process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
 process/size_limit=0
-detect_3d/compress_to=1
+detect_3d/compress_to=0
