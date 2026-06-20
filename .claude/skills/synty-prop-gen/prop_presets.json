@@ -388,5 +388,41 @@
     "height": 1.2,
     "poly": 1500,
     "ref_count": 1
+  },
+  "vault_door": {
+    "prompt": "a heavy round steel bank-vault blast door, a thick circular metal door with a central spoked wheel handle and rows of bolts, set in a square frame",
+    "seed": 16,
+    "track": "painted",
+    "angle": 6,
+    "height": 2.8,
+    "poly": 3500,
+    "ref_count": 1
+  },
+  "pump_machine": {
+    "prompt": "an industrial water pump machine, a large electric motor on a metal base connected to thick pipes with a round pressure gauge and valves",
+    "seed": 11,
+    "track": "painted",
+    "angle": 6,
+    "height": 1.6,
+    "poly": 3500,
+    "ref_count": 1
+  },
+  "valve_wheel": {
+    "prompt": "a large industrial pipe valve, a round red spoked valve handwheel on a thick flanged metal pipe section",
+    "seed": 13,
+    "track": "painted",
+    "angle": 6,
+    "height": 1.2,
+    "poly": 2500,
+    "ref_count": 1
+  },
+  "pipe_cluster": {
+    "prompt": "a cluster of industrial pipes along a wall, several thick metal pipes with elbow joints, a valve and a gauge on a bracket",
+    "seed": 11,
+    "track": "painted",
+    "angle": 6,
+    "height": 2.2,
+    "poly": 2500,
+    "ref_count": 1
   }
 }

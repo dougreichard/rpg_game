@@ -117,7 +117,8 @@ func _depth1() -> void:
 	point_light(F1 + Vector3(11, 2.4, 0), Color(0.7, 0.85, 1.0), 1.4, 8.0)   # pump room work-lamp
 	_ceiling_pipes(F1, 12.0)
 	# pump room dressing + the security badge crate
-	add_child(box_mesh(Vector3(1.6, 1.8, 1.2), STEEL.darkened(0.1), F1 + Vector3(13.0, 0.9, -2.5)))  # pump housing
+	prop("res://assets/models/props/pump_machine.glb", F1 + Vector3(13.0, 0, -2.5), deg_to_rad(-90))  # pump (Prop Farm)
+	prop("res://assets/models/props/pipe_cluster.glb", F1 + Vector3(13.5, 0, 1.5), deg_to_rad(-90))    # wall pipes
 	prop("res://assets/models/props/barrel.glb", F1 + Vector3(8.5, 0, 3.5))
 	_badge_box = box_mesh(Vector3(0.5, 0.5, 0.5), Color(0.5, 0.7, 0.9), F1 + BADGE + Vector3(0, 0.25, 0), 0.7)
 	add_child(_badge_box)
@@ -135,6 +136,8 @@ func _depth2() -> void:
 	point_light(F2 + Vector3(-11, 2.4, -9), Color(1.0, 0.75, 0.4), 1.2, 7.0)
 	point_light(F2 + Vector3(11, 2.4, -9), Color(0.6, 1.0, 0.7), 1.2, 7.0)
 	_ceiling_pipes(F2 + Vector3(0, 0, -9), 14.0)
+	prop("res://assets/models/props/pipe_cluster.glb", F2 + Vector3(-6.5, 0, -12.5), deg_to_rad(0))   # junction wall pipes
+	prop("res://assets/models/props/pipe_cluster.glb", F2 + Vector3(6.5, 0, -12.5), deg_to_rad(0))
 	_rubble_pile()
 	_hatch()
 	# west storeroom loot: the rusty key + a lore photo
@@ -155,8 +158,7 @@ func _depth3() -> void:
 	# Ethan's drain: a flooded passage gate between antechamber and vault room, with a
 	# valve wheel + a pool of "water" the player can't cross until it's pumped out.
 	add_child(box_mesh(Vector3(3.0, 0.08, 2.0), Color(0.1, 0.22, 0.3), F3 + Vector3(0, 0.04, -3.5), 0.3))   # water pool
-	add_child(box_mesh(Vector3(0.3, 1.1, 0.3), Color(0.45, 0.46, 0.5), F3 + DRAIN + Vector3(0, 0.55, 0)))    # valve post
-	add_child(box_mesh(Vector3(0.5, 0.18, 0.5), Color(0.5, 0.7, 0.9), F3 + DRAIN + Vector3(0, 1.2, 0), 0.8))  # valve wheel
+	prop("res://assets/models/props/valve_wheel.glb", F3 + DRAIN, 0.0)   # Ethan's drain valve (Prop Farm)
 	_drain_wall = StaticBody3D.new()
 	(_drain_wall as StaticBody3D).collision_layer = Combat3D.L_WORLD
 	var dcs := CollisionShape3D.new(); var dbs := BoxShape3D.new()
@@ -180,12 +182,10 @@ func _depth3() -> void:
 	_blast_door.add_child(box_mesh(Vector3(4.2, 0.2, 0.5), STEEL.darkened(0.15), Vector3(0, 1.5, 0)))  # seam
 	_blast_door.position = F3 + Vector3(0, 0, -13.6)
 	add_child(_blast_door)
+	# a Prop-Farm bank-vault safe standing in the room (the heist trophy)
+	prop("res://assets/models/props/vault_door.glb", F3 + Vector3(4.2, 0, -12.0), deg_to_rad(150))
 	# Evan's seized wheel (left) + Ethan's lock panel (right)
-	var wheel := MeshInstance3D.new()
-	var wm := TorusMesh.new(); wm.inner_radius = 0.25; wm.outer_radius = 0.5
-	var wmat := StandardMaterial3D.new(); wmat.albedo_color = Color(0.7, 0.3, 0.2); wmat.metallic = 0.6
-	wm.material = wmat; wheel.mesh = wm; wheel.position = F3 + WHEEL + Vector3(0, 1.2, -1.4)
-	add_child(wheel)
+	prop("res://assets/models/props/valve_wheel.glb", F3 + WHEEL + Vector3(0, 0, -1.2), 0.0)  # Evan's wheel
 	add_child(box_mesh(Vector3(0.7, 1.0, 0.25), Color(0.2, 0.3, 0.4), F3 + PANEL + Vector3(0, 1.0, -1.4)))  # panel
 	add_child(box_mesh(Vector3(0.5, 0.18, 0.05), Color(0.3, 0.9, 0.4), F3 + PANEL + Vector3(0, 1.3, -1.27), 1.0))  # panel light
 
