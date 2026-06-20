@@ -96,6 +96,11 @@ elif src_profile != TO:
 clip_src = None if NO_CLIPS else (CLIPS if (CLIPS and CLIPS != "-") else tp.get("clip_source"))
 if clip_src:
     clip_src = repo_path(clip_src)
+    # drop the input's OWN actions first so the grafted clips keep CLEAN names (else Blender renames
+    # the imported library clips to attack.001/walk.001/... on collision — and the game plays by name).
+    target.animation_data_clear()
+    for a in list(bpy.data.actions):
+        bpy.data.actions.remove(a)
     before = set(bpy.data.objects)
     acts_before = set(bpy.data.actions)
     bpy.ops.import_scene.gltf(filepath=clip_src)
