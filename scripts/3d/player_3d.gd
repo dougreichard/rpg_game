@@ -140,6 +140,7 @@ func _physics_process(delta: float) -> void:
 			var want_yaw := atan2(dir.x, dir.z)
 			_mesh.rotation.y = lerp_angle(_mesh.rotation.y, want_yaw, clampf(TURN_LERP * delta, 0.0, 1.0))
 	_attack_anim_t = maxf(_attack_anim_t - delta, 0.0)
+	_special_anim_t = maxf(_special_anim_t - delta, 0.0)
 	if _anim != null:
 		if _attack_anim_t > 0.0:
 			if _anim.current_animation != "attack":
