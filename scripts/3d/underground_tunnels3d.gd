@@ -186,7 +186,7 @@ func _depth3() -> void:
 	prop("res://assets/models/props/vault_door.glb", F3 + Vector3(4.2, 0, -12.0), deg_to_rad(150))
 	# Evan's seized wheel (left) + Ethan's lock panel (right)
 	prop("res://assets/models/props/valve_wheel.glb", F3 + WHEEL + Vector3(0, 0, -1.2), 0.0)  # Evan's wheel
-	add_child(box_mesh(Vector3(0.7, 1.0, 0.25), Color(0.2, 0.3, 0.4), F3 + PANEL + Vector3(0, 1.0, -1.4)))  # panel
+	prop("res://assets/models/props/control_panel.glb", F3 + PANEL + Vector3(0, 0, -1.4), 0.0)  # Ethan's lock panel (Prop Farm)
 	add_child(box_mesh(Vector3(0.5, 0.18, 0.05), Color(0.3, 0.9, 0.4), F3 + PANEL + Vector3(0, 1.3, -1.27), 1.0))  # panel light
 
 # --- shared dressing --------------------------------------------------------

@@ -207,9 +207,8 @@ func _furnish() -> void:
 		add_child(flame)
 		_candle_flames.append(flame)
 		_floating_label(str(i + 1), CANDLES[i] + Vector3(0, 1.6, 0), Color(1.0, 0.85, 0.4))
-	# Memorial register on its stand in the vestry (the Doug objective).
-	add_child(box_mesh(Vector3(0.9, 1.0, 0.6), Color(0.4, 0.28, 0.18), REGISTER_POS + Vector3(0, 0.5, 0)))
-	add_child(box_mesh(Vector3(0.7, 0.08, 0.45), Color(0.9, 0.86, 0.78), REGISTER_POS + Vector3(0, 1.04, 0)))
+	# Memorial register on its lectern in the vestry (the Doug objective).
+	prop("res://assets/models/props/lectern.glb", REGISTER_POS, PI)
 	# Crypt plaques (Erin's observation puzzle) + a lore plaque deeper in.
 	for i: int in range(PLAQUES.size()):
 		var col: Color = Color(0.7, 0.72, 0.6) if i == FALSE_PLAQUE else Color(0.5, 0.5, 0.52)

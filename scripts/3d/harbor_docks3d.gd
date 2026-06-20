@@ -178,8 +178,8 @@ func _stack(pos: Vector3, col: Color) -> void:
 
 # Dock-power panel — Quinn rewires it to power the crane.
 func _power_panel() -> void:
-	add_child(box_mesh(Vector3(0.4, 1.8, 1.4), Color(0.2, 0.22, 0.24), POWER_POS + Vector3(0, 0.9, 0)))
-	add_child(box_mesh(Vector3(0.12, 0.5, 0.5), Color(0.8, 0.2, 0.15), POWER_POS + Vector3(0.28, 1.2, 0), 1.5))  # dead light
+	prop("res://assets/models/props/control_panel.glb", POWER_POS, deg_to_rad(90))   # dock-power panel (Prop Farm)
+	add_child(box_mesh(Vector3(0.12, 0.4, 0.4), Color(0.8, 0.2, 0.15), POWER_POS + Vector3(0.35, 1.2, 0), 1.5))  # dead light glint
 
 # Manifest / lantern locker — Evan forces it, or Quinn dials it once the manifest is up.
 func _locker_stand() -> void:

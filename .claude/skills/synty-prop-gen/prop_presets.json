@@ -487,5 +487,23 @@
     "height": 2.4,
     "poly": 3000,
     "ref_count": 1
+  },
+  "control_panel": {
+    "prompt": "an industrial electrical control panel cabinet, a grey metal wall box with a hinged door, round dials, toggle switches and a warning label",
+    "seed": 15,
+    "track": "painted",
+    "angle": 6,
+    "height": 1.5,
+    "poly": 2500,
+    "ref_count": 1
+  },
+  "lectern": {
+    "prompt": "a wooden reading lectern podium, a slanted reading top on a single carved post and a wide base, an open book resting on top",
+    "seed": 11,
+    "track": "painted",
+    "angle": 6,
+    "height": 1.2,
+    "poly": 2000,
+    "ref_count": 1
   }
 }
