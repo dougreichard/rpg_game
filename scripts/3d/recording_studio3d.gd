@@ -151,10 +151,9 @@ func _glass(pos: Vector3, size: Vector3) -> MeshInstance3D:
 	return mi
 
 func _console() -> void:
-	prop("res://assets/models/props/desk.glb", CONSOLE_POS, 0.0)
-	var surf := box_mesh(Vector3(2.4, 0.08, 0.9), Color(0.14, 0.14, 0.17), CONSOLE_POS + Vector3(0, 1.0, 0))
-	surf.rotation.x = deg_to_rad(-18)
-	add_child(surf)
+	# Prop-Farm mixing console (the soundboard Ben tunes). Keep the fader pips on top as the
+	# solved-state indicator (dead red -> amber when powered -> green when tuned).
+	prop("res://assets/models/props/mixing_console.glb", CONSOLE_POS, 0.0)
 	for i: int in range(8):
 		var x: float = -1.0 + float(i) * 0.28
 		var lite := box_mesh(Vector3(0.12, 0.04, 0.12), Color(0.9, 0.25, 0.2), CONSOLE_POS + Vector3(x, 1.12, 0.0), 1.5)
@@ -162,28 +161,18 @@ func _console() -> void:
 		add_child(lite)
 		_console_lights.append(lite)
 
-# Patch bay — a dead rack Quinn rewires to power the console.
+# Patch bay — a dead rack Quinn rewires to power the console (Prop-Farm patch rack).
 func _patch_bay() -> void:
-	add_child(box_mesh(Vector3(0.5, 1.8, 1.2), Color(0.16, 0.16, 0.2), PATCH_POS + Vector3(0, 0.9, 0)))
-	for i: int in range(6):
-		var y: float = 0.5 + float(i) * 0.22
-		add_child(box_mesh(Vector3(0.12, 0.08, 0.9), Color(0.5, 0.35, 0.15), PATCH_POS + Vector3(0.28, y, 0)))  # patch cables
+	prop("res://assets/models/props/patch_rack.glb", PATCH_POS, deg_to_rad(-90))
 
-# Doug's reel-to-reel — Ben restores it to hear Doug's message.
+# Doug's reel-to-reel — Ben restores it to hear Doug's message (Prop-Farm tape machine).
 func _reel_machine() -> void:
-	add_child(box_mesh(Vector3(1.4, 0.9, 0.8), Color(0.2, 0.18, 0.16), REEL_POS + Vector3(0, 0.45, 0)))
-	for sx: float in [-0.35, 0.35]:
-		var reel := MeshInstance3D.new()
-		var cm := CylinderMesh.new(); cm.top_radius = 0.28; cm.bottom_radius = 0.28; cm.height = 0.08
-		var mat := StandardMaterial3D.new(); mat.albedo_color = Color(0.45, 0.3, 0.2)
-		cm.material = mat; reel.mesh = cm; reel.rotation.x = deg_to_rad(90)
-		reel.position = REEL_POS + Vector3(sx, 1.0, 0.1)
-		add_child(reel)
+	prop("res://assets/models/props/reel_to_reel.glb", REEL_POS, PI)
 
 # Feedback panel — a squealing monitor wedge Ben can silence (optional → backstage pass).
 func _feedback_panel() -> void:
-	add_child(box_mesh(Vector3(0.9, 0.6, 0.7), Color(0.15, 0.15, 0.18), FEEDBACK_POS + Vector3(0, 0.3, 0)))
-	add_child(box_mesh(Vector3(0.7, 0.1, 0.5), Color(0.8, 0.3, 0.2), FEEDBACK_POS + Vector3(0, 0.65, 0.1), 1.2))
+	prop("res://assets/models/props/studio_monitor.glb", FEEDBACK_POS, deg_to_rad(45))
+	add_child(box_mesh(Vector3(0.5, 0.08, 0.35), Color(0.8, 0.3, 0.2), FEEDBACK_POS + Vector3(0, 0.6, 0.1), 1.2))  # squeal light
 
 # Iso Booth — Ben's perfect-pitch tone-match: three sounding pads + the tape-archive cabinet.
 func _iso_booth() -> void:
@@ -195,6 +184,13 @@ func _iso_booth() -> void:
 	# tape-archive cabinet (a sliding door rises when the tones match)
 	_archive_node = box_mesh(Vector3(1.6, 2.4, 0.5), Color(0.15, 0.15, 0.18), ARCHIVE_POS + Vector3(0, 1.2, 0))
 	add_child(_archive_node)
+	# amp storage + a stray monitor (the iso booth doubles as gear storage)
+	prop("res://assets/models/props/amp_stack.glb", ISO_C + Vector3(3.5, 0, 2.5), deg_to_rad(-110))
+	prop("res://assets/models/props/amp_stack.glb", ISO_C + Vector3(-3.0, 0, 2.8), deg_to_rad(60))
+	prop("res://assets/models/props/studio_monitor.glb", ISO_C + Vector3(3.0, 0, -3.0), deg_to_rad(-135))
+	# a couple of amp stacks + a monitor dressing the live room corners
+	prop("res://assets/models/props/amp_stack.glb", Vector3(-7.5, 0, -6.0), deg_to_rad(30))
+	prop("res://assets/models/props/studio_monitor.glb", Vector3(6.5, 0, 5.5), deg_to_rad(200))
 
 func _floating_label(txt: String, pos: Vector3, col: Color) -> void:
 	var l := Label3D.new()

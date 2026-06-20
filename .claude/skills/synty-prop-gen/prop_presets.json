@@ -235,5 +235,50 @@
     "height": 1.5,
     "poly": 2500,
     "ref_count": 1
+  },
+  "mixing_console": {
+    "prompt": "a large recording studio mixing console, a wide angled desk covered in rows of faders and knobs with small meter lights, on a metal stand",
+    "seed": 15,
+    "track": "painted",
+    "angle": 6,
+    "height": 1.2,
+    "poly": 4000,
+    "ref_count": 1
+  },
+  "patch_rack": {
+    "prompt": "a studio patch-bay rack cabinet, a tall black metal equipment rack full of patch points with a tangle of colorful patch cables down the front",
+    "seed": 15,
+    "track": "painted",
+    "angle": 6,
+    "height": 1.8,
+    "poly": 3000,
+    "ref_count": 1
+  },
+  "reel_to_reel": {
+    "prompt": "a vintage reel-to-reel tape machine, two large round tape reels side by side above a control panel deck with VU meters and knobs",
+    "seed": 15,
+    "track": "painted",
+    "angle": 6,
+    "height": 1.1,
+    "poly": 3000,
+    "ref_count": 1
+  },
+  "studio_monitor": {
+    "prompt": "a studio monitor speaker, a black angled floor wedge speaker cabinet with one large round driver and a small tweeter",
+    "seed": 11,
+    "track": "painted",
+    "angle": 6,
+    "height": 0.7,
+    "poly": 2000,
+    "ref_count": 1
+  },
+  "amp_stack": {
+    "prompt": "a guitar amplifier stack, a large speaker cabinet with a separate head amp on top, black covering, a cloth grille and a row of control knobs",
+    "seed": 16,
+    "track": "painted",
+    "angle": 6,
+    "height": 1.6,
+    "poly": 2500,
+    "ref_count": 1
   }
 }
