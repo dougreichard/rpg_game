@@ -8,6 +8,8 @@ so the Blender/animation context is loaded once.
 ---
 
 ## Plan A — Characters: identity, look, pose, special anims
+**Status:** A1 ✅ (09542d6 — Doug→"UD", pronouns verified clean) · A2 ✅ (1e7db03 — arms-down idle, all 15 chars re-baked, ARM_APOSE −70) · A3 ⬜ looks/accessories · A4 ⬜ special anims.
+**Re-bake manifest** (for A3/A4 — `export_anim_authored.py --kind lead`, /tmp/bake_all.sh): leads = `CityCharacters/FBX/Character.fbx` meshes Character_Roadworker(quinn)/HipsterGirl(erin)/Jock(evan)/PunkGuy(ben)/HipsterGuy(ethan), atlas Polygon_City_Characters_Texture_01_A; Doug+NPCs = `Office/Characters/SK_Chr_*` (Developer_Male_02=doug, Boss_Male_01=bellows, Developer_Male_01=congregant_m, Business_Female_01=congregant_f), atlas PolygonOffice_01_A; aldric = `WesternFrontier/.../SK_Chr_Priest_Male_01`, atlas PolygonWesternFrontier_01_A; kids = `Kids/Chr/SK_Chr_Kid_*`, mesh "Kid", atlas PolygonKids_01_A.
 **Context:** Blender character pipeline (`synty_source/blender/scripts/export_anim_authored.py`,
 `render_anim_character.py` pose code), the lead meshes (`assets/models/characters/{quinn,erin,evan,
 ben,ethan,uncle_doug}.glb`), `CharacterData` (`scripts/players/character_data.gd` + `data/characters/*.tres`),
