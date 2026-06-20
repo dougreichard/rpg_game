@@ -257,7 +257,7 @@ often; Evan is the slowest but hits hardest and has the most HP.
 ### Game flow & UI systems
 - **Flow:** `Title3D` → `Overworld3D` → `*3D` level → (Esc/clear) → `Overworld3D`; endgame → `Result3D`.
 - **Overworld** (`scenes/3d/Overworld3D.tscn`, `scripts/3d/overworld3d.gd`) — a walkable Synty city laid out as a **stacked-boulevard grid**: 3 rows of buildings (`SLOTS`/`COL_X`/`ROW_Z`) **all facing +Z** (the camera is locked looking −Z, so every building faces it — no more per-building yaw guessing), each fronted by an E-W boulevard (`BLVD_Z`) with N-S cross-streets (`CROSS_X`); a **central park** (`_park()` — grass, fountain, gazebo, pond, tree ring, benches, lamps, flower beds, baked from Town/Kids env meshes) fills the middle slot where the 12 NPC quest-givers cluster; `_foliage()` scatters trees/bushes/flowers along the medians. Proximity to a building shows its name billboard + status and `G` enters that location's 3D scene (unlock-gated via each `LOCS` entry's `req` = a completed-location id). The strolling duo is drawn from `GameManager.unlocked_characters` (first two, in unlock order — so Quinn walks alone at the start). Some locations also need an **item in hand** (`ITEM_GATE`, checked across all characters): the Underground Tunnels need the `pocket_lantern` (the door shows a "you'll need a lantern (try the Harbor & Docks)" hint until you carry one). 12 town NPC quest-givers are placed here too — they **wander a small loop** (`Npc3D` waypoints) and bark idle **speech bubbles** (`TOWN_QUIPS`), with a **static one-at-a-time bark gate** in `npc3d.gd` (`_last_bark_ms` / `BARK_GAP_MS`) so the crowd never talks over itself; the NPC nearest the player is `paused` so it holds still to be talked to, and `_nearest_npc` measures the **live** node position (not the spawn point). Per-location buildings are **thematic whole-mesh Synty meshes** (`LOCS[i]["glb"]` in `assets/models/town/`), baked via `export_prop.py`: church, CityHall=library, WaterTower=clocktower, Warehouse=harbor, Chopshop=the_drop, market-stall=carnival, SciFiCity FoodHole=arcade, City OfficeOld_Large=cinema. **Gotchas:** (1) per-pack scale — `export_prop` clobbers the FBX import unit-scale, so cm packs need `--scale 0.01` (some meshes are authored tiny and need ~0.55–0.7); (2) **facing** — the overworld camera always looks −Z, so a building's *front must face +Z*; `LOCS` entries take an optional `yaw` (and `BLD_SCALE`) override since each mesh's native front differs. Modular kit-bash (`synty_source/blender/scripts/assemble_building.py`) exists but the **Casino pack uses external tiling textures that don't resolve to a single atlas**, so those assemblies came out mis-textured — whole-mesh is the reliable path. See `docs/overworld_building_themes.md`.
-- **Combat polish** (`CombatFX` autoload): screen shake + hit-stop; enemies flash an overbright tint on hit and a red tint on windup. (The old 2D hit-spark particles don't render in 3D — a 3D `GPUParticles3D` spark is a candidate add.)
+- **Combat polish** (`CombatFX` autoload): screen shake + hit-stop; enemies flash an overbright tint on hit and a red tint on windup. A 3D **`GPUParticles3D` hit-spark** (`Combat3D.spark`, billboarded + additive, self-freeing) fires where damage lands on players + enemies.
 
 ---
 
@@ -660,8 +660,10 @@ Applies `Engine.time_scale = 0.4` for a brief window. Governs cooldown/charge. E
 ### HUD
 Each 3D level builds a lightweight HUD in its own `_build_hud` (a goal line + a transient
 hint line + a centre banner, via `Level3D.hud_label`/`make_hud_layer`), plus the shared
-**Bies charge bar** (`Level3D._build_bies_bar`, bottom-centre, fills/pulses gold). Per-character
-health bars + a boss health bar aren't built yet — a candidate HUD upgrade.
+**Bies charge bar** (`Level3D._build_bies_bar`, bottom-centre, fills/pulses gold). **Per-character
+health bars** (top-left, one row per duo body — name + HP, red→green fill, active row highlighted,
+"DOWN" state) **+ a boss health bar** (top-centre, auto-detects the `enemy3d` boss) are built in
+`Level3D._build_health_bars` / `_update_health_bars` (shared across every level via `build_ui_stack`).
 
 ### UI skin — UITheme + Nunito font (cozy-warm Synty)
 `scripts/ui/ui_theme.gd` (`class_name UITheme`) is the global UI look: a code-built warm
