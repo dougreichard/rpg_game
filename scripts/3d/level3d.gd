@@ -27,6 +27,7 @@ var _bies_fill: ColorRect = null   # Bies charge bar (levels only)
 var _bies_pulse: float = 0.0
 var _hp_layer: CanvasLayer = null  # per-character + boss health bars (levels only)
 var _hp_rows: Array = []           # one {bg, fill, label} per duo body
+var music_track: String = "combat" # per-level BGM; calm/dialogue levels override (e.g. "overworld")
 var _boss_bg: ColorRect = null
 var _boss_fill: ColorRect = null
 var _boss_label: Label = null
@@ -95,6 +96,7 @@ func build_ui_stack(in_overworld: bool) -> void:
 	if not in_overworld:
 		_build_bies_bar()
 		_build_health_bars()
+		Audio.play_music(music_track)
 
 func _build_bies_bar() -> void:
 	var cl := CanvasLayer.new(); cl.layer = 6; add_child(cl)
@@ -415,7 +417,18 @@ func hud_label(cl: CanvasLayer, y: float, size: int = 22, from_bottom: bool = fa
 func _process(d: float) -> void:
 	_update_bies_bar(d)
 	_update_health_bars()
+	_update_music()
 	_check_walk_out()
+
+# Swap to the boss theme while a boss is alive, back to the level track once it's down.
+# (_boss_enemy is set by _update_health_bars; Audio.play_music de-dups so this is cheap.)
+func _update_music() -> void:
+	if _hp_layer == null:
+		return
+	if _boss_enemy != null and is_instance_valid(_boss_enemy):
+		Audio.play_music("boss")
+	else:
+		Audio.play_music(music_track)
 	if _shot_frames < 0:
 		return
 	_shot_frames -= 1

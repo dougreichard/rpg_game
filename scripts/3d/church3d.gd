@@ -134,6 +134,7 @@ var _cl_bubble_t: float = 0.0
 func _build_level() -> void:
 	location_id = LOCATION_ID
 	multi_room = true
+	music_track = "overworld"   # combat-free, dialogue-heavy → the calmer theme, not combat
 	build_env(Color(0.06, 0.06, 0.09), Color(0.5, 0.46, 0.42), 0.55, 0.8)
 	point_light(Vector3(0, 3.0, -6.0), Color(1.0, 0.85, 0.55), 2.5, 9.0)        # altar
 	point_light(Vector3(-HALF_W + 0.5, 2.6, -2.0), Color(0.5, 0.6, 1.0), 1.6, 6.0)  # stained glass

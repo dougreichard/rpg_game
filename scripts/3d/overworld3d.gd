@@ -120,6 +120,7 @@ func _build_level() -> void:
 		if c is Camera3D and c.has_method("reframe"):
 			c.call("reframe", 13.5, 52.0)
 	build_ui_stack(true)   # pause menu + overlays (Esc opens it)
+	Audio.play_music("overworld")   # the walkable city theme
 
 # The strolling duo = the first (up to two) unlocked characters, in unlock order.
 # Quinn alone at the start; Quinn+Erin once Bellows & Sons is done; and so on.
