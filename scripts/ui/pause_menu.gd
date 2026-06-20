@@ -130,13 +130,12 @@ func _build_main_panel() -> void:
 	_main_panel_nodes.append(title)
 
 	for i in _options.size():
-		var lbl := Label.new()
-		lbl.position = PANEL_RECT.position + Vector2(40.0, 96.0 + float(i) * 44.0)
-		lbl.size = Vector2(PANEL_RECT.size.x - 80.0, 38.0)
-		lbl.add_theme_font_size_override("font_size", 18)
-		add_child(lbl)
-		_option_labels.append(lbl)
-		_main_panel_nodes.append(lbl)
+		var b := UITheme.menu_button(_options[i], 18, false)
+		b.position = PANEL_RECT.position + Vector2(40.0, 96.0 + float(i) * 44.0)
+		b.size = Vector2(PANEL_RECT.size.x - 80.0, 38.0)
+		add_child(b)
+		_option_labels.append(b)
+		_main_panel_nodes.append(b)
 
 	var hint := Label.new()
 	hint.text = "ESC  to  resume"
@@ -426,9 +425,9 @@ func _select_main() -> void:
 
 func _refresh_options() -> void:
 	for i in _option_labels.size():
-		var lbl: Label = _option_labels[i]
-		lbl.text = (">  " if i == _cursor else "    ") + _options[i]
-		lbl.add_theme_color_override("font_color", SELECTED_COLOR if i == _cursor else NORMAL_COLOR)
+		var b: Button = _option_labels[i]
+		b.text = _options[i]
+		UITheme.set_button_selected(b, i == _cursor)
 
 func _refresh_sliders() -> void:
 	var volumes: Array = [Audio.sfx_volume, Audio.music_volume]

@@ -301,18 +301,13 @@ func _focus(i: int) -> void:
 	_btns[_focus_i].grab_focus()
 	_repaint_focus()
 
-# Explicit highlight so keyboard/gamepad focus is obvious (the UITheme has no loud
-# focus box): the selected button stays bright, the rest dim.
+# Highlight the focused button (shared menu styling, so it matches the title/pause menus).
 func _repaint_focus() -> void:
 	for i in _btns.size():
-		(_btns[i] as Button).modulate = Color(1, 1, 1) if i == _focus_i else Color(0.52, 0.52, 0.56)
+		UITheme.set_button_selected(_btns[i], i == _focus_i)
 
 func _mk_button(parent: Node, text: String, on_press: Callable) -> Button:
-	var b := Button.new()
-	b.text = text
-	b.custom_minimum_size = Vector2(0, 40)
-	b.add_theme_font_override("font", UITheme.font())
-	b.add_theme_font_size_override("font_size", 18)
+	var b := UITheme.menu_button(text, 18, true)
 	b.pressed.connect(on_press)
 	parent.add_child(b)
 	return b

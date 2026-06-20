@@ -89,13 +89,12 @@ func _render(header: String, sub: String) -> void:
 	if sub != "":
 		_title_label(sub, 196, 24, UITheme.CREAM)
 	for i in _items.size():
-		var l := Label.new()
-		l.anchor_right = 1.0; l.offset_top = 320 + i * 52; l.offset_bottom = 368 + i * 52
-		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		l.add_theme_font_override("font", UITheme.font())
-		l.add_theme_font_size_override("font_size", 32)
-		_menu.add_child(l)
-		_item_nodes.append(l)
+		var b := UITheme.menu_button(_items[i]["text"], 28, false)
+		b.anchor_left = 0.5; b.anchor_right = 0.5
+		b.offset_left = -200; b.offset_right = 200
+		b.offset_top = 320 + i * 58; b.offset_bottom = 372 + i * 58
+		_menu.add_child(b)
+		_item_nodes.append(b)
 	_title_label("W/S or ↑/↓ choose   ·   F / Enter select   ·   Esc back", 648, 18, UITheme.TEXT_DIM)
 	_refresh()
 
@@ -115,10 +114,11 @@ func _title_label(text: String, y: float, size: int, col: Color) -> Label:
 func _refresh() -> void:
 	for i in _item_nodes.size():
 		var it: Dictionary = _items[i]
-		var sel: bool = i == _cursor
-		var col: Color = UITheme.ACCENT if sel else (UITheme.TEXT_DIM if it["enabled"] else Color(0.45, 0.42, 0.4))
-		_item_nodes[i].add_theme_color_override("font_color", col)
-		_item_nodes[i].text = ("> %s <" % it["text"]) if sel else it["text"]
+		var b: Button = _item_nodes[i]
+		b.text = it["text"]
+		b.disabled = not it["enabled"]   # themed disabled stylebox
+		if it["enabled"]:
+			UITheme.set_button_selected(b, i == _cursor)
 
 # --- input -------------------------------------------------------------------
 func _unhandled_input(_e: InputEvent) -> void:
@@ -168,3 +168,4 @@ func _select() -> void:
 			else:
 				SaveManager.load_game(slot)
 			get_tree().change_scene_to_file(OVERWORLD_3D)
+

@@ -75,6 +75,29 @@ static func _button_box(bg: Color, border: Color) -> StyleBoxFlat:
 	return b
 
 
+# Shared themed menu button — the warm "nice button" look used across the menus
+# (title, pause, Gimme Dat Spoon) so they read consistently. `focusable=false` for
+# cursor-driven menus that run their own keyboard nav (highlight via set_button_selected).
+static func menu_button(text: String, font_size: int = 26, focusable: bool = true) -> Button:
+	var b := Button.new()
+	b.text = text
+	b.theme = get_theme()
+	b.add_theme_font_override("font", font())
+	b.add_theme_font_size_override("font_size", font_size)
+	b.custom_minimum_size = Vector2(0, 44)
+	if not focusable:
+		b.focus_mode = Control.FOCUS_NONE
+	return b
+
+
+# Mark a menu button selected (for cursor-driven menus where the button isn't the
+# focused Control): brighter fill + accent border + cream text vs. the soft normal look.
+static func set_button_selected(b: Button, sel: bool) -> void:
+	b.add_theme_stylebox_override("normal",
+		_button_box(Color(0.30, 0.22, 0.13, 0.98), ACCENT) if sel else _button_box(PANEL_BG_SOFT, GOLD_DIM))
+	b.add_theme_color_override("font_color", CREAM if sel else TEXT_DIM)
+
+
 static func get_theme() -> Theme:
 	if _theme != null:
 		return _theme
