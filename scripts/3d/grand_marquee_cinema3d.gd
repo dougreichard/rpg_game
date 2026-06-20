@@ -126,11 +126,13 @@ func _screen() -> void:
 	add_child(box_mesh(Vector3(12.0, 0.8, 0.6), GOLD.darkened(0.1), Vector3(0, 4.8, -9.5)))   # proscenium pelmet
 
 func _seating() -> void:
-	# rows of theatre seats (Prop-Farm cinema_seats — a 4-seat row) flanking the aisle
+	# rows of theatre seats (Prop-Farm cinema_seats — a 4-seat row) flanking the aisle.
+	# yaw -90° turns each row to run side-to-side (along X) and FACE the screen (-Z).
+	var face_screen: float = -PI / 2.0
 	for row: int in range(6):
 		var z: float = -4.0 + float(row) * 2.0
-		prop("res://assets/models/props/cinema_seats.glb", Vector3(-4.6, 0, z), 0.0)
-		prop("res://assets/models/props/cinema_seats.glb", Vector3(4.6, 0, z), 0.0)
+		prop("res://assets/models/props/cinema_seats.glb", Vector3(-4.6, 0, z), face_screen)
+		prop("res://assets/models/props/cinema_seats.glb", Vector3(4.6, 0, z), face_screen)
 
 func _projector_booth() -> void:
 	# Prop-Farm film projector (Quinn repairs it); keep the status pip as the solved indicator
