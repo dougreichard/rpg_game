@@ -93,6 +93,10 @@ func _move_input(prefix: String) -> Vector3:
 
 func _physics_process(delta: float) -> void:
 	_iframes = maxf(_iframes - delta, 0.0)
+	# Tick anim timers before any early-return so a special/attack started just
+	# before a dialog (which locks input) still resolves instead of replaying after.
+	_attack_anim_t = maxf(_attack_anim_t - delta, 0.0)
+	_special_anim_t = maxf(_special_anim_t - delta, 0.0)
 	if is_downed or _input_locked:
 		velocity.x = 0.0; velocity.z = 0.0
 		if not is_on_floor():
@@ -139,8 +143,6 @@ func _physics_process(delta: float) -> void:
 		if _mesh != null:
 			var want_yaw := atan2(dir.x, dir.z)
 			_mesh.rotation.y = lerp_angle(_mesh.rotation.y, want_yaw, clampf(TURN_LERP * delta, 0.0, 1.0))
-	_attack_anim_t = maxf(_attack_anim_t - delta, 0.0)
-	_special_anim_t = maxf(_special_anim_t - delta, 0.0)
 	if _anim != null:
 		if _attack_anim_t > 0.0:
 			if _anim.current_animation != "attack":
@@ -161,6 +163,8 @@ func _physics_process(delta: float) -> void:
 	_companion_cd = maxf(_companion_cd - delta, 0.0)
 	if Input.is_action_just_pressed(prefix + "special"):
 		_special_anim_t = 0.6
+		if _anim != null:
+			_anim.play("special")
 		# Erin's special doubles as a distraction — calms nearby alerted guards.
 		if active_name() == "Erin":
 			GameManager.calm_enemies(Vector2(global_position.x, global_position.z), 130.0 / PX_PER_M)
