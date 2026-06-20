@@ -2,19 +2,19 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://badm33ig03gyb"
-path="res://.godot/imported/cinema_marquee_Image_0.png-17754ac46a7964d564112118b2051756.ctex"
+uid="uid://bbnki5qghlbh6"
+path="res://.godot/imported/gym_boiler_Image_0.png-22e0e06030c57b0813ad2f6cf41b484b.ctex"
 metadata={
 "vram_texture": false
 }
 generator_parameters={
-"md5": "92de0d524216dd628abc64ffcf7c4d4d"
+"md5": "9d7ab9f5d053ab3976949b99de1407c1"
 }
 
 [deps]
 
-source_file="res://assets/models/props/cinema_marquee_Image_0.png"
-dest_files=["res://.godot/imported/cinema_marquee_Image_0.png-17754ac46a7964d564112118b2051756.ctex"]
+source_file="res://assets/models/props/gym_boiler_Image_0.png"
+dest_files=["res://.godot/imported/gym_boiler_Image_0.png-22e0e06030c57b0813ad2f6cf41b484b.ctex"]
 
 [params]
 

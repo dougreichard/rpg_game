@@ -291,12 +291,12 @@
     "ref_count": 1
   },
   "cinema_marquee": {
-    "prompt": "an ornate illuminated cinema theatre marquee sign, a projecting canopy with rows of round light bulbs along its edges and blank white letter-board panels, gold art-deco trim",
-    "seed": 15,
+    "prompt": "an art-deco theatre vertical blade sign, a tall narrow illuminated sign tower spelling a name vertically with rows of round light bulbs down both edges, gold and red",
+    "seed": 65,
     "track": "painted",
     "angle": 6,
-    "height": 2.4,
-    "poly": 3500,
+    "height": 3.2,
+    "poly": 3000,
     "ref_count": 1
   },
   "chandelier": {
@@ -444,12 +444,12 @@
     "ref_count": 1
   },
   "library_globe": {
-    "prompt": "an antique world globe on a wooden floor stand, a large sphere globe held in a turned-wood cradle",
-    "seed": 13,
+    "prompt": "an antique terrestrial world globe on a four-legged wooden floor stand, one clear round sphere globe held in a brass half-ring on turned-wood legs",
+    "seed": 65,
     "track": "painted",
     "angle": 6,
-    "height": 1.2,
-    "poly": 2000,
+    "height": 1.3,
+    "poly": 2500,
     "ref_count": 1
   },
   "gym_lockers": {
@@ -477,6 +477,15 @@
     "angle": 6,
     "height": 1.0,
     "poly": 2500,
+    "ref_count": 1
+  },
+  "gym_boiler": {
+    "prompt": "a tall cylindrical industrial water-heater boiler tank standing on short legs, a single metal tank with a few pipes up the side and a round pressure gauge on the front",
+    "seed": 62,
+    "track": "painted",
+    "angle": 6,
+    "height": 2.4,
+    "poly": 3000,
     "ref_count": 1
   }
 }

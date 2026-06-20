@@ -189,7 +189,7 @@ func _rack_barrier() -> void:
 
 # Boiler room contents — big boiler tank + the valve wheel Quinn turns for the key.
 func _boiler() -> void:
-	prop("res://assets/models/props/bellows_engine.glb", BOILER_C + Vector3(1.3, 0, 2.0), deg_to_rad(180))  # reused boiler-engine
+	prop("res://assets/models/props/gym_boiler.glb", BOILER_C + Vector3(1.3, 0, 2.0), deg_to_rad(180))  # Prop-Farm boiler (re-rolled)
 	add_child(box_mesh(Vector3(0.3, 1.2, 0.3), Color(0.45, 0.46, 0.5), VALVE_POS + Vector3(0, 0.6, 0)))     # valve post
 	var wheel := MeshInstance3D.new()
 	var cm := CylinderMesh.new(); cm.top_radius = 0.45; cm.bottom_radius = 0.45; cm.height = 0.1

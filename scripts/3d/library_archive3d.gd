@@ -102,6 +102,7 @@ func _reading_room() -> void:
 	for pos: Vector3 in [READ_C + Vector3(-5.0, 0, 1.5), READ_C + Vector3(5.0, 0, 1.5), READ_C + Vector3(-5.0, 0, -2.0), READ_C + Vector3(5.0, 0, -2.0)]:
 		prop("res://assets/models/props/table.glb", pos, 0.0)
 		prop("res://assets/models/props/chair.glb", pos + Vector3(0, 0, 0.8), PI)
+	prop("res://assets/models/props/library_globe.glb", READ_C + Vector3(0, 0, 2.5), 0.0)   # reading-room globe (re-rolled)
 	prop("res://assets/models/props/shelf.glb", READ_C + Vector3(-8.0, 0, -1.0), deg_to_rad(90))   # wall shelves
 	prop("res://assets/models/props/shelf.glb", READ_C + Vector3(8.0, 0, -1.0), deg_to_rad(-90))
 	# Priswick's checkpoint desk, just south of the gate
