@@ -365,7 +365,7 @@ Loft. Still-single-room levels inherit this as they're converted to multi-room.)
 ### 5. The Clocktower — `Clocktower3D.tscn`
 - **Unlock condition:** All five characters unlocked
 - **Key puzzle(s):** Quinn repairs the gear floor escapement (unbars the belfry stair); Ben plays the correct belfry bell sequence; clockwork-guardian Boss guards the belfry
-- **3D build:** 3 floors. New: Ben **times the swinging pendulum** in the antechamber to still it + lift a gate to the belfry (timing gate, live HUD); Quinn winds the **weight cranks 1→2→3** → optional `archive_key`; Quinn winds **Doug's pocket-watch** → `doug_pocketwatch`. Bells now also grant `tuning_fork`. Tile/stone surfaces, brass accents.
+- **3D build:** 3 floors. New: Ben **times the swinging pendulum** in the antechamber to still it + lift a gate to the belfry (timing gate, live HUD); Quinn winds the **weight cranks 1→2→3** → optional `archive_key`; Quinn winds **Doug's pocket-watch** → `doug_pocketwatch`. Bells now also grant `tuning_fork`. **Hero props are Prop-Farm** (`clock_gears` behind the spinning gear-train, `tower_bells` behind the playable belfry bells, `clock_face` + `clock_pendulum` as lobby/hall display pieces); the playable gear/pendulum/bells + glowing tower-face stay primitive (they animate/gate the puzzles). Tile/stone surfaces, brass accents.
 - **Enemy types:** Grunts + Boss (clockwork guardian)
 - **Level progress flags:** `enemies_cleared` / `gear_repaired` / `bells_played` / `gear_loot_open` / `pendulum_stilled` / `archive_open` / `watch_taken`
 - **NPCs:** Hieronymus (stationary in the F1 lobby)
