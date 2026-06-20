@@ -24,8 +24,8 @@
         "UpperLeg_L", "LowerLeg_L", "Ankle_L", "Ball_L", "Toes_L"
       ],
       "anim_clips": ["idle", "walk", "run", "attack", "dash", "down", "hurt", "sit", "special"],
-      "clip_source": "assets/models/characters/quinn.glb",
-      "clip_reuse_note": "All shipped characters carry these 9 clips on this identical skeleton, so the retarget grafts them verbatim from clip_source (no re-authoring). Verified uniform across quinn/erin/evan/ethan/ben (49-bone) and the 55-bone NPCs.",
+      "clip_source": "assets/animations/synty_clips.glb",
+      "clip_reuse_note": "Canonical mesh-free clip library (make_clip_library.py, extracted from quinn.glb). All characters carry these 9 clips on this identical skeleton, so the retarget grafts them verbatim (no re-authoring). Regenerate the library if the clips change.",
       "bone_map": {},
       "_bone_map_todo": "source(UniRig)->Synty rename map. Fill once we confirm whether the humanoid pipeline emits UniRig 'vroid' (J_Bip_*, preferred named hub) or generic 'bone_N' (then classify by T-pose position first). e.g. J_Bip_C_Hips->Hips, J_Bip_L_UpperArm->Shoulder_L, J_Bip_L_LowerArm->Elbow_L, J_Bip_L_Hand->Hand_L, J_Bip_L_UpperLeg->UpperLeg_L, ..."
     },
