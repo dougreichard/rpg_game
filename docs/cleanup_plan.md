@@ -36,7 +36,8 @@ elaboration ("if so ok" → left as-is).
 7. **Audit the outdoor pass**: confirm Harbor got the "resize for outdoors" + extra-puzzle treatment; if
    not, apply the outdoor recipe (spaced areas, bush boundary, a dressed sub-area).
 
-## Phase 3 — Arcade overworld building polish (no farm; farm upgrade deferred → F)
+## Phase 3 — Arcade overworld building polish (no farm; farm upgrade deferred → F)  ✅ DONE
+Baked Synty `SM_Sign_Large_Arcade_01` (cm→`--scale 0.01`) and mounted it on the arcade building front (keeps the Gimme Dat Spoon surprise). Bespoke farm building still deferred to F.
 8. Theme the current arcade building **now** with the Synty **`SM_Sign_Large_Arcade_01`** sign (+ maybe a
    couple of arcade-machine props at the entrance). A bespoke farm-generated arcade building is a
    deferred nice-to-have (Phase F).

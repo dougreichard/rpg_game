@@ -275,6 +275,10 @@ func _buildings() -> void:
 		prop(TOWN + loc["glb"] + ".glb", place, byaw, bscale)
 		if loc["id"] == "clocktower":
 			_add_clock_tower(place, 0.0)
+		# Big "ARCADE" sign mounted on the games-hall front (keeps the Gimme Dat
+		# Spoon surprise — it just reads as an arcade until you go in).
+		if loc["id"] == "gimme_dat_spoon":
+			prop(TOWN + "arcade_sign.glb", place + Vector3(0, 5.6, 4.2), 0.0, 1.0)
 		_entry_plaza(x, z)
 		_entry_dressing(x, z)
 		_name_billboard(loc, Vector3(x, 0.0, z + 2.0))
