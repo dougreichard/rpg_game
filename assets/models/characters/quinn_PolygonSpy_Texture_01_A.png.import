@@ -2,19 +2,19 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://p767lb4yi40a"
-path="res://.godot/imported/ethan_Polygon_City_Characters_Texture_01_A.png-77a0268ad4e684644e61b0c01379d511.ctex"
+uid="uid://djwrd7kec8swg"
+path="res://.godot/imported/quinn_PolygonSpy_Texture_01_A.png-3a6c8bed9231307d5c7314ab73740de0.ctex"
 metadata={
 "vram_texture": false
 }
 generator_parameters={
-"md5": "a9542edb6e7af11ec095c0389fdf71bb"
+"md5": "826c7e3adf2e760674c7b4868327cb12"
 }
 
 [deps]
 
-source_file="res://assets/models/characters/ethan_Polygon_City_Characters_Texture_01_A.png"
-dest_files=["res://.godot/imported/ethan_Polygon_City_Characters_Texture_01_A.png-77a0268ad4e684644e61b0c01379d511.ctex"]
+source_file="res://assets/models/characters/quinn_PolygonSpy_Texture_01_A.png"
+dest_files=["res://.godot/imported/quinn_PolygonSpy_Texture_01_A.png-3a6c8bed9231307d5c7314ab73740de0.ctex"]
 
 [params]
 

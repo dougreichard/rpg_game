@@ -8,7 +8,21 @@ so the Blender/animation context is loaded once.
 ---
 
 ## Plan A — Characters: identity, look, pose, special anims
-**Status:** A1 ✅ (09542d6 — Doug→"UD", pronouns verified clean) · A2 ✅ (1e7db03 — arms-down idle, all 15 chars re-baked, ARM_APOSE −70) · A3 ⬜ looks/accessories · A4 ⬜ special anims.
+**Status:** A1 ✅ (09542d6 — Doug→"UD", pronouns verified clean) · A2 ✅ (1e7db03 — arms-down idle, all 15 chars re-baked, ARM_APOSE −70) · A3 🔶 looks/accessories IN PROGRESS · A4 ⬜ special anims.
+
+**A3 — all LOOKS DONE (accessories still TODO).** Body picks (all Doug-approved, all boot clean):
+- **Quinn** = SpyKit `SK_Chr_Male_Spy_Necktie` (dark suit+shades, `PolygonSpy_Texture_01_A`) + near-black **flat cap** (Kids `SM_Chr_Attach_Hat_Flatcap_01`) via `attach_hat.py`.
+- **Erin** = City `SK_Character_Female_Jacket` (`PolygonCity_Texture_01_A`) — red jacket+tee+jeans (no true sweater mesh exists; Doug picked this).
+- **Evan** = unchanged (CityCharacters Jock = red letterman jacket + jeans — already matched spec).
+- **Ben** = City `SK_Character_Male_Jacket` (`PolygonCity_Texture_01_A`) — jacket+tee+jeans, tousled hair (off PunkGuy mohawk per Doug).
+- **Ethan** = Office `SK_Chr_Developer_Male_01` (`PolygonOffice_Texture_01_A`) — '</>' code t-shirt+jeans+glasses. Freed up by re-baking the church **congregant_m → Office `SK_Chr_Business_Male_02`** so they don't share a mesh.
+- **Doug** = unchanged (Office Developer_Male_02 — older/balding/glasses — already matched).
+
+**attach_hat.py** (the hat tool) joins an accessory mesh into the body mesh + weights new verts to a named bone (debugged: bone-parent re-adds 17m leaf-bone length; fresh skin collapses to origin; join-into-body is the only reliable path). It also strips the stray origin "Icosphere" the SpyKit FBX carries (Blender re-import falsely re-reports an Icosphere — trust raw GLB JSON). Generalizes to `Hand_R` for held accessories.
+
+**Process (per Doug):** exhaust Synty mesh options across ALL packs, render candidates, let Doug PICK, before any Blender recolor. **Rig gotcha:** packs that ship ONLY an `Unreal_Characters`/`Unreal` FBX (Heist SWAT, Shops Musician, Casino) use lowercase Unreal-mannequin bones (`upperarm_l`) our pose code won't match → stuck A-pose. Use packs with a standard `SK_Character_*`/`Characters/` rig (`UpperArm_L`, `head`): City, CityCharacters, SpyKit (Characters/, not Unreal/), Office, WesternFrontier, Kids.
+
+**A3 accessories (TODO):** wrench (Quinn), book (Erin), keytar (Ben), phone/tablet (Ethan), laptop (Doug); Evan = none. Attach to `Hand_R` via attach_hat.py. Find Synty prop meshes (Office laptop/phone/book exist; wrench in Construction/City; keytar may need Prop Farm).
 **Re-bake manifest** (for A3/A4 — `export_anim_authored.py --kind lead`, /tmp/bake_all.sh): leads = `CityCharacters/FBX/Character.fbx` meshes Character_Roadworker(quinn)/HipsterGirl(erin)/Jock(evan)/PunkGuy(ben)/HipsterGuy(ethan), atlas Polygon_City_Characters_Texture_01_A; Doug+NPCs = `Office/Characters/SK_Chr_*` (Developer_Male_02=doug, Boss_Male_01=bellows, Developer_Male_01=congregant_m, Business_Female_01=congregant_f), atlas PolygonOffice_01_A; aldric = `WesternFrontier/.../SK_Chr_Priest_Male_01`, atlas PolygonWesternFrontier_01_A; kids = `Kids/Chr/SK_Chr_Kid_*`, mesh "Kid", atlas PolygonKids_01_A.
 **Context:** Blender character pipeline (`synty_source/blender/scripts/export_anim_authored.py`,
 `render_anim_character.py` pose code), the lead meshes (`assets/models/characters/{quinn,erin,evan,
