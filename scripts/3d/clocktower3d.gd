@@ -399,12 +399,9 @@ func _unhandled_input(_e: InputEvent) -> void:
 
 # --- HUD + win ---------------------------------------------------------------
 func _build_hud() -> void:
-	var cl := make_hud_layer()
-	_hud_goal = hud_label(cl, 24)
-	_hud_hint = hud_label(cl, -70, 22, true)
+	var cl := build_default_hud()
+	_hud_goal = hud_goal; _hud_hint = hud_toast; _hud_banner = hud_ribbon
 	_hud_pulse = hud_label(cl, -110, 24, true); _hud_pulse.visible = false
-	_hud_banner = hud_label(cl, 0, 40); _hud_banner.anchor_top = 0.5; _hud_banner.anchor_bottom = 0.5
-	_hud_banner.visible = false
 
 func _process(d: float) -> void:
 	super._process(d)

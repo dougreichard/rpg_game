@@ -28,6 +28,19 @@ var _bies_pulse: float = 0.0
 var _hp_layer: CanvasLayer = null  # per-character + boss health bars (levels only)
 var _hp_rows: Array = []           # one {bg, fill, label} per duo body
 var music_track: String = "combat" # per-level BGM; calm/dialogue levels override (e.g. "overworld")
+# Shared compact HUD (build_default_hud): top-left objective chip + auto-fading bottom toast +
+# auto-dismissing top win ribbon. Levels point their _hud_goal/_hud_hint/_hud_banner at these.
+var hud_goal: Label = null
+var _goal_bg: ColorRect = null
+var hud_toast: Label = null
+var hud_ribbon: Label = null
+var _toast_bg: ColorRect = null
+var _toast_last: String = ""
+var _toast_t: float = 0.0
+var _ribbon_bg: ColorRect = null
+var _ribbon_t: float = 0.0
+const TOAST_DUR := 3.2
+const RIBBON_DUR := 4.0
 var _boss_bg: ColorRect = null
 var _boss_fill: ColorRect = null
 var _boss_label: Label = null
@@ -392,6 +405,91 @@ func make_hud_layer() -> CanvasLayer:
 	add_child(cl)
 	return cl
 
+# Compact, non-blocking HUD shared by every level. Returns nothing — sets hud_goal/hud_toast/
+# hud_ribbon. Levels alias their _hud_goal/_hud_hint/_hud_banner to these so existing .text/.visible
+# calls keep working; the toast auto-fades and the win ribbon auto-dismisses (see _process).
+func build_default_hud() -> CanvasLayer:
+	var cl := CanvasLayer.new(); cl.layer = 5; add_child(cl)
+	# objective chip — top-left, left-aligned, out of the play area (keeps the progress checklist)
+	var chip_bg := ColorRect.new()
+	chip_bg.color = Color(0.10, 0.08, 0.06, 0.62)
+	chip_bg.anchor_left = 0.0; chip_bg.anchor_top = 0.0
+	chip_bg.offset_left = 10; chip_bg.offset_top = 8; chip_bg.offset_right = 470; chip_bg.offset_bottom = 64
+	chip_bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	cl.add_child(chip_bg)
+	_goal_bg = chip_bg
+	hud_goal = Label.new()
+	hud_goal.anchor_left = 0.0; hud_goal.anchor_top = 0.0
+	hud_goal.offset_left = 18; hud_goal.offset_top = 10; hud_goal.offset_right = 464; hud_goal.offset_bottom = 120
+	hud_goal.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hud_goal.add_theme_font_override("font", UITheme.font())
+	hud_goal.add_theme_font_size_override("font_size", 15)
+	hud_goal.add_theme_color_override("font_color", UITheme.CREAM)
+	hud_goal.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
+	hud_goal.add_theme_constant_override("outline_size", 4)
+	cl.add_child(hud_goal)
+	# hint toast — bottom-centre, auto-fades a few seconds after the text changes
+	_toast_bg = ColorRect.new()
+	_toast_bg.color = Color(0.10, 0.08, 0.06, 0.7)
+	_toast_bg.anchor_left = 0.5; _toast_bg.anchor_right = 0.5; _toast_bg.anchor_top = 1.0; _toast_bg.anchor_bottom = 1.0
+	_toast_bg.offset_left = -320; _toast_bg.offset_right = 320; _toast_bg.offset_top = -66; _toast_bg.offset_bottom = -34
+	_toast_bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_toast_bg.visible = false
+	cl.add_child(_toast_bg)
+	hud_toast = Label.new()
+	hud_toast.anchor_left = 0.5; hud_toast.anchor_right = 0.5; hud_toast.anchor_top = 1.0; hud_toast.anchor_bottom = 1.0
+	hud_toast.offset_left = -316; hud_toast.offset_right = 316; hud_toast.offset_top = -64; hud_toast.offset_bottom = -34
+	hud_toast.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hud_toast.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hud_toast.add_theme_font_override("font", UITheme.font())
+	hud_toast.add_theme_font_size_override("font_size", 17)
+	hud_toast.add_theme_color_override("font_color", UITheme.CREAM)
+	hud_toast.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.9))
+	hud_toast.add_theme_constant_override("outline_size", 4)
+	cl.add_child(hud_toast)
+	# win ribbon — top-centre band, auto-dismisses (never covers the play field)
+	_ribbon_bg = ColorRect.new()
+	_ribbon_bg.color = UITheme.GOLD
+	_ribbon_bg.color.a = 0.92
+	_ribbon_bg.anchor_left = 0.0; _ribbon_bg.anchor_right = 1.0; _ribbon_bg.anchor_top = 0.0
+	_ribbon_bg.offset_top = 60; _ribbon_bg.offset_bottom = 138
+	_ribbon_bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_ribbon_bg.visible = false
+	cl.add_child(_ribbon_bg)
+	hud_ribbon = Label.new()
+	hud_ribbon.anchor_left = 0.0; hud_ribbon.anchor_right = 1.0; hud_ribbon.anchor_top = 0.0
+	hud_ribbon.offset_top = 60; hud_ribbon.offset_bottom = 138
+	hud_ribbon.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hud_ribbon.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	hud_ribbon.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hud_ribbon.add_theme_font_override("font", UITheme.font())
+	hud_ribbon.add_theme_font_size_override("font_size", 22)
+	hud_ribbon.add_theme_color_override("font_color", Color(0.15, 0.10, 0.06))
+	hud_ribbon.visible = false
+	cl.add_child(hud_ribbon)
+	return cl
+
+func _update_hud_chrome(d: float) -> void:
+	if _goal_bg != null and hud_goal != null:
+		_goal_bg.visible = hud_goal.text != ""
+	if hud_toast != null:
+		if hud_toast.text != _toast_last:
+			_toast_last = hud_toast.text
+			_toast_t = TOAST_DUR if hud_toast.text != "" else 0.0
+			hud_toast.modulate.a = 1.0
+		var on: bool = _toast_t > 0.0
+		if _toast_t > 0.0:
+			_toast_t -= d
+			hud_toast.modulate.a = clampf(_toast_t / 0.6, 0.0, 1.0)   # fade out over the last 0.6s
+		hud_toast.visible = on; _toast_bg.visible = on; _toast_bg.modulate.a = hud_toast.modulate.a
+	if hud_ribbon != null and _ribbon_bg != null:
+		if hud_ribbon.visible and _ribbon_t <= 0.0 and hud_ribbon.text != "":
+			_ribbon_t = RIBBON_DUR; _ribbon_bg.visible = true
+		if _ribbon_t > 0.0:
+			_ribbon_t -= d
+			if _ribbon_t <= 0.0:
+				hud_ribbon.visible = false; _ribbon_bg.visible = false
+
 func hud_label(cl: CanvasLayer, y: float, size: int = 22, from_bottom: bool = false) -> Label:
 	var l := Label.new()
 	l.anchor_left = 0.0
@@ -418,6 +516,7 @@ func _process(d: float) -> void:
 	_update_bies_bar(d)
 	_update_health_bars()
 	_update_music()
+	_update_hud_chrome(d)
 	_check_walk_out()
 
 # Swap to the boss theme while a boss is alive, back to the level track once it's down.

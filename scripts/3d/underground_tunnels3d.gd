@@ -448,11 +448,8 @@ func _all_done() -> bool:
 	return _enemies_cleared and _rubble_cleared and _hatch_progress >= HATCH_PRESSES_REQUIRED and _vault_opened
 
 func _build_hud() -> void:
-	var cl := make_hud_layer()
-	_hud_goal = hud_label(cl, 24)
-	_hud_hint = hud_label(cl, -70, 22, true)
-	_hud_banner = hud_label(cl, 0, 40); _hud_banner.anchor_top = 0.5; _hud_banner.anchor_bottom = 0.5
-	_hud_banner.visible = false
+	build_default_hud()
+	_hud_goal = hud_goal; _hud_hint = hud_toast; _hud_banner = hud_ribbon
 
 func _process(d: float) -> void:
 	super._process(d)
