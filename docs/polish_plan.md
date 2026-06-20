@@ -22,7 +22,15 @@ so the Blender/animation context is loaded once.
 
 **Process (per Doug):** exhaust Synty mesh options across ALL packs, render candidates, let Doug PICK, before any Blender recolor. **Rig gotcha:** packs that ship ONLY an `Unreal_Characters`/`Unreal` FBX (Heist SWAT, Shops Musician, Casino) use lowercase Unreal-mannequin bones (`upperarm_l`) our pose code won't match → stuck A-pose. Use packs with a standard `SK_Character_*`/`Characters/` rig (`UpperArm_L`, `head`): City, CityCharacters, SpyKit (Characters/, not Unreal/), Office, WesternFrontier, Kids.
 
-**A3 accessories (TODO):** wrench (Quinn), book (Erin), keytar (Ben), phone/tablet (Ethan), laptop (Doug); Evan = none. Attach to `Hand_R` via attach_hat.py. Find Synty prop meshes (Office laptop/phone/book exist; wrench in Construction/City; keytar may need Prop Farm).
+**A3 accessories — 4/5 DONE** (via `attach_prop.py`, the generalized hand version of attach_hat: bone arg + euler rotation, solid-tints the prop so no extra texture, joins into the body mesh weighted to `Hand_R`). All boot clean, single-mesh, no new texture files:
+- **Quinn** = Town `SM_Item_Wrench_01` (steel tint, ~0.34m, rx90) — reads clearly.
+- **Doug** = Office `SM_Prop_Laptop_01` (dark slate, ~0.40m) — dark slab at side, reads.
+- **Erin** = Adventure `SM_Prop_Book_01` (blue tome, ~0.30m) — single thick book (the Office Book_Group stack scaled too small to read).
+- **Ethan** = Shops `SM_Prop_Computer_Tablet_01` (dark, ~0.30m, rx90) — tablet (a phone was too small/ambiguous).
+- **Evan** = none (fists/animals).
+- **Ben keytar** = no Synty keytar exists → Prop Farm gen (`ben_keytar`, painted track). TODO: wire onto Ben's hand once generated (attach_prop needs a .glb-prop path; currently imports FBX only).
+
+**Lesson:** the idle hand is a relaxed OPEN pose (no grip), so compact props (book/phone) hide against the hip at gameplay distance — only elongated/bulky items (wrench, laptop, tome, tablet) read; size props ~1.4× and prefer larger items. rx=90 aligns elongated props with this rig's grip.
 **Re-bake manifest** (for A3/A4 — `export_anim_authored.py --kind lead`, /tmp/bake_all.sh): leads = `CityCharacters/FBX/Character.fbx` meshes Character_Roadworker(quinn)/HipsterGirl(erin)/Jock(evan)/PunkGuy(ben)/HipsterGuy(ethan), atlas Polygon_City_Characters_Texture_01_A; Doug+NPCs = `Office/Characters/SK_Chr_*` (Developer_Male_02=doug, Boss_Male_01=bellows, Developer_Male_01=congregant_m, Business_Female_01=congregant_f), atlas PolygonOffice_01_A; aldric = `WesternFrontier/.../SK_Chr_Priest_Male_01`, atlas PolygonWesternFrontier_01_A; kids = `Kids/Chr/SK_Chr_Kid_*`, mesh "Kid", atlas PolygonKids_01_A.
 **Context:** Blender character pipeline (`synty_source/blender/scripts/export_anim_authored.py`,
 `render_anim_character.py` pose code), the lead meshes (`assets/models/characters/{quinn,erin,evan,
