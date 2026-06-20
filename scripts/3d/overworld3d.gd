@@ -53,7 +53,7 @@ const LOCS := [
 	{"id": "harbor_docks", "name": "Harbor & Docks", "scene": "res://scenes/3d/HarborDocks3D.tscn", "req": "recording_studio", "glb": "warehouse"},
 	{"id": "library", "name": "Library & Archive", "scene": "res://scenes/3d/LibraryArchive3D.tscn", "req": "recording_studio", "glb": "cityhall"},
 	{"id": "carnival", "name": "Carnival & Fairground", "scene": "res://scenes/3d/Carnival3D.tscn", "req": "recording_studio", "glb": "fairstall"},
-	{"id": "underground", "name": "Underground Tunnels", "scene": "res://scenes/3d/UndergroundTunnels3D.tscn", "req": "recording_studio", "glb": "subway_entrance", "yaw": PI},
+	{"id": "underground", "name": "Underground Tunnels", "scene": "res://scenes/3d/UndergroundTunnels3D.tscn", "req": "recording_studio", "glb": "subway_entrance"},
 	{"id": "zip_line", "name": "Zip Line Park", "scene": "res://scenes/3d/ZipLinePark3D.tscn", "req": "recording_studio", "glb": "zipline_tower"},
 	{"id": "vr_room", "name": "VR Escape Room", "scene": "res://scenes/3d/VrEscapeRoom3D.tscn", "req": "recording_studio", "glb": "vr_bld", "yaw": -PI / 2.0},
 	{"id": "the_drop", "name": "The Drop", "scene": "res://scenes/3d/TheDrop3D.tscn", "req": "vr_room", "glb": "chopshop"},
