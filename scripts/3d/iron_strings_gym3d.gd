@@ -89,7 +89,8 @@ func _build_level() -> void:
 	_build_hud()
 	_ben = spawn_npc("ben", BEN_POS, PI, BEN_QUIPS)
 	_ben.set("yell_min", 4.0); _ben.set("yell_max", 8.0)
-	_marv = spawn_npc("congregant_m", DESK_POS, PI)
+	_marv = spawn_npc("congregant_m", DESK_POS + Vector3(0, 0, -0.6), PI)
+	prop("res://assets/models/props/desk.glb", DESK_POS + Vector3(0, 0, 0.4), 0.0)   # Marv's front desk
 	add_exit_portal(LOBBY_C + Vector3(0, 0, 5.0), Vector3(3, 3, 1.4))
 	var p := spawn_duo([QUINN, EVAN], LOBBY_C + Vector3(0.0, 0.1, 1.0))
 	p.special_used.connect(_on_special)
