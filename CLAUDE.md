@@ -354,10 +354,11 @@ Loft. Still-single-room levels inherit this as they're converted to multi-room.)
 - **Unlock condition:** Complete Iron & Strings Gym
 - **Unlocks:** Ethan
 - **Key puzzle(s):** Ben tunes the soundboard console, sliding open the glass BoothDoor and revealing Ethan
-- **3D build:** multi-room — combat-free LOBBY (producer Sasha + exit) → LIVE ROOM (combat + Doug's reel + feedback panel) → CONTROL ROOM (booth + console + patch bay). Quinn **repairs the patch bay** to power the dead console (gate before Ben tunes); Ben **plays Doug's reel** → `doug_recording`; Ben **silences the feedback** → `backstage_pass` (optional). Freeing Ethan also grants `sheet_music_page`. Carpet/concrete surfaces.
+- **3D build:** expanded multi-room (indoor recipe): combat-free LOBBY (producer Sasha + exit) → LIVE ROOM (combat + Doug's reel + feedback panel) → CONTROL ROOM (booth + console + patch bay), plus a new **ISO BOOTH / TAPE ARCHIVE** east of the live room. Rooms enlarged, corridors 1m→4.5m. Quinn **repairs the patch bay** to power the dead console (gate before Ben tunes); Ben **plays Doug's reel** → `doug_recording`; Ben **silences the feedback** → `backstage_pass` (optional). Freeing Ethan also grants `sheet_music_page`. **NEW — Ben's perfect-pitch tone-match** (Iso Booth): three pads (C/E/G) played low→high (Ben-only) slide the tape archive open → `tangled_headphone_cable` — *the first puzzle to use Ben's signature Perfect Pitch ability*. **Hero props are Prop-Farm** (mixing_console, patch_rack, reel_to_reel, studio_monitor, amp_stack); acoustic-foam wall panels are the indoor "boundary" detail. Carpet/concrete surfaces, matte-black trim.
 - **Enemy types:** Grunts + Runners (live room only)
-- **Level progress flags:** `enemies_cleared` / `console_tuned` / `patch_repaired` / `reel_played` / `feedback_silenced` / `sasha_met`
-- **NPCs:** Sasha (producer, lobby)
+- **Level progress flags:** `enemies_cleared` / `console_tuned` / `patch_repaired` / `reel_played` / `feedback_silenced` / `tones_done` / `sasha_met`
+- **NPCs:** Sasha (producer, lobby) · Ethan (sealed in the booth until freed)
+- **Notes:** Win = floor cleared + console tuned; reel / feedback / tone-match are optional bonuses.
 
 ---
 
