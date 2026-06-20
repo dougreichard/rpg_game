@@ -35,13 +35,14 @@ const BEN_POS := Vector3(0.0, 0.0, -HALF_D + 1.4)
 const RACK_POS := Vector3(0.0, 0.0, -HALF_D + 3.2)   # barbell rack blocking the cage
 const REACH := 2.2
 
-const LOBBY_C := Vector3(0, 0, 15.0)
-const DESK_POS := Vector3(3.5, 0, 16.5)
-const LOCKER_POS := Vector3(-5.0, 0, 15.0)
+# lobby/boiler pushed out behind longer (4m) corridors
+const LOBBY_C := Vector3(0, 0, 17.0)
+const DESK_POS := Vector3(3.5, 0, 18.5)
+const LOCKER_POS := Vector3(-5.0, 0, 17.0)
 const PLATE_POS := Vector3(5.5, 0, 0.0)
-const BOILER_GATE := Vector3(9.5, 0, 0.0)
-const BOILER_C := Vector3(13.0, 0, 0.0)
-const VALVE_POS := Vector3(13.0, 0, -2.0)
+const BOILER_GATE := Vector3(12.0, 0, 0.0)
+const BOILER_C := Vector3(15.5, 0, 0.0)
+const VALVE_POS := Vector3(15.5, 0, -2.0)
 
 const BEN_QUIPS := [
 	"Watch the big one — he telegraphs the left hook!",
@@ -98,21 +99,21 @@ func _build_level() -> void:
 func _rooms() -> void:
 	# Weight floor — concrete, the main combat room. Openings: south (lobby), east (boiler).
 	set_theme(FLOOR_CONCRETE, WALL_CONCRETE)
-	room(Vector3.ZERO, HALF_W * 2.0, HALF_D * 2.0, FT_GYM, WT_GYM, WALL_H, ["s", "e"], 3.0, true)
-	corridor(Vector3(0, 0, HALF_D), "s", 2.0, FT_GYM, WT_GYM, 3.0, WALL_H, true, CORNER_COL)        # → lobby
-	corridor(Vector3(HALF_W, 0, 0), "e", 1.5, FT_GYM, WT_GYM, 3.0, WALL_H, true, CORNER_COL)        # → boiler
+	room(Vector3.ZERO, HALF_W * 2.0, HALF_D * 2.0, FT_GYM, WT_GYM, WALL_H, ["s", "e"], 4.0, true)
+	corridor(Vector3(0, 0, HALF_D), "s", 4.0, FT_GYM, WT_GYM, 4.0, WALL_H, true, CORNER_COL)        # → lobby
+	corridor(Vector3(HALF_W, 0, 0), "e", 4.0, FT_GYM, WT_GYM, 4.0, WALL_H, true, CORNER_COL)        # → boiler
 	# Lobby — tile floor, concrete walls (combat-free entry). South vestibule = exit.
 	set_theme(FLOOR_TILE, WALL_CONCRETE)
-	room(LOBBY_C, 12, 8, FT_LOBBY, WT_GYM, 3.2, ["n", "s"], 3.0, true)
-	corridor(LOBBY_C + Vector3(0, 0, 4.0), "s", 2.0, FT_LOBBY, WT_GYM, 3.0, 3.2, true, CORNER_COL)  # entrance vestibule
+	room(LOBBY_C, 14, 9, FT_LOBBY, WT_GYM, 3.2, ["n", "s"], 4.0, true)
+	corridor(LOBBY_C + Vector3(0, 0, 4.5), "s", 2.0, FT_LOBBY, WT_GYM, 4.0, 3.2, true, CORNER_COL)  # entrance vestibule
 	# Boiler room — concrete floor, brick walls (utility). Threshold sealed by the pressure plate.
 	set_theme(FLOOR_CONCRETE, WALL_BRICK)
-	room(BOILER_C, 7, 8, FT_BOILER, WT_BOILER, 3.0, ["w"], 3.0, true)
+	room(BOILER_C, 8, 9, FT_BOILER, WT_BOILER, 3.0, ["w"], 4.0, true)
 	_boiler_wall = _gate_panel(BOILER_GATE, 3.0)
 
 # A removable doorway panel (thin in X — doorway runs along Z) filling a 3-wide gap.
 func _gate_panel(pos: Vector3, h: float) -> Node3D:
-	var size := Vector3(0.4, h, 3.0)
+	var size := Vector3(0.4, h, 4.0)
 	var sb := StaticBody3D.new()
 	sb.collision_layer = Combat3D.L_WORLD
 	var cs := CollisionShape3D.new(); var bs := BoxShape3D.new()
@@ -147,14 +148,10 @@ func _equipment() -> void:
 	prop("res://assets/models/props/barrel.glb", Vector3(-HALF_W + 1.4, 0, -3.5))
 
 func _bench(pos: Vector3) -> void:
-	add_child(box_mesh(Vector3(0.5, 0.45, 1.6), Color(0.15, 0.15, 0.18), pos + Vector3(0, 0.45, 0)))
-	add_child(box_mesh(Vector3(0.5, 0.12, 0.5), Color(0.6, 0.1, 0.12), pos + Vector3(0, 0.78, -0.55)))
+	prop("res://assets/models/props/weight_bench.glb", pos, deg_to_rad(90))   # Prop-Farm bench + barbell
 
 func _dumbbell_rack(pos: Vector3) -> void:
-	add_child(box_mesh(Vector3(0.6, 0.9, 2.6), Color(0.22, 0.22, 0.26), pos + Vector3(0, 0.45, 0)))
-	for i: int in range(4):
-		var z: float = -0.9 + float(i) * 0.6
-		add_child(box_mesh(Vector3(0.5, 0.2, 0.22), Color(0.4, 0.42, 0.46), pos + Vector3(0, 0.9, z)))
+	prop("res://assets/models/props/dumbbell_rack.glb", pos, deg_to_rad(-90))   # Prop-Farm dumbbell rack
 
 func _weight_tree(pos: Vector3) -> void:
 	add_child(box_mesh(Vector3(0.4, 1.5, 0.4), Color(0.2, 0.2, 0.24), pos + Vector3(0, 0.75, 0)))
@@ -192,7 +189,7 @@ func _rack_barrier() -> void:
 
 # Boiler room contents — big boiler tank + the valve wheel Quinn turns for the key.
 func _boiler() -> void:
-	add_child(box_mesh(Vector3(2.2, 2.6, 2.2), Color(0.4, 0.3, 0.22), BOILER_C + Vector3(1.5, 1.3, 2.0)))  # tank
+	prop("res://assets/models/props/bellows_engine.glb", BOILER_C + Vector3(1.3, 0, 2.0), deg_to_rad(180))  # reused boiler-engine
 	add_child(box_mesh(Vector3(0.3, 1.2, 0.3), Color(0.45, 0.46, 0.5), VALVE_POS + Vector3(0, 0.6, 0)))     # valve post
 	var wheel := MeshInstance3D.new()
 	var cm := CylinderMesh.new(); cm.top_radius = 0.45; cm.bottom_radius = 0.45; cm.height = 0.1
@@ -203,6 +200,9 @@ func _boiler() -> void:
 
 # Uncle Doug's gym locker in the lobby — Evan forces it open.
 func _locker_stand() -> void:
+	# a Prop-Farm locker bank dressing the lobby; Doug's locker (the interactive one Evan forces)
+	# stays a primitive panel set just in front so its open-state recolour still reads.
+	prop("res://assets/models/props/gym_lockers.glb", LOCKER_POS + Vector3(-1.5, 0, -0.2), 0.0)
 	_locker = box_mesh(Vector3(0.9, 2.2, 0.7), Color(0.25, 0.4, 0.5), LOCKER_POS + Vector3(0, 1.1, 0))
 	add_child(_locker)
 	add_child(box_mesh(Vector3(0.92, 0.1, 0.72), Color(0.18, 0.3, 0.38), LOCKER_POS + Vector3(0, 1.7, 0.02)))  # vent line

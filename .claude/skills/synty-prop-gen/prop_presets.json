@@ -451,5 +451,32 @@
     "height": 1.2,
     "poly": 2000,
     "ref_count": 1
+  },
+  "gym_lockers": {
+    "prompt": "a bank of tall metal gym lockers, a row of four narrow steel locker doors with vents and handles on a base",
+    "seed": 11,
+    "track": "painted",
+    "angle": 6,
+    "height": 2.0,
+    "poly": 2500,
+    "ref_count": 1
+  },
+  "weight_bench": {
+    "prompt": "a gym weight bench with a barbell rack, a padded flat bench beside an upright steel rack holding a loaded barbell with round weight plates",
+    "seed": 15,
+    "track": "painted",
+    "angle": 6,
+    "height": 1.3,
+    "poly": 3000,
+    "ref_count": 1
+  },
+  "dumbbell_rack": {
+    "prompt": "a gym dumbbell rack, a slanted two-tier steel rack holding a row of black dumbbells of different sizes",
+    "seed": 15,
+    "track": "painted",
+    "angle": 6,
+    "height": 1.0,
+    "poly": 2500,
+    "ref_count": 1
   }
 }
