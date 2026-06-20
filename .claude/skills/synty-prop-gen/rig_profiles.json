@@ -26,8 +26,32 @@
       "anim_clips": ["idle", "walk", "run", "attack", "dash", "down", "hurt", "sit", "special"],
       "clip_source": "assets/animations/synty_clips.glb",
       "clip_reuse_note": "Canonical mesh-free clip library (make_clip_library.py, extracted from quinn.glb). All characters carry these 9 clips on this identical skeleton, so the retarget grafts them verbatim (no re-authoring). Regenerate the library if the clips change.",
-      "bone_map": {},
-      "_bone_map_todo": "source(UniRig)->Synty rename map. Fill once we confirm whether the humanoid pipeline emits UniRig 'vroid' (J_Bip_*, preferred named hub) or generic 'bone_N' (then classify by T-pose position first). e.g. J_Bip_C_Hips->Hips, J_Bip_L_UpperArm->Shoulder_L, J_Bip_L_LowerArm->Elbow_L, J_Bip_L_Hand->Hand_L, J_Bip_L_UpperLeg->UpperLeg_L, ..."
+      "bone_map": {
+        "_note": "Keyed by SOURCE profile -> {source_bone: synty_bone}. Used to rename a source rig's bones to Synty (retarget_char.py) and to drive motion retarget (retarget_anim.py). UniRig humanoids land here as 'vrm' (trained vroid/J_Bip class) — verify in the gen pipeline.",
+        "mixamo": {
+          "mixamorig:Hips": "Hips",
+          "mixamorig:Spine": "Spine_01", "mixamorig:Spine1": "Spine_02", "mixamorig:Spine2": "Spine_03",
+          "mixamorig:Neck": "Neck", "mixamorig:Head": "Head",
+          "mixamorig:LeftShoulder": "Clavicle_L", "mixamorig:LeftArm": "Shoulder_L", "mixamorig:LeftForeArm": "Elbow_L", "mixamorig:LeftHand": "Hand_L",
+          "mixamorig:RightShoulder": "Clavicle_R", "mixamorig:RightArm": "Shoulder_R", "mixamorig:RightForeArm": "Elbow_R", "mixamorig:RightHand": "Hand_R",
+          "mixamorig:LeftUpLeg": "UpperLeg_L", "mixamorig:LeftLeg": "LowerLeg_L", "mixamorig:LeftFoot": "Ankle_L", "mixamorig:LeftToeBase": "Ball_L",
+          "mixamorig:RightUpLeg": "UpperLeg_R", "mixamorig:RightLeg": "LowerLeg_R", "mixamorig:RightFoot": "Ankle_R", "mixamorig:RightToeBase": "Ball_R",
+          "mixamorig:LeftHandThumb1": "Thumb_01", "mixamorig:LeftHandThumb2": "Thumb_02", "mixamorig:LeftHandThumb3": "Thumb_03",
+          "mixamorig:LeftHandIndex1": "IndexFinger_01", "mixamorig:LeftHandIndex2": "IndexFinger_02", "mixamorig:LeftHandIndex3": "IndexFinger_03",
+          "mixamorig:LeftHandMiddle1": "Finger_01", "mixamorig:LeftHandMiddle2": "Finger_02", "mixamorig:LeftHandMiddle3": "Finger_03",
+          "mixamorig:RightHandThumb1": "Thumb_01.001", "mixamorig:RightHandThumb2": "Thumb_02.001", "mixamorig:RightHandThumb3": "Thumb_03.001",
+          "mixamorig:RightHandIndex1": "IndexFinger_01.001", "mixamorig:RightHandIndex2": "IndexFinger_02.001", "mixamorig:RightHandIndex3": "IndexFinger_03.001",
+          "mixamorig:RightHandMiddle1": "Finger_01.001", "mixamorig:RightHandMiddle2": "Finger_02.001", "mixamorig:RightHandMiddle3": "Finger_03.001"
+        },
+        "vrm": {
+          "J_Bip_C_Hips": "Hips", "J_Bip_C_Spine": "Spine_01", "J_Bip_C_Chest": "Spine_02", "J_Bip_C_UpperChest": "Spine_03",
+          "J_Bip_C_Neck": "Neck", "J_Bip_C_Head": "Head",
+          "J_Bip_L_Shoulder": "Clavicle_L", "J_Bip_L_UpperArm": "Shoulder_L", "J_Bip_L_LowerArm": "Elbow_L", "J_Bip_L_Hand": "Hand_L",
+          "J_Bip_R_Shoulder": "Clavicle_R", "J_Bip_R_UpperArm": "Shoulder_R", "J_Bip_R_LowerArm": "Elbow_R", "J_Bip_R_Hand": "Hand_R",
+          "J_Bip_L_UpperLeg": "UpperLeg_L", "J_Bip_L_LowerLeg": "LowerLeg_L", "J_Bip_L_Foot": "Ankle_L", "J_Bip_L_ToeBase": "Ball_L",
+          "J_Bip_R_UpperLeg": "UpperLeg_R", "J_Bip_R_LowerLeg": "LowerLeg_R", "J_Bip_R_Foot": "Ankle_R", "J_Bip_R_ToeBase": "Ball_R"
+        }
+      }
     },
 
     "godot_generic": {

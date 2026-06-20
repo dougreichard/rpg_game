@@ -79,8 +79,9 @@ target = arms[0]
 src_profile = detect_profile(target) if FROM == "auto" else FROM
 print(f"RETARGET: in={IN} detected_from={src_profile} to={TO} bones={len(target.data.bones)}")
 
-# ---- bone rename (source -> target), if a map is provided ----
-bmap = tp.get("bone_map", {}) or {}
+# ---- bone rename (source -> target), if a map is provided (bone_map is keyed by source profile) ----
+bmap_all = tp.get("bone_map", {}) or {}
+bmap = bmap_all.get(src_profile, {}) if isinstance(bmap_all, dict) else {}
 if bmap and src_profile != TO:
     renamed = 0
     for b in target.data.bones:
