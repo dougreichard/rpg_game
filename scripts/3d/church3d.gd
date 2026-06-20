@@ -13,6 +13,7 @@ const QUINN := preload("res://data/characters/quinn.tres")
 const ERIN := preload("res://data/characters/erin.tres")
 const FlowerItem: ItemData = preload("res://data/items/pressed_flower.tres")
 const EvanTicketItem: ItemData = preload("res://data/items/ticket_evan.tres")
+const HankyItem: ItemData = preload("res://data/items/embroidered_handkerchief.tres")
 # DialogBox is provided by Level3D (make_dialog/open_dialog/dialog_input).
 
 # --- thematic surfaces (church floor / stone walls / dark-wood corner trim) ---
@@ -30,21 +31,30 @@ const CRYPT_WT := Color(0.60, 0.60, 0.60)
 const CORNER_COL := Color(0.20, 0.15, 0.10)   # solid dark-wood trim
 const STONE := Color(0.52, 0.50, 0.47)
 
-const HALF_W := 6.5
-const HALF_D := 8.5
-const WALL_H := 3.4
-const ALDRIC_POS := Vector3(0.0, 0.0, -HALF_D + 1.8)
+# Enlarged nave (16x22, was 13x17) with a grand north chancel — organ loft + choir.
+const HALF_W := 8.0
+const HALF_D := 11.0
+const WALL_H := 4.0
+const ALDRIC_POS := Vector3(0.0, 0.0, -HALF_D + 3.5)
 const REACH := 2.0
 
+# North chancel — organ loft (off to the NW) + choir stalls + the altar centre.
+const ALTAR_POS := Vector3(0.0, 0.0, -HALF_D + 2.0)
+const ORGAN_POS := Vector3(-4.5, 0.0, -HALF_D + 1.0)   # organ on its dais, NW chancel
+const ORGAN_HIT := Vector3(-4.5, 0.0, -HALF_D + 2.6)   # Quinn repairs it from the front
+const PIPE_RACKS := [Vector3(-6.6, 0, -HALF_D + 0.7), Vector3(-2.6, 0, -HALF_D + 0.7)]
+const CHOIR_STALLS := [Vector3(4.5, 0, -HALF_D + 1.5), Vector3(4.5, 0, -HALF_D + 3.2)]
+const NICHE_POS := Vector3(-7.0, 0.0, -HALF_D + 2.2)   # hidden niche revealed when the organ plays
+
 # Candle-sequence puzzle (Quinn) — light 1→2→3 to open the vestry.
-const CANDLES := [Vector3(5.2, 0, -2.0), Vector3(5.2, 0, -3.5), Vector3(5.2, 0, -5.0)]
-const VESTRY_DOOR := Vector3(8.5, 0, 0.0)
-const REGISTER_POS := Vector3(12.0, 0, -2.0)
+const CANDLES := [Vector3(6.7, 0, -2.0), Vector3(6.7, 0, -3.5), Vector3(6.7, 0, -5.0)]
+const VESTRY_DOOR := Vector3(10.0, 0, 0.0)
+const REGISTER_POS := Vector3(13.5, 0, -2.0)
 # Crypt false-plaque puzzle (Erin) — find the forged plaque among three.
-const PLAQUES := [Vector3(-5.2, 0, -2.0), Vector3(-5.2, 0, -3.5), Vector3(-5.2, 0, -5.0)]
+const PLAQUES := [Vector3(-6.7, 0, -2.0), Vector3(-6.7, 0, -3.5), Vector3(-6.7, 0, -5.0)]
 const FALSE_PLAQUE := 1   # index into PLAQUES — the forged one
-const CRYPT_DOOR := Vector3(-8.5, 0, 0.0)
-const CRYPT_LORE := Vector3(-12.0, 0, -2.0)
+const CRYPT_DOOR := Vector3(-10.0, 0, 0.0)
+const CRYPT_LORE := Vector3(-13.5, 0, -2.0)
 
 # id -> {pos, mesh, who, flag, name, ok, hint}. Wrong-character "hint" lines
 # give a breadcrumb toward a different NPC rather than a flat refusal.
@@ -106,6 +116,9 @@ var _candles_lit := false
 var _candle_seq: Array = []
 var _candle_flames: Array = []
 var _register_read := false
+var _organ_played := false
+var _niche_wall: Node3D = null
+var _niche_box: Node3D = null
 var _hud_goal: Label = null
 var _hud_hint: Label = null
 var _hud_banner: Label = null
@@ -154,13 +167,13 @@ func _rooms() -> void:
 	# East corridor → vestry (warm wood sacristy). Threshold sealed by the candle gate.
 	corridor(Vector3(HALF_W, 0, 0), "e", 2.0, NAVE_FT, NAVE_WT, 3.0, WALL_H, true, CORNER_COL)
 	set_theme(FLOOR_CARPET, WALL_WOOD)
-	room(Vector3(12.0, 0, 0), 7, 8, VESTRY_FT, VESTRY_WT, 3.0, ["w"], 3.0, true)
+	room(Vector3(13.5, 0, 0), 7, 8, VESTRY_FT, VESTRY_WT, 3.0, ["w"], 3.0, true)
 	_vestry_wall = _gate_panel(VESTRY_DOOR, 3.0, "x")
 	# West corridor → crypt (cold concrete + stone). Threshold sealed by the false-plaque gate.
 	set_theme(FLOOR_CHURCH, WALL_STONE)
 	corridor(Vector3(-HALF_W, 0, 0), "w", 2.0, NAVE_FT, NAVE_WT, 3.0, WALL_H, true, CORNER_COL)
 	set_theme(FLOOR_CONCRETE, WALL_STONE)
-	room(Vector3(-12.0, 0, 0), 7, 7, CRYPT_FT, CRYPT_WT, 2.8, ["e"], 3.0, true)
+	room(Vector3(-13.5, 0, 0), 7, 7, CRYPT_FT, CRYPT_WT, 2.8, ["e"], 3.0, true)
 	_crypt_wall = _gate_panel(CRYPT_DOOR, 2.8, "x")
 
 # A removable doorway panel (matches the wall texture) filling a `gap`-wide opening.
@@ -177,13 +190,14 @@ func _gate_panel(pos: Vector3, h: float, axis: String) -> Node3D:
 	return sb
 
 func _furnish() -> void:
-	prop("res://assets/models/props/altar.glb", Vector3(0, 0, -HALF_D + 1.0))
-	prop("res://assets/models/props/candles.glb", Vector3(-1.5, 0, -HALF_D + 1.0))
-	prop("res://assets/models/props/candles.glb", Vector3(1.5, 0, -HALF_D + 1.0))
-	for row: int in range(4):
+	prop("res://assets/models/props/altar.glb", ALTAR_POS)
+	prop("res://assets/models/props/candles.glb", ALTAR_POS + Vector3(-1.4, 0, 0.3))
+	prop("res://assets/models/props/candles.glb", ALTAR_POS + Vector3(1.4, 0, 0.3))
+	for row: int in range(6):
 		var z: float = -1.0 + float(row) * 2.2
-		prop("res://assets/models/props/pew.glb", Vector3(-2.4, 0, z), deg_to_rad(180))  # face the altar (north)
-		prop("res://assets/models/props/pew.glb", Vector3(2.4, 0, z), deg_to_rad(180))
+		prop("res://assets/models/props/pew.glb", Vector3(-2.8, 0, z), deg_to_rad(180))  # face the altar (north)
+		prop("res://assets/models/props/pew.glb", Vector3(2.8, 0, z), deg_to_rad(180))
+	_organ_loft()
 	# Candle sconces (Quinn's sequence puzzle) — numbered posts with a hideable flame.
 	for i: int in range(CANDLES.size()):
 		add_child(box_mesh(Vector3(0.18, 1.0, 0.18), Color(0.85, 0.82, 0.7), CANDLES[i] + Vector3(0, 0.5, 0)))
@@ -200,6 +214,23 @@ func _furnish() -> void:
 		var col: Color = Color(0.7, 0.72, 0.6) if i == FALSE_PLAQUE else Color(0.5, 0.5, 0.52)
 		add_child(box_mesh(Vector3(0.12, 0.9, 0.6), col, PLAQUES[i] + Vector3(0, 1.1, 0)))
 	add_child(box_mesh(Vector3(0.15, 1.0, 0.7), Color(0.45, 0.42, 0.4), CRYPT_LORE + Vector3(0, 1.1, 0)))
+
+# Organ loft + choir area at the north chancel: the organ on a low dais flanked by tall pipe
+# ranks (the 'loft'), choir stalls beside it, and a hidden niche the organ's hymn reveals.
+func _organ_loft() -> void:
+	add_child(box_mesh(Vector3(4.6, 0.3, 2.2), STONE.lightened(0.06), ORGAN_POS + Vector3(0, 0.15, -0.1)))  # dais
+	prop("res://assets/models/props/organ.glb", ORGAN_POS + Vector3(0, 0.3, 0), 0.0)
+	for r: Vector3 in PIPE_RACKS:
+		prop("res://assets/models/props/pipe_rack.glb", r + Vector3(0, 0.3, 0), 0.0)
+	# choir stalls (pews turned to face the centre aisle, west)
+	for s: Vector3 in CHOIR_STALLS:
+		prop("res://assets/models/props/pew.glb", s, deg_to_rad(-90))
+	# hidden niche behind the organ (a removable panel that drops when the hymn plays)
+	_niche_wall = box_mesh(Vector3(0.3, 2.0, 1.4), NAVE_WT, NICHE_POS + Vector3(0, 1.0, 0), 0.0, wall_tex)
+	add_child(_niche_wall)
+	_niche_box = box_mesh(Vector3(0.5, 0.4, 0.5), Color(0.4, 0.3, 0.22), NICHE_POS + Vector3(0, 0.25, 0))
+	_niche_box.visible = false
+	add_child(_niche_box)
 
 func _floating_label(txt: String, pos: Vector3, col: Color) -> void:
 	var l := Label3D.new()
@@ -313,6 +344,11 @@ func _on_special(char_name: String) -> void:
 		for i: int in range(PLAQUES.size()):
 			if _near(pp, PLAQUES[i]):
 				_try_plaque(char_name, i); return
+	# Organ loft (Quinn repairs the organ → a hymn plays → the hidden niche opens)
+	if not _organ_played and _near(pp, ORGAN_HIT):
+		_try_organ(char_name); return
+	if _organ_played and _niche_box != null and _niche_box.visible and _near(pp, NICHE_POS):
+		_take_niche(char_name); return
 	# Memorial register (Doug objective)
 	if _near(pp, REGISTER_POS):
 		_read_register(char_name); return
@@ -375,6 +411,31 @@ func _reveal_crypt() -> void:
 	create_tween().tween_property(_crypt_wall, "position:y", -3.4, 0.6)
 	(_crypt_wall as StaticBody3D).collision_layer = 0
 	_hud_hint.text = "Erin: \"This plaque's fresh — the screws aren't even rusted.\" It swings aside; cold air, stairs down to the crypt."
+	Audio.play("special")
+
+func _try_organ(char_name: String) -> void:
+	if char_name != "Quinn":
+		_hud_hint.text = "The old organ's wind-chest is split — Quinn could mend it."
+		return
+	_organ_played = true
+	GameManager.set_level_flag(LOCATION_ID, "organ_played", true)
+	if _niche_wall != null:
+		create_tween().tween_property(_niche_wall, "position:y", -2.0, 0.6)
+		(_niche_wall as MeshInstance3D).visible = true
+	if _niche_box != null:
+		_niche_box.visible = true
+	_hud_hint.text = "Quinn mends the wind-chest and the organ swells into a hymn — a stone niche grinds open behind it."
+	Audio.play("special")
+
+func _take_niche(char_name: String) -> void:
+	GameManager.set_level_flag(LOCATION_ID, "niche_taken", true)
+	GameManager.grant_item(player.active_name(), HankyItem.id)
+	if _niche_box != null: _niche_box.visible = false
+	open_dialog("Hidden Niche", Color(0.5, 0.48, 0.42),
+		{"start": {"lines": [
+			"In the niche behind the organ: a folded handkerchief, monogrammed with a looping 'D'.",
+			"Someone tucked it here for safekeeping. Doug's, surely.",
+			"Picked up: Embroidered Handkerchief."]}}, char_name)
 	Audio.play("special")
 
 func _read_register(char_name: String) -> void:
@@ -444,6 +505,11 @@ func _restore() -> void:
 		_crypt_wall.position.y = -3.4
 		(_crypt_wall as StaticBody3D).collision_layer = 0
 	_register_read = GameManager.get_level_flag(LOCATION_ID, "register_read", false)
+	if GameManager.get_level_flag(LOCATION_ID, "organ_played", false):
+		_organ_played = true
+		if _niche_wall != null: _niche_wall.position.y = -2.0
+		var taken: bool = GameManager.get_level_flag(LOCATION_ID, "niche_taken", false)
+		if _niche_box != null: _niche_box.visible = not taken
 
 # --- HUD + win ---------------------------------------------------------------
 func _build_hud() -> void:
