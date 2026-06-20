@@ -453,11 +453,12 @@ Loft. Still-single-room levels inherit this as they're converted to multi-room.)
 
 ### 13. The Grand Marquee Cinema — `GrandMarqueeCinema3D.tscn` (endgame)
 - **Unlock condition:** Complete The Drop; all five characters + all five movie tickets required
-- **Key puzzle(s):** Quinn repairs the projection booth; Ben plays the house organ on the Balcony; Boss guards the Backstage aisle; Uncle Doug found in the projection booth
+- **Key puzzle(s):** Quinn repairs the projector + forces the jammed booth door; Ben plays the house organ; Quinn throws the house-lights breaker (optional → chandeliers blaze on); Boss guards the aisle; Uncle Doug found in the projection booth.
+- **3D build:** expanded **grand house** (indoor recipe): big AUDITORIUM 22×20 (5m ceiling; silver screen + proscenium drapes/pelmet, rows of cinema seats, aisle runner) + combat-free GRAND LOBBY (Cecil + clue-board + exit, velvet-rope stanchions + framed posters + a marquee board) + PROJECTION BOOTH (Doug, behind Quinn's jammed door). **Hero props are Prop-Farm** (film_projector, cinema_seats, chandelier, cinema_marquee) + reused organ.glb + pipe_rack for the house organ; the chandeliers are the payoff of the house-lights breaker (dark→blaze). Carpet/brick, gold trim.
 - **Enemy types:** Grunts ×2 + Boss (cinema guardian)
-- **Level progress flags:** `enemies_cleared` / `projector_repaired` / `organ_played`
-- **NPCs:** Cecil / Usher (chief usher, dialog-choice tree, stationary in Lobby)
-- **Notes:** Win needs enemies cleared + projector + organ + **all 5 tickets** → Uncle Doug is revealed in the booth and `_win` routes to `Result3D.tscn` after a beat. Completion id is `"grand_marquee"`.
+- **Level progress flags:** `enemies_cleared` / `projector_repaired` / `organ_played` / `lights_on` / `booth_forced` / `usher_met` / `doug_talked`
+- **NPCs:** Cecil / Usher (chief usher, dialog-choice tree, Lobby) · Uncle Doug (revealed in the booth on win)
+- **Notes:** Win needs enemies cleared + projector + organ + booth forced + **all 5 tickets** → Uncle Doug is revealed in the booth and `_win` routes to `Result3D.tscn` after a beat. The lobby clue-board tallies the 12 `doug_*` clues. Completion id is `"grand_marquee"`.
 
 ```
 Location template:
