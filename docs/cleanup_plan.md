@@ -77,6 +77,7 @@ count, Bies, power plays, eliminations). Win → banner + `spoon_game_won`. Boot
 **Lighter than spec (optional follow-ups):** the announcer is a framed broadcast panel, not a live
 second-camera SubViewport of an announcer character; per-character storytelling anims are light
 (seated `sit` pose + slump/shake/FX rather than bespoke gesture clips).
+**Added (this pass):** the middle **pile** is now visualised — spoons sent to the middle (forced discards + anchorless exiles) drop as real `spoon.glb` onto a growing table heap with a `MIDDLE PILE: N` chip + announcer call; the spoon picker is **keyboard/gamepad** navigable (WASD/arrows/d-pad/stick + accept, mouse still works); **Esc** (and game over) opens a **Resume / Play Again / Leave** menu (Leave → Al's Rooftop).
 10. **Camera direction**: stop the current camera drift; on each turn **jump-cut** to a player camera
     across the table, then **slow dolly-in**. Pause a beat for NPC turns; for the **human** player, hold
     after the dolly until their choice is made.
