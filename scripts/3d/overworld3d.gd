@@ -32,7 +32,8 @@ const SLOTS := [
 ]
 # big office towers scaled down so footprints fit the block; shops stay 1.0
 const BLD_SCALE := {"bld_round": 0.7, "bld_round3": 0.7, "bld_octagon": 0.7,
-	"bld_office_large": 0.75, "bld_square": 0.8, "bld_square3": 0.8, "bld_office_small": 0.85}
+	"bld_office_large": 0.75, "bld_square": 0.8, "bld_square3": 0.8, "bld_office_small": 0.85,
+	"courthouse": 0.85, "subway_entrance": 1.3}
 const DOOR_INSET := 5.0     # interaction point pulled toward the boulevard
 const INTERACT := 4.5
 const GROUND := Color(0.30, 0.42, 0.26)   # grassy town green
@@ -48,13 +49,13 @@ const LOCS := [
 	{"id": "old_parish_church", "name": "Old Parish Church", "scene": "res://scenes/3d/Church3D.tscn", "req": "pipe_organ_works", "glb": "church"},
 	{"id": "iron_strings_gym", "name": "Iron & Strings Gym", "scene": "res://scenes/3d/IronStringsGym3D.tscn", "req": "old_parish_church", "glb": "shop_02"},
 	{"id": "recording_studio", "name": "Recording Studio", "scene": "res://scenes/3d/RecordingStudio3D.tscn", "req": "iron_strings_gym", "glb": "shop_03"},
-	{"id": "clocktower", "name": "The Clocktower", "scene": "res://scenes/3d/Clocktower3D.tscn", "req": "recording_studio", "glb": "cityhall"},
+	{"id": "clocktower", "name": "The Clocktower", "scene": "res://scenes/3d/Clocktower3D.tscn", "req": "recording_studio", "glb": "courthouse"},
 	{"id": "harbor_docks", "name": "Harbor & Docks", "scene": "res://scenes/3d/HarborDocks3D.tscn", "req": "recording_studio", "glb": "warehouse"},
 	{"id": "library", "name": "Library & Archive", "scene": "res://scenes/3d/LibraryArchive3D.tscn", "req": "recording_studio", "glb": "cityhall"},
 	{"id": "carnival", "name": "Carnival & Fairground", "scene": "res://scenes/3d/Carnival3D.tscn", "req": "recording_studio", "glb": "fairstall"},
-	{"id": "underground", "name": "Underground Tunnels", "scene": "res://scenes/3d/UndergroundTunnels3D.tscn", "req": "recording_studio", "glb": "shop_06"},
-	{"id": "zip_line", "name": "Zip Line Park", "scene": "res://scenes/3d/ZipLinePark3D.tscn", "req": "recording_studio", "glb": "bld_round"},
-	{"id": "vr_room", "name": "VR Escape Room", "scene": "res://scenes/3d/VrEscapeRoom3D.tscn", "req": "recording_studio", "glb": "bld_square3"},
+	{"id": "underground", "name": "Underground Tunnels", "scene": "res://scenes/3d/UndergroundTunnels3D.tscn", "req": "recording_studio", "glb": "subway_entrance", "yaw": PI},
+	{"id": "zip_line", "name": "Zip Line Park", "scene": "res://scenes/3d/ZipLinePark3D.tscn", "req": "recording_studio", "glb": "zipline_tower"},
+	{"id": "vr_room", "name": "VR Escape Room", "scene": "res://scenes/3d/VrEscapeRoom3D.tscn", "req": "recording_studio", "glb": "vr_bld", "yaw": -PI / 2.0},
 	{"id": "the_drop", "name": "The Drop", "scene": "res://scenes/3d/TheDrop3D.tscn", "req": "vr_room", "glb": "chopshop"},
 	{"id": "grand_marquee", "name": "Grand Marquee Cinema", "scene": "res://scenes/3d/GrandMarqueeCinema3D.tscn", "req": "the_drop", "glb": "cinema_bld"},
 	{"id": "gimme_dat_spoon", "name": "Gimme Dat Spoon", "scene": "res://scenes/3d/Spoon3D.tscn", "req": "grand_marquee", "glb": "arcade", "yaw": 0.0},
@@ -214,7 +215,10 @@ func _buildings() -> void:
 		# push the building mesh back so its +Z front clears the sidewalk; the door,
 		# sidewalk, billboard and dressing stay keyed to the slot's front (z).
 		var place: Vector3 = base - Vector3(0, 0, BLDG_SETBACK)
-		prop(TOWN + loc["glb"] + ".glb", place, 0.0, bscale)
+		# Most meshes are baked facing +Z; a few (Prop-Farm buildings) need a per-entry
+		# yaw override so their front faces the −Z camera.
+		var byaw: float = loc.get("yaw", 0.0)
+		prop(TOWN + loc["glb"] + ".glb", place, byaw, bscale)
 		if loc["id"] == "clocktower":
 			_add_clock_tower(place, 0.0)
 		_entry_plaza(x, z)

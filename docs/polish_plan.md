@@ -96,7 +96,21 @@ dialog text. Do A1 first (cheap, no Blender); then batch A2–A4 in ONE re-bake 
 ---
 
 ## Plan B — World dressing: lobby NPCs + overworld
-**Status:** B1 ✅ (c42c6df — lobby-NPC props) · B2 ✅ (88775c8 — overworld last-played duo) · B3 ⬜ (optional).
+**Status:** B1 ✅ (c42c6df) · B2 ✅ (88775c8) · B3 🔶 4 buildings WIRED+committed; 3 awaiting a Prop-Farm reroll.
+
+**B3 progress:** Generated 8 thematic whole-buildings via Prop Farm (painted). **WIRED + committed** (4):
+`courthouse` → Clocktower (domed civic + the existing `_add_clock_tower` clock piece = courthouse-WITH-clock,
+[[feedback_clocktower_courthouse]] — NOT a water tower; scale 0.85, yaw 0), `zipline_tower` → Zip Line
+(scale 1.0, yaw 0), `subway_entrance` → Underground (scale 1.3, **yaw PI** — entrance faced −Z),
+`vr_bld` → VR Room (scale 1.0, **yaw −PI/2** — facade faced +X). Placement loop now honours a per-`LOCS`
+`yaw` override (was hardcoded 0). **Library reverted to `cityhall`** (Doug) — Clocktower moving to courthouse
+de-dupes them; `library_bld` deleted.
+**TO RETOOL (reroll on Prop Farm — paused temporarily, awaiting Doug's go-ahead):** `gym_bld` (ambiguous
+red arch), `organ_works_bld` (thin facade fragment), `studio_bld` (plain red porthole tower). These 3 GLBs
+sit UNTRACKED in `assets/models/props/` as the current "before"; Recording Studio/Gym/Pipe Organ Works keep
+their old generic `shop_*` glb until the reroll lands. **Verify in-engine:** building facing/scale are derived
+from orbit renders + estimates — eyeball them in the overworld and nudge `BLD_SCALE`/`yaw` if needed.
+Lesson reconfirmed: whole buildings are Hunyuan's hard case (~5/8 usable).
 **Context:** level scripts (`scripts/3d/*3d.gd`), `overworld3d.gd`, `GameManager`, prop placement +
 Prop Farm. GDScript-only (no Blender); independent of Plan A.
 
