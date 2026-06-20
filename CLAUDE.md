@@ -434,6 +434,7 @@ Loft. Still-single-room levels inherit this as they're converted to multi-room.)
 - **Unlock condition:** TBD
 - **Key puzzle(s):** Quinn repairs physics-glitch node in Stage Alpha; Ethan hacks system console in Stage Beta; Lizard companion offers an alternate bypass route
 - **Enemy types:** Grunts ×2 + Sentry (glitchy/corrupted)
+- **3D build:** multi-room neon-grid sim (BOOT CHAMBER → SIM HALL → DATA VAULT) behind longer 4m neon corridors. **Deliberately keeps the textureless all-emissive look** — no Prop-Farm painted props (they'd clash). Enhanced with **emissive neon dressing**: glowing data pylons, a full cross-grid floor, and floating holographic cubes (drift + spin), plus the bobbing ARIA orb + jittering glitch node.
 - **Level progress flags:** `enemies_cleared` / `glitch_repaired` / `system_hacked`
 - **NPCs:** ARIA (virtual assistant, stationary in Boot Chamber)
 
