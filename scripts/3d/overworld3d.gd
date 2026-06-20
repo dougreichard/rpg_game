@@ -33,7 +33,7 @@ const SLOTS := [
 # big office towers scaled down so footprints fit the block; shops stay 1.0
 const BLD_SCALE := {"bld_round": 0.7, "bld_round3": 0.7, "bld_octagon": 0.7,
 	"bld_office_large": 0.75, "bld_square": 0.8, "bld_square3": 0.8, "bld_office_small": 0.85,
-	"courthouse": 0.85, "subway_entrance": 1.3}
+	"courthouse": 0.85, "subway_entrance": 1.3, "carousel": 2.5}
 const DOOR_INSET := 5.0     # interaction point pulled toward the boulevard
 const INTERACT := 4.5
 const GROUND := Color(0.30, 0.42, 0.26)   # grassy town green
@@ -52,13 +52,13 @@ const LOCS := [
 	{"id": "clocktower", "name": "The Clocktower", "scene": "res://scenes/3d/Clocktower3D.tscn", "req": "recording_studio", "glb": "courthouse"},
 	{"id": "harbor_docks", "name": "Harbor & Docks", "scene": "res://scenes/3d/HarborDocks3D.tscn", "req": "recording_studio", "glb": "warehouse"},
 	{"id": "library", "name": "Library & Archive", "scene": "res://scenes/3d/LibraryArchive3D.tscn", "req": "recording_studio", "glb": "cityhall"},
-	{"id": "carnival", "name": "Carnival & Fairground", "scene": "res://scenes/3d/Carnival3D.tscn", "req": "recording_studio", "glb": "fairstall"},
+	{"id": "carnival", "name": "Carnival & Fairground", "scene": "res://scenes/3d/Carnival3D.tscn", "req": "recording_studio", "glb": "carousel"},
 	{"id": "underground", "name": "Underground Tunnels", "scene": "res://scenes/3d/UndergroundTunnels3D.tscn", "req": "recording_studio", "glb": "subway_entrance"},
 	{"id": "zip_line", "name": "Zip Line Park", "scene": "res://scenes/3d/ZipLinePark3D.tscn", "req": "recording_studio", "glb": "zipline_tower"},
 	{"id": "vr_room", "name": "VR Escape Room", "scene": "res://scenes/3d/VrEscapeRoom3D.tscn", "req": "recording_studio", "glb": "vr_bld", "yaw": -PI / 2.0},
 	{"id": "the_drop", "name": "The Drop", "scene": "res://scenes/3d/TheDrop3D.tscn", "req": "vr_room", "glb": "chopshop"},
 	{"id": "grand_marquee", "name": "Grand Marquee Cinema", "scene": "res://scenes/3d/GrandMarqueeCinema3D.tscn", "req": "the_drop", "glb": "cinema_bld"},
-	{"id": "gimme_dat_spoon", "name": "Gimme Dat Spoon", "scene": "res://scenes/3d/Spoon3D.tscn", "req": "grand_marquee", "glb": "arcade", "yaw": 0.0},
+	{"id": "gimme_dat_spoon", "name": "Arcade", "scene": "res://scenes/3d/Spoon3D.tscn", "req": "grand_marquee", "glb": "arcade", "yaw": 0.0},
 ]
 
 # Some locations also need an item in hand, not just an unlock. The Underground
@@ -122,6 +122,60 @@ func _build_level() -> void:
 			c.call("reframe", 13.5, 52.0)
 	build_ui_stack(true)   # pause menu + overlays (Esc opens it)
 	Audio.play_music("overworld")   # the walkable city theme
+	# First-ever arrival in the overworld: a silly title card + Quinn intro barks (one-shot).
+	if ret == "" and GameManager.completed_locations.is_empty() \
+			and not GameManager.get_level_flag("meta", "intro_seen", false):
+		GameManager.set_level_flag("meta", "intro_seen", true)
+		_play_intro(p)
+
+# One-shot opening: a cinematic "Based on Actual Events" card, then Quinn's intro
+# speech bubbles. Fire-and-forget coroutine; never blocks the build.
+func _play_intro(duo: Node) -> void:
+	var layer := CanvasLayer.new()
+	layer.layer = 40
+	add_child(layer)
+	var card := Label.new()
+	card.text = "Based on Actual Events"
+	card.add_theme_font_override("font", UITheme.font())
+	card.add_theme_font_size_override("font_size", 46)
+	card.add_theme_color_override("font_color", UITheme.GOLD)
+	card.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.95))
+	card.add_theme_constant_override("outline_size", 14)
+	card.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	card.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	card.set_anchors_preset(Control.PRESET_FULL_RECT)
+	card.modulate.a = 0.0
+	layer.add_child(card)
+	var tin := create_tween()
+	tin.tween_property(card, "modulate:a", 1.0, 0.7)
+	await get_tree().create_timer(2.8).timeout
+	var tout := create_tween()
+	tout.tween_property(card, "modulate:a", 0.0, 0.8)
+	await tout.finished
+	layer.queue_free()
+	# Quinn's barks above the active body.
+	var body: Node3D = duo.bodies[duo.active] if duo != null and not duo.bodies.is_empty() else null
+	if body == null:
+		return
+	var bub := Label3D.new()
+	bub.font = UITheme.font()
+	bub.font_size = 48
+	bub.outline_size = 16
+	bub.modulate = UITheme.CREAM
+	bub.outline_modulate = Color(0, 0, 0, 0.95)
+	bub.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	bub.no_depth_test = true
+	bub.fixed_size = true
+	bub.pixel_size = 0.0011
+	bub.position = Vector3(0.0, 2.6, 0.0)
+	body.add_child(bub)
+	for line: String in ["Hi, I'm Quinn", "Now where is Uncle Doug?", "What a crock!"]:
+		if not is_instance_valid(bub):
+			return
+		bub.text = line
+		await get_tree().create_timer(2.0).timeout
+	if is_instance_valid(bub):
+		bub.queue_free()
 
 # The strolling duo = the first (up to two) unlocked characters, in unlock order.
 # Quinn alone at the start; Quinn+Erin once Bellows & Sons is done; and so on.

@@ -61,6 +61,9 @@ var _hud_banner: Label = null
 func _build_level() -> void:
 	location_id = "the_drop"
 	multi_room = true
+	# Outdoor grove: walls are collision-only — the tree/bush ring (_forest_ring/_tree_line)
+	# is the visible "hedge" boundary instead of stone walls.
+	walls_visible = false
 	build_env(Color(0.05, 0.08, 0.06), Color(0.5, 0.55, 0.45), 0.6, 1.0)
 	point_light(Vector3(0, 4.0, 2.0), Color(0.7, 0.85, 0.7), 1.8, 18.0)
 	point_light(CLEAR_C + Vector3(0, 2.8, 0), Color(0.8, 0.9, 0.75), 1.8, 11.0)
