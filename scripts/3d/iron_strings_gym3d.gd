@@ -190,13 +190,7 @@ func _rack_barrier() -> void:
 # Boiler room contents — big boiler tank + the valve wheel Quinn turns for the key.
 func _boiler() -> void:
 	prop("res://assets/models/props/gym_boiler.glb", BOILER_C + Vector3(1.3, 0, 2.0), deg_to_rad(180))  # Prop-Farm boiler (re-rolled)
-	add_child(box_mesh(Vector3(0.3, 1.2, 0.3), Color(0.45, 0.46, 0.5), VALVE_POS + Vector3(0, 0.6, 0)))     # valve post
-	var wheel := MeshInstance3D.new()
-	var cm := CylinderMesh.new(); cm.top_radius = 0.45; cm.bottom_radius = 0.45; cm.height = 0.1
-	var mat := StandardMaterial3D.new(); mat.albedo_color = Color(0.7, 0.2, 0.18); mat.metallic = 0.5; mat.roughness = 0.4
-	cm.material = mat; wheel.mesh = cm; wheel.rotation.x = deg_to_rad(90)
-	wheel.position = VALVE_POS + Vector3(0, 1.25, 0.15)
-	add_child(wheel)
+	prop("res://assets/models/props/valve_wheel.glb", VALVE_POS, 0.0)   # Quinn's boiler valve (reused prop)
 
 # Uncle Doug's gym locker in the lobby — Evan forces it open.
 func _locker_stand() -> void:

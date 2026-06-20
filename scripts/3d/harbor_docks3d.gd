@@ -183,7 +183,7 @@ func _power_panel() -> void:
 
 # Manifest / lantern locker — Evan forces it, or Quinn dials it once the manifest is up.
 func _locker_stand() -> void:
-	add_child(box_mesh(Vector3(0.9, 2.0, 0.7), Color(0.3, 0.4, 0.48), LOCKER_POS + Vector3(0, 1.0, 0)))
+	prop("res://assets/models/props/gym_lockers.glb", LOCKER_POS, deg_to_rad(180))   # reused locker bank
 
 func _crank_pickup() -> void:
 	var box := box_mesh(Vector3(0.5, 0.4, 0.5), Color(0.5, 0.42, 0.2), CRANK_PICKUP + Vector3(0, 0.2, 0))

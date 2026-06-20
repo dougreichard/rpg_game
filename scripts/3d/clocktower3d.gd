@@ -105,8 +105,8 @@ func _floor1() -> void:
 	prop("res://assets/models/props/shelf.glb", F1 + Vector3(-3.5, 0, -14), deg_to_rad(90))
 	prop("res://assets/models/props/barrel.glb", F1 + Vector3(3.5, 0, -14))
 	prop("res://assets/models/props/clock_face.glb", F1 + Vector3(4.5, 0, 3.5), deg_to_rad(200))   # ornate display clock (lobby)
-	# Doug's pocket-watch on a workbench
-	add_child(box_mesh(Vector3(1.0, 0.8, 0.6), Color(0.3, 0.22, 0.16), F1 + WATCH + Vector3(0, 0.4, 0)))
+	# Doug's pocket-watch on a workbench (reused table prop) + its brass glint
+	prop("res://assets/models/props/table.glb", F1 + WATCH, 0.0)
 	add_child(box_mesh(Vector3(0.22, 0.06, 0.22), BRASS, F1 + WATCH + Vector3(0, 0.84, 0), 1.5))
 	# weight-crank cabinet (optional archive key) — three winders + a numbered tag each
 	for i: int in range(WEIGHTS.size()):

@@ -105,9 +105,8 @@ func _reading_room() -> void:
 	prop("res://assets/models/props/library_globe.glb", READ_C + Vector3(0, 0, 2.5), 0.0)   # reading-room globe (re-rolled)
 	prop("res://assets/models/props/shelf.glb", READ_C + Vector3(-8.0, 0, -1.0), deg_to_rad(90))   # wall shelves
 	prop("res://assets/models/props/shelf.glb", READ_C + Vector3(8.0, 0, -1.0), deg_to_rad(-90))
-	# Priswick's checkpoint desk, just south of the gate
-	add_child(box_mesh(Vector3(3.0, 1.0, 0.7), WOOD, PRISWICK_POS + Vector3(0, 0.5, 0.7)))
-	add_child(box_mesh(Vector3(3.0, 0.1, 0.7), WOOD.lightened(0.1), PRISWICK_POS + Vector3(0, 1.05, 0.7)))
+	# Priswick's checkpoint desk, just south of the gate (reused desk prop)
+	prop("res://assets/models/props/desk.glb", PRISWICK_POS + Vector3(0, 0, 0.7), PI)
 
 func _stacks() -> void:
 	# rows of real bookshelves (reuse shelf.glb) flanking a central aisle — clear of the
