@@ -22,16 +22,17 @@ const NEON := Color(0.3, 0.8, 1.0)
 const WALL_H := 3.2
 const REACH := 2.2
 
-const BOOT_C := Vector3(0, 0, 13.0)
-const ARIA_POS := Vector3(0.0, 0.0, 15.0)
+# boot/vault pushed out behind longer neon corridors (sim hall kept the same size)
+const BOOT_C := Vector3(0, 0, 16.0)
+const ARIA_POS := Vector3(0.0, 0.0, 18.0)
 const GLITCH_POS := Vector3(-5.0, 0.0, -3.0)
 const CONSOLE_POS := Vector3(5.0, 0.0, -3.0)
 const BRIDGE := [Vector3(-2.0, 0, 4.0), Vector3(0.0, 0, 4.0), Vector3(2.0, 0, 4.0)]
 const BRIDGE_GATE := Vector3(0.0, 0, -8.5)
-const VAULT_C := Vector3(0, 0, -13.0)
-const FW_QUINN := Vector3(-1.5, 0.0, -15.5)
-const FW_ETHAN := Vector3(1.5, 0.0, -15.5)
-const DEV_POS := Vector3(-4.0, 0.0, -15.0)
+const VAULT_C := Vector3(0, 0, -16.0)
+const FW_QUINN := Vector3(-1.5, 0.0, -18.5)
+const FW_ETHAN := Vector3(1.5, 0.0, -18.5)
+const DEV_POS := Vector3(-4.0, 0.0, -18.0)
 
 var _cleared := false
 var _enemies_cleared := false
@@ -48,6 +49,7 @@ var _aria_orb: MeshInstance3D = null
 var _aria_bob := 0.0
 var _glitch_node: MeshInstance3D = null
 var _console_lights: Array = []
+var _holos: Array = []
 var _bridge_lights: Array = []
 var _bridge_wall: Node3D = null
 var _hud_goal: Label = null
@@ -67,6 +69,7 @@ func _build_level() -> void:
 	_zone(GLITCH_POS, ALPHA_COL)
 	_zone(CONSOLE_POS, BETA_COL)
 	_grid_lines()
+	_neon_dressing()
 	_glitch()
 	_console()
 	_bridge()
@@ -84,8 +87,8 @@ func _build_level() -> void:
 func _rooms() -> void:
 	# Neon flat surfaces (no set_theme); corridors get NEON corner posts.
 	room(Vector3.ZERO, 18, 16, FLOOR_COL, WALL_COL, WALL_H, ["s", "n"], 3.0, true)         # sim hall
-	corridor(Vector3(0, 0, 8), "s", 1.0, FLOOR_COL, WALL_COL, 3.0, WALL_H, true, NEON)         # → boot
-	corridor(Vector3(0, 0, -8), "n", 1.0, FLOOR_COL, WALL_COL, 3.0, WALL_H, true, NEON)        # → data vault
+	corridor(Vector3(0, 0, 8), "s", 4.0, FLOOR_COL, WALL_COL, 3.0, WALL_H, true, NEON)         # → boot
+	corridor(Vector3(0, 0, -8), "n", 4.0, FLOOR_COL, WALL_COL, 3.0, WALL_H, true, NEON)        # → data vault
 	_bridge_wall = _gate_panel(BRIDGE_GATE, WALL_H)
 	room(BOOT_C, 12, 8, FLOOR_COL, WALL_COL, WALL_H, ["n", "s"], 3.0, true)                # boot chamber (lobby)
 	corridor(BOOT_C + Vector3(0, 0, 4.0), "s", 2.0, FLOOR_COL, WALL_COL, 3.0, WALL_H, true, NEON)
@@ -109,6 +112,20 @@ func _grid_lines() -> void:
 	for i: int in range(9):
 		var x: float = -8.0 + float(i) * 2.0
 		add_child(box_mesh(Vector3(0.04, 0.02, 16.0), NEON, Vector3(x, 0.06, 0), 0.8))
+	for i: int in range(9):   # cross-grid (Z lines) for a full neon floor grid
+		var z: float = -8.0 + float(i) * 2.0
+		add_child(box_mesh(Vector3(16.0, 0.02, 0.04), NEON, Vector3(0, 0.06, z), 0.8))
+
+# All-emissive neon set-dressing (matches the no-texture VR look): glowing data pylons around the
+# sim hall + a few floating holographic cubes (bob in _process).
+func _neon_dressing() -> void:
+	for p: Vector3 in [Vector3(-8.0, 0, -6.5), Vector3(8.0, 0, -6.5), Vector3(-8.0, 0, 6.5), Vector3(8.0, 0, 6.5)]:
+		add_child(box_mesh(Vector3(0.5, WALL_H, 0.5), NEON.darkened(0.2), p + Vector3(0, WALL_H * 0.5, 0), 0.6))
+		add_child(box_mesh(Vector3(0.7, 0.2, 0.7), NEON, p + Vector3(0, WALL_H - 0.2, 0), 1.4))   # glowing cap
+	for h: Vector3 in [Vector3(-3.0, 2.2, 5.5), Vector3(3.0, 2.6, 5.5), Vector3(0.0, 2.4, -6.5)]:
+		var holo := box_mesh(Vector3(0.6, 0.6, 0.6), Color(0.4, 0.9, 1.0), h, 1.2)
+		holo.rotation = Vector3(0.6, 0.4, 0.0)
+		add_child(holo); _holos.append(holo)
 
 func _glitch() -> void:
 	_glitch_node = box_mesh(Vector3(0.8, 0.8, 0.8), Color(1.0, 0.5, 0.2), GLITCH_POS + Vector3(0, 1.2, 0), 1.4)
@@ -322,6 +339,11 @@ func _process(d: float) -> void:
 	_aria_bob += d
 	if _aria_orb != null:
 		_aria_orb.position.y = ARIA_POS.y + 1.6 + 0.15 * sin(_aria_bob * 2.0)
+	for i: int in range(_holos.size()):   # floating holograms drift + spin
+		var hl: Node3D = _holos[i]
+		if hl != null:
+			hl.position.y += 0.004 * sin(_aria_bob * 1.5 + float(i))
+			hl.rotation.y += d * 0.8
 	if _glitch_node != null and not _glitch_repaired:
 		_glitch_node.position = GLITCH_POS + Vector3(randf_range(-0.05, 0.05), 1.2 + randf_range(-0.05, 0.05), randf_range(-0.05, 0.05))
 		_glitch_node.rotation.y += d * 3.0
