@@ -130,9 +130,8 @@ func _crane() -> void:
 	_tint_crane_part("res://assets/models/props/dock_crane_top.glb", Color(0.86, 0.70, 0.18))
 	add_child(box_mesh(Vector3(3.0, 0.08, 2.0), Color(0.35, 0.33, 0.3), CRANE_POS + Vector3(0, 0.04, 0)))  # platform pad
 	# (crane parts added above via _tint_crane_part)
-	# the manifest crate the crane lifts (Doug's trail) — sits on the platform
-	_crate = box_mesh(Vector3(1.2, 1.2, 1.2), Color(0.55, 0.4, 0.22), CRANE_POS + Vector3(1.4, 0.6, 0))
-	add_child(_crate)
+	# the manifest crate the crane lifts (Doug's trail) — sits on the platform (Synty crate)
+	_crate = prop("res://assets/models/town/deck_crate.glb", CRANE_POS + Vector3(1.4, 0, 0), 0.0)
 
 func _tint_crane_part(path: String, col: Color) -> void:
 	var part := prop(path, CRANE_POS + Vector3(0, 0, 1.0), 0.0, 4.3)
@@ -149,20 +148,29 @@ func _container_block() -> void:
 	var cs := CollisionShape3D.new(); var bs := BoxShape3D.new()
 	bs.size = Vector3(3.4, 2.0, 1.6); cs.shape = bs; cs.position = Vector3(0, 1.0, 0)
 	_container.add_child(cs)
-	_container.add_child(box_mesh(Vector3(3.4, 2.0, 1.6), Color(0.65, 0.25, 0.2), Vector3(0, 1.0, 0)))
-	for i: int in range(6):
-		var x: float = -1.4 + float(i) * 0.56
-		_container.add_child(box_mesh(Vector3(0.08, 1.9, 1.62), Color(0.5, 0.18, 0.15), Vector3(x, 1.0, 0)))
+	# Prop-Farm shipping container as the visual (child of the collision body → sinks with it
+	# when Evan shoves it clear). ~4.6m long → scale to the 3.4m collision footprint.
+	var c: Node3D = load("res://assets/models/props/cargo_container.glb").instantiate()
+	c.scale = Vector3(0.74, 0.74, 0.74)
+	_container.add_child(c)
 	_container.position = CONTAINER_POS
 	add_child(_container)
 
 func _dock_clutter() -> void:
-	_stack(Vector3(-7.6, 0, -2.0), Color(0.25, 0.45, 0.55))
-	_stack(Vector3(-7.6, 0, 2.0), Color(0.55, 0.5, 0.25))
-	_stack(Vector3(7.6, 0, -5.0), Color(0.5, 0.3, 0.45))
-	prop("res://assets/models/props/barrel.glb", Vector3(-2.5, 0, 3.5))
-	prop("res://assets/models/props/barrel.glb", Vector3(-3.1, 0, 3.7))
-	prop("res://assets/models/props/barrel.glb", Vector3(2.8, 0, 4.0))
+	_stack(Vector3(-10.5, 0, -3.0), Color(0.25, 0.45, 0.55))
+	_stack(Vector3(-10.5, 0, 2.0), Color(0.55, 0.5, 0.25))
+	_stack(Vector3(10.5, 0, -6.0), Color(0.5, 0.3, 0.45))
+	prop("res://assets/models/props/barrel.glb", Vector3(-3.0, 0, 5.5))
+	prop("res://assets/models/props/barrel.glb", Vector3(-3.6, 0, 5.7))
+	prop("res://assets/models/props/barrel.glb", Vector3(3.4, 0, 6.0))
+	# Prop-Farm container stacks + forklift + dock detail (bollards/buoys along the water edge)
+	prop("res://assets/models/props/cargo_container.glb", Vector3(-9.5, 0, -7.5), deg_to_rad(90), 0.8)
+	prop("res://assets/models/props/cargo_container.glb", Vector3(9.0, 0, 6.0), deg_to_rad(70), 0.8)
+	prop("res://assets/models/props/forklift.glb", Vector3(5.5, 0, 4.0), deg_to_rad(210))
+	for b: Vector3 in [Vector3(-4.0, 0, -9.0), Vector3(0.0, 0, -9.2), Vector3(4.0, 0, -9.0)]:
+		prop("res://assets/models/props/dock_bollard.glb", b, 0.0)
+	prop("res://assets/models/props/life_buoy.glb", Vector3(-11.0, 0, -8.0), deg_to_rad(40))
+	prop("res://assets/models/props/life_buoy.glb", Vector3(11.0, 0, -8.0), deg_to_rad(-40))
 
 func _stack(pos: Vector3, col: Color) -> void:
 	add_child(box_mesh(Vector3(2.6, 1.6, 1.4), col, pos + Vector3(0, 0.8, 0)))

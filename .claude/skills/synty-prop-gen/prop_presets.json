@@ -352,5 +352,41 @@
     "height": 2.8,
     "poly": 2000,
     "ref_count": 1
+  },
+  "cargo_container": {
+    "prompt": "a steel shipping cargo container, a long ribbed intermodal container with double doors at one end and weathered faded paint",
+    "seed": 11,
+    "track": "painted",
+    "angle": 6,
+    "height": 2.6,
+    "poly": 2500,
+    "ref_count": 1
+  },
+  "forklift": {
+    "prompt": "a small warehouse forklift truck, a compact yellow lift truck with two front forks, an overhead driver cage and a counterweight at the rear",
+    "seed": 16,
+    "track": "painted",
+    "angle": 6,
+    "height": 2.2,
+    "poly": 4000,
+    "ref_count": 1
+  },
+  "dock_bollard": {
+    "prompt": "a harbor mooring bollard, a short heavy cast-iron post on a base with a thick rope coiled around it",
+    "seed": 14,
+    "track": "painted",
+    "angle": 6,
+    "height": 0.8,
+    "poly": 1500,
+    "ref_count": 1
+  },
+  "life_buoy": {
+    "prompt": "a harbor life-ring on a wooden stand post, a red and white round life preserver ring",
+    "seed": 14,
+    "track": "painted",
+    "angle": 6,
+    "height": 1.2,
+    "poly": 1500,
+    "ref_count": 1
   }
 }
