@@ -8,7 +8,7 @@ so the Blender/animation context is loaded once.
 ---
 
 ## Plan A — Characters: identity, look, pose, special anims
-**Status:** A1 ✅ (09542d6 — Doug→"UD", pronouns verified clean) · A2 ✅ (1e7db03 — arms-down idle, all 15 chars re-baked, ARM_APOSE −70) · A3 🔶 looks/accessories IN PROGRESS · A4 ⬜ special anims.
+**Status:** A1 ✅ (09542d6) · A2 ✅ (1e7db03) · A3 ✅ DONE (059c2c6 looks · 0486b89 Synty accessories · ca729f8 Ben keytar) · A4 ⬜ special anims.
 
 **A3 — all LOOKS DONE (accessories still TODO).** Body picks (all Doug-approved, all boot clean):
 - **Quinn** = SpyKit `SK_Chr_Male_Spy_Necktie` (dark suit+shades, `PolygonSpy_Texture_01_A`) + near-black **flat cap** (Kids `SM_Chr_Attach_Hat_Flatcap_01`) via `attach_hat.py`.
@@ -28,7 +28,7 @@ so the Blender/animation context is loaded once.
 - **Erin** = Adventure `SM_Prop_Book_01` (blue tome, ~0.30m) — single thick book (the Office Book_Group stack scaled too small to read).
 - **Ethan** = Shops `SM_Prop_Computer_Tablet_01` (dark, ~0.30m, rx90) — tablet (a phone was too small/ambiguous).
 - **Evan** = none (fists/animals).
-- **Ben keytar** = no Synty keytar exists → Prop Farm gen (`ben_keytar`, painted track). TODO: wire onto Ben's hand once generated (attach_prop needs a .glb-prop path; currently imports FBX only).
+- **Ben** = Prop-Farm `ben_keytar.glb` (painted, seed 13 — no Synty keytar exists), attached keeping its diffuse (attach_prop now handles .glb props). ben.glb carries 2 textures (body + keytar).
 
 **Lesson:** the idle hand is a relaxed OPEN pose (no grip), so compact props (book/phone) hide against the hip at gameplay distance — only elongated/bulky items (wrench, laptop, tome, tablet) read; size props ~1.4× and prefer larger items. rx=90 aligns elongated props with this rig's grip.
 **Re-bake manifest** (for A3/A4 — `export_anim_authored.py --kind lead`, /tmp/bake_all.sh): leads = `CityCharacters/FBX/Character.fbx` meshes Character_Roadworker(quinn)/HipsterGirl(erin)/Jock(evan)/PunkGuy(ben)/HipsterGuy(ethan), atlas Polygon_City_Characters_Texture_01_A; Doug+NPCs = `Office/Characters/SK_Chr_*` (Developer_Male_02=doug, Boss_Male_01=bellows, Developer_Male_01=congregant_m, Business_Female_01=congregant_f), atlas PolygonOffice_01_A; aldric = `WesternFrontier/.../SK_Chr_Priest_Male_01`, atlas PolygonWesternFrontier_01_A; kids = `Kids/Chr/SK_Chr_Kid_*`, mesh "Kid", atlas PolygonKids_01_A.
