@@ -58,7 +58,7 @@ const LOCS := [
 	{"id": "vr_room", "name": "VR Escape Room", "scene": "res://scenes/3d/VrEscapeRoom3D.tscn", "req": "recording_studio", "glb": "vr_bld", "yaw": -PI / 2.0},
 	{"id": "the_drop", "name": "The Drop", "scene": "res://scenes/3d/TheDrop3D.tscn", "req": "vr_room", "glb": "chopshop"},
 	{"id": "grand_marquee", "name": "Grand Marquee Cinema", "scene": "res://scenes/3d/GrandMarqueeCinema3D.tscn", "req": "the_drop", "glb": "cinema_bld"},
-	{"id": "gimme_dat_spoon", "name": "Arcade", "scene": "res://scenes/3d/Spoon3D.tscn", "req": "grand_marquee", "glb": "arcade", "yaw": 0.0},
+	{"id": "gimme_dat_spoon", "name": "Arcade", "scene": "res://scenes/3d/AlsRooftopGarden3D.tscn", "req": "grand_marquee", "glb": "arcade", "yaw": 0.0},
 ]
 
 # Some locations also need an item in hand, not just an unlock. The Underground

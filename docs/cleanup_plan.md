@@ -42,7 +42,18 @@ Baked Synty `SM_Sign_Large_Arcade_01` (cm→`--scale 0.01`) and mounted it on th
    couple of arcade-machine props at the entrance). A bespoke farm-generated arcade building is a
    deferred nice-to-have (Phase F).
 
-## Phase 4 — Al's Rooftop Garden (new optional location; no farm for the core)
+## Phase 4 — Al's Rooftop Garden (no farm for the core)  ✅ DONE (core)
+**Access (per Doug): NOT a new overworld building — it IS the Arcade's interior.** The
+`gimme_dat_spoon` LOCS `scene` was repointed from `Spoon3D.tscn` → `AlsRooftopGarden3D.tscn`; the
+"Arcade" building + ARCADE sign stay, so entering the Arcade (after Grand Marquee / Doug found)
+drops you on Al's dusk rooftop jazz club. Al (host, bellows mesh) greets; Uncle Doug sits at a
+bistro table (recap dialog that flips to a celebratory state at 12 spoons); Fred & Ginger pose as a
+dance pair (congregant_m/f); a cabinet (`▶ PLAY`, `SPOON_POS`) launches the real `Spoon3D` game.
+Rooftop deck + hand-built parapet + garden dressing + warm lights + `Audio.play_music("jazz")`
+(procedural fallback). Combat-free, boots clean. `_spoons_held()` counts numbered_spoon_01..12.
+**Deferred / optional (not blocking):** Fred's top hat (attach_hat), a ballroom-dance authored clip,
+bespoke Prop-Farm jazz props (Phase F). **Verify in-engine:** rooftop layout / NPC spots are by
+estimate — eyeball + nudge positions.
 9. New `scenes/3d/AlsRooftopGarden3D.tscn` + `scripts/3d/als_rooftop_garden3d.gd` on the `Level3D` kit —
    an **outdoor rooftop jazz club**. **Gating:** unlocks **after Uncle Doug is found**, and is an
    alternate way to reach the Arcade **until Gimme Dat Spoon is unlocked**; then either kept or removed
