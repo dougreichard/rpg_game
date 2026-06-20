@@ -449,7 +449,7 @@ func _read_register(char_name: String) -> void:
 	open_dialog("Memorial Register", Color(0.55, 0.5, 0.42),
 		{"start": {"lines": [
 			"The vestry register is open on its stand. Most signatures are decades old.",
-			"One is fresh: a looping hand signing \"D. Hunkle\" — then crossed out, re-signed under a name that isn't his.",
+			"One is fresh: a looping hand signing just the initials \"UD\" — then crossed out, re-signed under a name that isn't his.",
 			"A flower is pressed flat against the page, marking it. You take it as a clue.",
 			"Picked up: Pressed Flower."]}}, char_name)
 	_hud_hint.text = "Doug was here — and didn't want to be found by name."
