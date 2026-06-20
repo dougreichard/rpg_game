@@ -10,7 +10,7 @@ local Synty Blender bakes (`export_prop.py` — NOT the Prop Farm), so it can pr
 
 ---
 
-## Phase 1 — Quick GDScript wins (no farm)
+## Phase 1 — Quick GDScript wins (no farm)  ✅ DONE (c4e2604)
 1. **First-time intro beat** (`overworld3d.gd` + a `SaveManager`/`GameManager` first-run flag): on the
    very first overworld entry, flash a silly **"Based on Actual Events"** title card, then Quinn barks a
    speech-bubble sequence — "Hi, I'm Quinn" → "Now where is Uncle Doug?" → "What a crock!" (reuse the
@@ -24,7 +24,11 @@ local Synty Blender bakes (`export_prop.py` — NOT the Prop Farm), so it can pr
    (Synty `bush`/hedge) and keep the existing wall colliders as **invisible** collision mesh (it's an
    outdoor level — matches the outdoor recipe).
 
-## Phase 2 — Harbor & Docks props/cleanup (no farm)
+## Phase 2 — Harbor & Docks props/cleanup (no farm)  ✅ DONE
+Chain-link fence baked (GangWarfare `SM_Bld_Fence_Wire_01`, cm→`--scale 0.01`) + run along the
+north/water edge with a crane gap; the placeholder `_stack` colour-cubes now stack real
+`cargo_container.glb`; the outdoor-resize + extra-puzzle pass was already applied in the level
+elaboration ("if so ok" → left as-is).
 5. **Chain-link fence**: bake a Synty wire/metal fence (`SM_Bld_Fence_Wire_01` or `SM_Bld_Metal_Fence_01/02`)
    via `export_prop.py` and line the open outdoor edges with it (it's a dockside yard).
 6. **Kill remaining generic cubes**: find the leftover `box_mesh` placeholders in `harbor_docks3d.gd` and

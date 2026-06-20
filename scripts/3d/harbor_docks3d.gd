@@ -79,6 +79,7 @@ func _build_level() -> void:
 	_crane()
 	_container_block()
 	_dock_clutter()
+	_dock_fence()
 	_power_panel()
 	_locker_stand()
 	_crank_pickup()
@@ -173,9 +174,18 @@ func _dock_clutter() -> void:
 	prop("res://assets/models/props/life_buoy.glb", Vector3(-11.0, 0, -8.0), deg_to_rad(40))
 	prop("res://assets/models/props/life_buoy.glb", Vector3(11.0, 0, -8.0), deg_to_rad(-40))
 
-func _stack(pos: Vector3, col: Color) -> void:
-	add_child(box_mesh(Vector3(2.6, 1.6, 1.4), col, pos + Vector3(0, 0.8, 0)))
-	add_child(box_mesh(Vector3(2.6, 1.6, 1.4), col.darkened(0.12), pos + Vector3(0, 2.4, 0)))
+func _stack(pos: Vector3, _col: Color) -> void:
+	# Real Synty/Prop-Farm shipping containers stacked two high (replaces the old
+	# placeholder colour cubes). Container is 2.6 m tall → 2.08 m at scale 0.8.
+	var s := 0.8
+	prop("res://assets/models/props/cargo_container.glb", pos, deg_to_rad(90), s)
+	prop("res://assets/models/props/cargo_container.glb", pos + Vector3(0, 2.08, 0), 0.0, s)
+
+# Dockside chain-link safety fence along the north (water) edge of the yard, with a
+# central gap for the crane reach. Synty GangWarfare wire fence (~3.4 m segments).
+func _dock_fence() -> void:
+	for x: float in [-11.0, -7.6, -4.2, 4.2, 7.6, 11.0]:
+		prop("res://assets/models/props/chainlink_fence.glb", Vector3(x, 0, -9.4), 0.0)
 
 # Dock-power panel — Quinn rewires it to power the crane.
 func _power_panel() -> void:
