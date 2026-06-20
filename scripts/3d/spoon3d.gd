@@ -187,8 +187,8 @@ func _build_hud() -> void:
 	_sel_list = VBoxContainer.new(); _sel_list.custom_minimum_size = Vector2(388, 0)
 	scroll.add_child(_sel_list)
 	_sel_panel.visible = false
-	# Pause / game-over menu (centre)
-	_menu_panel = _panel(Vector2(480, 230), Vector2(320, 240))
+	# Pause / game-over menu (lower-right, so it doesn't cover the table/result)
+	_menu_panel = _panel(Vector2(936, 452), Vector2(320, 244))
 	var mt := _mk(_menu_panel, Vector2(16, 12), 22, UITheme.GOLD, HORIZONTAL_ALIGNMENT_CENTER, 288); mt.text = "Gimme Dat Spoon"
 	_menu_list = VBoxContainer.new(); _menu_list.position = Vector2(40, 56); _menu_list.size = Vector2(240, 0)
 	_menu_list.add_theme_constant_override("separation", 10)
@@ -292,12 +292,20 @@ func _set_nav(arr: Array) -> void:
 	_focus_i = 0
 	if not arr.is_empty():
 		arr[0].grab_focus()
+	_repaint_focus()
 
 func _focus(i: int) -> void:
 	if _btns.is_empty():
 		return
 	_focus_i = clampi(i, 0, _btns.size() - 1)
 	_btns[_focus_i].grab_focus()
+	_repaint_focus()
+
+# Explicit highlight so keyboard/gamepad focus is obvious (the UITheme has no loud
+# focus box): the selected button stays bright, the rest dim.
+func _repaint_focus() -> void:
+	for i in _btns.size():
+		(_btns[i] as Button).modulate = Color(1, 1, 1) if i == _focus_i else Color(0.52, 0.52, 0.56)
 
 func _mk_button(parent: Node, text: String, on_press: Callable) -> Button:
 	var b := Button.new()
