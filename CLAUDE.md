@@ -385,7 +385,7 @@ Loft. Still-single-room levels inherit this as they're converted to multi-room.)
 ### 7. The Public Library & Archive — `LibraryArchive3D.tscn`
 - **Unlock condition:** TBD
 - **Key puzzle(s):** Erin talks past Ms. Priswick (or library card) to drop the checkpoint gate; Ethan hacks the restricted archive terminal
-- **3D build:** multi-room — combat-free READING ROOM (Priswick checkpoint + exit) → checkpoint gate → STACKS (combat + hiding spots). Archive hack reveals Doug's file → `doug_checkout_card`; the **locked stack** opens via the Clocktower `archive_key` OR Ethan's **catalog cipher** → `vr_override_chip`. Carpet/wood surfaces, deep-green trim.
+- **3D build:** expanded multi-room — combat-free READING ROOM 18×12 (Priswick checkpoint + exit, reading desks + wall shelves) → 5m corridor → checkpoint gate → STACKS 20×18 (combat + hiding spots, **rows of real `shelf.glb` bookshelves**). Archive hack reveals Doug's file → `doug_checkout_card`; the **locked stack** opens via the Clocktower `archive_key` OR Ethan's **catalog cipher** → `vr_override_chip`. **Hero props are Prop-Farm** (`archive_terminal` beige CRT console Ethan hacks, `card_catalog` drawer cabinet). Carpet/wood surfaces, deep-green trim.
 - **Enemy types:** Grunts + Sentry (ranged) — stacks only
 - **Level progress flags:** `enemies_cleared` / `librarian_talked` / `archive_hacked` / `catalog_done` / `stack_open` / `priswick_impression`
 - **NPCs:** Ms. Priswick (checkpoint desk, reading room)
