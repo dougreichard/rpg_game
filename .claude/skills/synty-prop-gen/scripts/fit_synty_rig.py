@@ -88,15 +88,53 @@ for o in (arm, mesh):
     bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
     o.select_set(False)
 
-# 4) auto-skin: parent mesh -> armature with automatic (bone-heat) weights
+# 4) skin. Bone-heat auto-weights (great for clean meshes) FAILS on Hunyuan paint meshes
+#    (non-watertight / multi-shell -> no weights). Fallback: voxel-remesh a watertight PROXY,
+#    bone-heat THAT, and transfer the weights onto the real mesh (robust on any geometry).
 bpy.ops.object.select_all(action="DESELECT")
 mesh.select_set(True); arm.select_set(True)
 bpy.context.view_layer.objects.active = arm
 bpy.ops.object.parent_set(type="ARMATURE_AUTO")
-print(f"FIT: skinned mesh ({len(mesh.data.polygons)} tris) to {len(arm.data.bones)} Synty bones; "
+# bone-heat creates empty groups even when it FAILS — check for real (non-zero) weights, not groups.
+def _weighted(o):
+    return any(any(g.weight > 0.0 for g in v.groups) for v in o.data.vertices)
+if not _weighted(mesh):
+    print("FIT: bone-heat produced no weights (non-watertight mesh) -> voxel-proxy weight transfer")
+    # establish a PROPER bind first (parent + armature modifier + empty named vgroups) — failed AUTO
+    # left none, which is why the glTF had weights but no skin. ARMATURE_NAME never computes heat.
+    bpy.ops.object.select_all(action="DESELECT")
+    mesh.select_set(True); arm.select_set(True); bpy.context.view_layer.objects.active = arm
+    bpy.ops.object.parent_set(type="ARMATURE_NAME")
+    proxy = mesh.copy(); proxy.data = mesh.data.copy()
+    bpy.context.collection.objects.link(proxy)
+    proxy.data.remesh_voxel_size = max(max(proxy.dimensions) / 96.0, 0.01)
+    bpy.ops.object.select_all(action="DESELECT")
+    proxy.select_set(True); bpy.context.view_layer.objects.active = proxy
+    bpy.ops.object.voxel_remesh()
+    proxy.select_set(True); arm.select_set(True); bpy.context.view_layer.objects.active = arm
+    bpy.ops.object.parent_set(type="ARMATURE_AUTO")            # bone-heat on the watertight proxy
+    bpy.ops.object.select_all(action="DESELECT")
+    proxy.select_set(True); mesh.select_set(True); bpy.context.view_layer.objects.active = mesh
+    bpy.ops.object.data_transfer(data_type="VGROUP_WEIGHTS", vert_mapping="POLYINTERP_NEAREST",
+                                 layers_select_src="ALL", layers_select_dst="NAME")
+    bpy.data.objects.remove(proxy, do_unlink=True)
+
+# whether the rig actually bound (canonical skeleton only fits a mesh of similar proportions; on a
+# very different generated body bone-heat finds no solution -> zero weights). Caller can fall back.
+if not _weighted(mesh):
+    print("FIT: WARNING — no skin weights bound (mesh proportions differ too much from the canonical "
+          "Synty skeleton). Caller should fall back to UniRig auto-rig.")
+# ensure the mesh has an Armature modifier bound to arm (the fallback path's failed AUTO may not
+# have added one -> glTF would export weights but NO skin). Parent for a clean hierarchy too.
+if not any(m.type == "ARMATURE" for m in mesh.modifiers):
+    md = mesh.modifiers.new("Armature", "ARMATURE"); md.object = arm
+if mesh.parent != arm:
+    mw = mesh.matrix_world.copy(); mesh.parent = arm; mesh.matrix_world = mw
+print(f"FIT: skinned mesh ({len(mesh.data.polygons)} tris, {len(mesh.vertex_groups)} vgroups) to "
+      f"{len(arm.data.bones)} Synty bones; "
       f"clips={[t.name for t in (arm.animation_data.nla_tracks if arm.animation_data else [])]}")
 
 # 5) export (armature + skinned mesh + the grafted clips)
 bpy.ops.export_scene.gltf(filepath=OUT, export_format="GLB", export_animations=True,
-                          export_animation_mode="NLA_TRACKS")
+                          export_animation_mode="NLA_TRACKS", export_skins=True)
 print("FIT: saved", OUT)
