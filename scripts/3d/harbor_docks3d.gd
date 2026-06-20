@@ -86,7 +86,7 @@ func _build_level() -> void:
 	_store_contents()
 	make_dialog()
 	_build_hud()
-	_viktor = spawn_npc("bellows", VIKTOR_POS, PI)   # weathered harbourmaster
+	_viktor = spawn_npc("bellows", VIKTOR_POS, 0.0)   # weathered harbourmaster (faces camera)
 	prop("res://assets/models/props/desk.glb", VIKTOR_POS + Vector3(0, 0, 1.0), 0.0)   # harbourmaster's desk
 	add_exit_portal(OFFICE_C + Vector3(0, 0, 5.0), Vector3(3, 3, 1.4))
 	var p := spawn_duo([QUINN, EVAN], OFFICE_C + Vector3(0.0, 0.1, 1.0))

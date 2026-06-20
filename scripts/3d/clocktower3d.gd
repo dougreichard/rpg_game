@@ -86,7 +86,7 @@ func _build_level() -> void:
 	_links()
 	make_dialog()
 	_build_hud()
-	_hiero = spawn_npc("aldric", F1 + HIERO, deg_to_rad(180))
+	_hiero = spawn_npc("aldric", F1 + HIERO, 0.0)   # face the camera
 	prop("res://assets/models/props/desk.glb", F1 + HIERO + Vector3(0, 0, 1.0), 0.0)   # Hieronymus's workbench
 	var p := spawn_duo([QUINN, BEN], F1 + Vector3(0, 0.1, 3.0))
 	p.special_used.connect(_on_special)

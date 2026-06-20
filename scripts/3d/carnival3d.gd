@@ -92,8 +92,8 @@ func _build_level() -> void:
 	_build_hud()
 	prop("res://assets/models/props/ticket_booth.glb", Vector3(-5.0, 0, 24.5), PI)  # plaza ticket kiosk (Prop Farm)
 	_carnival_crowd()
-	_marco = spawn_npc("bellows", MARCO_POS, PI)     # burly gatekeeper
-	_pearl = spawn_npc("congregant_f", PEARL_POS, PI) # plaza barker
+	_marco = spawn_npc("bellows", MARCO_POS, 0.0)     # burly gatekeeper (faces approaching player)
+	_pearl = spawn_npc("congregant_f", PEARL_POS, 0.0) # plaza barker (faces camera)
 	add_exit_portal(PLAZA_C + Vector3(0, 0, 5.0), Vector3(3, 3, 1.4))
 	var p := spawn_duo([QUINN, ERIN], PLAZA_C + Vector3(0.0, 0.1, 1.0))
 	p.special_used.connect(_on_special)

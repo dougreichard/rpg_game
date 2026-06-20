@@ -99,7 +99,7 @@ func _build_level() -> void:
 	_links()
 	make_dialog()
 	_build_hud()
-	_cyrus = spawn_npc("bellows", F1 + CYRUS, deg_to_rad(180))
+	_cyrus = spawn_npc("bellows", F1 + CYRUS, 0.0)   # face the camera
 	prop("res://assets/models/props/desk.glb", F1 + CYRUS + Vector3(0, 0, 1.0), 0.0)   # Cyrus's maintenance desk
 	var p := spawn_duo([EVAN, ETHAN], F1 + Vector3(0.0, 0.1, 4.0))
 	p.special_used.connect(_on_special)

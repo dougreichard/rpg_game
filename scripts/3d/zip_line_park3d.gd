@@ -101,7 +101,7 @@ func _build_level() -> void:
 	_forest_ring()
 	make_dialog()
 	_build_hud()
-	_lena = spawn_npc("congregant_f", LENA_POS, PI)
+	_lena = spawn_npc("congregant_f", LENA_POS, 0.0)   # face the camera
 	_park_visitors()
 	add_exit_portal(LANDING_C + Vector3(0, 0, 5.0), Vector3(3, 3, 1.4))
 	var p := spawn_duo([ETHAN, BEN], LANDING_C + Vector3(0.0, 0.1, 1.0))

@@ -323,7 +323,7 @@ func _find_in(n: Node) -> AnimationPlayer:
 	return null
 
 func _aldric() -> void:
-	_npc_mesh("aldric", ALDRIC_POS, deg_to_rad(180))
+	_npc_mesh("aldric", ALDRIC_POS, 0.0)   # face the camera/congregation
 
 func _congregant(id: String) -> void:
 	var d: Dictionary = CONGREGATION[id]

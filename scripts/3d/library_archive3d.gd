@@ -68,7 +68,7 @@ func _build_level() -> void:
 	add_hiding_spot(Vector3(5.0, 0, -11.0))
 	make_dialog()
 	_build_hud()
-	_priswick = spawn_npc("congregant_f", PRISWICK_POS, PI)
+	_priswick = spawn_npc("congregant_f", PRISWICK_POS, 0.0)   # face the camera
 	add_exit_portal(READ_C + Vector3(0, 0, 6.0), Vector3(3, 3, 1.4))
 	var p := spawn_duo([ERIN, ETHAN], READ_C + Vector3(0.0, 0.1, 1.5))
 	p.special_used.connect(_on_special)

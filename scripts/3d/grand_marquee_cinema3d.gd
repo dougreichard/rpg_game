@@ -82,8 +82,8 @@ func _build_level() -> void:
 	_clue_board()
 	make_dialog()
 	_build_hud()
-	_usher = spawn_npc("aldric", USHER_POS, PI)   # uniformed chief usher
-	prop("res://assets/models/props/ticket_booth.glb", USHER_POS + Vector3(0, 0, 1.3), PI)   # box office by Cecil
+	_usher = spawn_npc("aldric", USHER_POS, 0.0)   # uniformed chief usher (faces camera)
+	prop("res://assets/models/props/ticket_booth.glb", USHER_POS + Vector3(0, 0, -1.6), 0.0)   # box office BEHIND Cecil (tall — don't block him)
 	_doug = spawn_npc("uncle_doug", DOUG_POS, deg_to_rad(-90))
 	_doug.visible = false
 	add_exit_portal(LOBBY_C + Vector3(0, 0, 5.0), Vector3(3, 3, 1.4))

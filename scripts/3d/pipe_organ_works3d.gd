@@ -113,7 +113,7 @@ func _build_level() -> void:
 	_dressing()
 	make_dialog()
 	_build_hud()
-	spawn_npc("bellows", F1 + BELLOWS, deg_to_rad(180))
+	spawn_npc("bellows", F1 + BELLOWS, 0.0)   # face the camera (+Z)
 	var p := spawn_duo([QUINN], F1 + Vector3(0, 0.1, 5.0))   # Quinn arrives ALONE
 	p.special_used.connect(_on_special)
 	reframe_camera(F_WORK.x, F_WORK.y)
@@ -148,7 +148,7 @@ func _floor1() -> void:
 	_organ()
 	_workshop_tools()
 	_timber_store()
-	prop("res://assets/models/props/desk.glb", F1 + BELLOWS + Vector3(0, 0, -0.9), deg_to_rad(180))
+	prop("res://assets/models/props/desk.glb", F1 + BELLOWS + Vector3(0, 0, 0.9), 0.0)   # counter in front of Bellows (camera side)
 	prop("res://assets/models/props/shelf.glb", F1 + Vector3(6.8, 0, -6.2), 0.0)
 	# Storeroom: crates Erin hides behind + a barrel cluster
 	prop("res://assets/models/props/barrel.glb", F1 + Vector3(20.3, 0, -3.0))

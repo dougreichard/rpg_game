@@ -80,7 +80,7 @@ func _build_level() -> void:
 	_pod()
 	make_dialog()
 	_build_hud()
-	_rio = spawn_npc("bellows", RIO_POS, PI)
+	_rio = spawn_npc("bellows", RIO_POS, 0.0)   # face the camera
 	prop("res://assets/models/town/deck_crate.glb", RIO_POS + Vector3(1.4, 0, 0.3), 0.6)   # Rio's camp crate
 	prop("res://assets/models/town/wood_box.glb", RIO_POS + Vector3(-1.3, 0, 0.5), -0.4)
 	add_exit_portal(CLEAR_C + Vector3(0, 0, 5.0), Vector3(3, 3, 1.4))

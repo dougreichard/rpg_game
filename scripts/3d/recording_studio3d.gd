@@ -99,7 +99,7 @@ func _build_level() -> void:
 	_build_hud()
 	_ethan = spawn_npc("ethan", ETHAN_POS, deg_to_rad(60), ETHAN_QUIPS)
 	_ethan.set("yell_min", 4.0); _ethan.set("yell_max", 8.0)
-	_sasha = spawn_npc("congregant_f", SASHA_POS, PI)
+	_sasha = spawn_npc("congregant_f", SASHA_POS, 0.0)   # face the camera
 	prop("res://assets/models/props/desk.glb", SASHA_POS + Vector3(0, 0, 1.0), 0.0)   # Sasha's producer desk
 	add_exit_portal(LOBBY_C + Vector3(0, 0, 5.0), Vector3(3, 3, 1.4))
 	var p := spawn_duo([QUINN, BEN], LOBBY_C + Vector3(0.0, 0.1, 1.0))
