@@ -27,8 +27,9 @@ local Synty Blender bakes (`export_prop.py` — NOT the Prop Farm), so it can pr
 ## Phase 2 — Harbor & Docks props/cleanup (no farm)  ✅ DONE
 Chain-link fence baked (GangWarfare `SM_Bld_Fence_Wire_01`, cm→`--scale 0.01`) + run along the
 north/water edge with a crane gap; the placeholder `_stack` colour-cubes now stack real
-`cargo_container.glb`; the outdoor-resize + extra-puzzle pass was already applied in the level
-elaboration ("if so ok" → left as-is).
+`cargo_container.glb`; the dock YARD walls are now hidden (collision-only) with a chain-link fence ring + the
+water revealed beyond the north fence (office/storeroom keep their walls); the outdoor-resize +
+extra-puzzle pass was already applied in the elaboration.
 5. **Chain-link fence**: bake a Synty wire/metal fence (`SM_Bld_Fence_Wire_01` or `SM_Bld_Metal_Fence_01/02`)
    via `export_prop.py` and line the open outdoor edges with it (it's a dockside yard).
 6. **Kill remaining generic cubes**: find the leftover `box_mesh` placeholders in `harbor_docks3d.gd` and

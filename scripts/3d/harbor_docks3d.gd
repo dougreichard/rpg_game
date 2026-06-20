@@ -96,9 +96,13 @@ func _build_level() -> void:
 	_restore()
 
 func _rooms() -> void:
-	# Dock yard — concrete, combat. Openings: south (office), east (storeroom).
+	# Dock yard — OUTDOOR: its walls are collision-only (hidden) so it reads as an
+	# open dock; the chain-link fence ring (+ water to the north) is the boundary.
+	# The office/storeroom keep visible walls (they're buildings).
 	set_theme(FLOOR_CONCRETE, WALL_CONCRETE)
+	walls_visible = false
 	room(Vector3.ZERO, 24, 20, FT_YARD, WT_YARD, WALL_H, ["s", "e"], 4.0, true)
+	walls_visible = true
 	corridor(Vector3(0, 0, 10), "s", 4.0, FT_YARD, WT_YARD, 4.0, WALL_H, true, CORNER_COL)        # → office
 	corridor(Vector3(12, 0, 0), "e", 4.0, FT_YARD, WT_YARD, 4.0, WALL_H, true, CORNER_COL)        # → storeroom
 	# Office — tile floor, concrete walls (combat-free). South vestibule = exit.
@@ -181,11 +185,18 @@ func _stack(pos: Vector3, _col: Color) -> void:
 	prop("res://assets/models/props/cargo_container.glb", pos, deg_to_rad(90), s)
 	prop("res://assets/models/props/cargo_container.glb", pos + Vector3(0, 2.08, 0), 0.0, s)
 
-# Dockside chain-link safety fence along the north (water) edge of the yard, with a
-# central gap for the crane reach. Synty GangWarfare wire fence (~3.4 m segments).
+# Chain-link fence ring around the open dock yard (its walls are hidden). Gaps left
+# for the crane (north/water), the office corridor (south) and the storeroom corridor
+# (east). Synty GangWarfare wire fence (~3.4 m segments; yaw 0 runs along X, PI/2 along Z).
 func _dock_fence() -> void:
+	const FENCE := "res://assets/models/props/chainlink_fence.glb"
 	for x: float in [-11.0, -7.6, -4.2, 4.2, 7.6, 11.0]:
-		prop("res://assets/models/props/chainlink_fence.glb", Vector3(x, 0, -9.4), 0.0)
+		prop(FENCE, Vector3(x, 0, -9.4), 0.0)     # north — water side (crane gap at centre)
+		prop(FENCE, Vector3(x, 0, 9.4), 0.0)      # south — office-corridor gap at centre
+	for z: float in [-9.0, -5.6, -2.2, 1.2, 4.6, 8.0]:
+		prop(FENCE, Vector3(-11.4, 0, z), PI / 2.0)   # west — full run
+	for z: float in [-9.0, -5.6, 5.6, 9.0]:
+		prop(FENCE, Vector3(11.4, 0, z), PI / 2.0)    # east — storeroom-corridor gap at centre
 
 # Dock-power panel — Quinn rewires it to power the crane.
 func _power_panel() -> void:
