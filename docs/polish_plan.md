@@ -85,7 +85,10 @@ Prop Farm. GDScript-only (no Blender); independent of Plan A.
 
 ---
 
-## Plan C — UI / HUD readability
+## Plan C — UI / HUD readability ✅ DONE (commit 48f0255)
+Implemented the "Compact corners" option: shared `Level3D.build_default_hud()` — top-left objective
+chip (hidden when empty), auto-fading bottom hint toast, auto-dismissing top win ribbon. All 13
+levels alias their `_hud_goal/_hud_hint/_hud_banner` to it. (Original notes below for reference.)
 **Context:** UI (`scripts/ui/`, `Level3D.hud_label`/`make_hud_layer`, per-level `_hud_goal/_hud_hint/
 _hud_banner`). GDScript Control work; independent.
 

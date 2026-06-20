@@ -658,9 +658,14 @@ Applies `Engine.time_scale = 0.4` for a brief window. Governs cooldown/charge. E
 `bies_activated` / `bies_ended` for HUD and VFX.
 
 ### HUD
-Each 3D level builds a lightweight HUD in its own `_build_hud` (a goal line + a transient
-hint line + a centre banner, via `Level3D.hud_label`/`make_hud_layer`), plus the shared
-**Bies charge bar** (`Level3D._build_bies_bar`, bottom-centre, fills/pulses gold). **Per-character
+Levels build a **compact, non-blocking HUD** via the shared `Level3D.build_default_hud()`: a
+small **top-left objective chip** (goal + progress checklist; hidden when the text is empty), a
+**bottom-centre hint toast** that **auto-fades** ~3s after its text changes, and a **top win
+ribbon** that **auto-dismisses** (~4s) and never covers the play field. Levels alias their
+`_hud_goal`/`_hud_hint`/`_hud_banner` to the shared `hud_goal`/`hud_toast`/`hud_ribbon` so existing
+`.text`/`.visible` calls work unchanged; `_update_hud_chrome` (in `_process`) drives the fade/dismiss.
+(`hud_label`/`make_hud_layer` remain for extra per-level labels, e.g. the Clocktower pendulum-pulse
+bar.) Plus the shared **Bies charge bar** (`Level3D._build_bies_bar`, bottom-centre, fills/pulses gold). **Per-character
 health bars** (top-left, one row per duo body — name + HP, red→green fill, active row highlighted,
 "DOWN" state) **+ a boss health bar** (top-centre, auto-detects the `enemy3d` boss) are built in
 `Level3D._build_health_bars` / `_update_health_bars` (shared across every level via `build_ui_stack`).
