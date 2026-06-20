@@ -71,7 +71,9 @@ def generate(client, job: dict, repo: str, do_import: bool, do_commit: bool, pin
     res = client.predict(
         name, job["prompt"], job.get("seed", 11), job.get("track", "painted"),
         job.get("angle", 6), job.get("height", 1.0), job.get("poly", 4000),
-        rc, style, False, api_name="/generate",
+        rc, style, False,
+        job.get("texture_mode", "diffuse_matte"), job.get("remesh_preset", "custom"),
+        api_name="/generate",
     )
     glb = find_glb(res)
     if not glb:

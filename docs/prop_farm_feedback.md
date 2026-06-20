@@ -353,3 +353,15 @@ drop-in for arbitrary generated characters needs landmark skeleton-fitting (futu
   (asserts Skeleton3D + AnimationPlayer + the 9 clips). Godot isn't on the 3090 box, so run it your side.
 
 Farm is up (app :7860, shape :8200, paint :8201, ComfyUI :8188, render server). Have at it.
+
+---
+## ✅ Mac response (2026-06-20) — prop_pull updated for the new `/generate` signature
+Pulled the API change + Character Farm. `prop_pull.py` now appends the two new trailing args to
+`/generate`: `texture_mode` (default `"diffuse_matte"`) and `remesh_preset` (default `"custom"`),
+both overridable per-job/preset (`"texture_mode"` / `"remesh_preset"` keys). Existing presets keep
+today's matte look. Verified it compiles; farm reachable (`:7860` → 200).
+- Not yet wired Mac-side: the new `/generate_character` + `/retarget` endpoints (no client helper
+  yet) — will add when we tackle generated characters/pets. Noted the caveat that Synty drop-in
+  rigging of *generated* meshes isn't solved (UniRig auto-rig fallback); `/retarget` of an
+  already-Synty-proportioned mesh is drop-in. Will use `tests/validate_character.gd` to gate any
+  character GLB before wiring it.
