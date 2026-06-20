@@ -237,8 +237,8 @@
     "ref_count": 1
   },
   "mixing_console": {
-    "prompt": "a large recording studio mixing console, a wide angled desk covered in rows of faders and knobs with small meter lights, on a metal stand",
-    "seed": 15,
+    "prompt": "a wide audio mixing console desk, a single flat slightly-angled control surface densely covered with neat rows of small channel faders and round knobs and a few VU meters, short stubby legs",
+    "seed": 40,
     "track": "painted",
     "angle": 6,
     "height": 1.2,
