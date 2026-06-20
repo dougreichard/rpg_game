@@ -35,17 +35,18 @@ const WATER_COL := Color(0.10, 0.22, 0.30)
 const WALL_H := 3.0
 const REACH := 2.4
 
-const OFFICE_C := Vector3(0, 0, 14.0)
-const VIKTOR_POS := Vector3(3.5, 0, 15.5)
+# Enlarged dock yard (24x20), office/storeroom pushed out behind longer corridors.
+const OFFICE_C := Vector3(0, 0, 19.0)
+const VIKTOR_POS := Vector3(3.5, 0, 20.5)
 const CONTAINER_POS := Vector3(0.0, 0.0, -6.0)
 const CRANE_POS := Vector3(0.0, 0.0, -8.0)
-const POWER_POS := Vector3(-7.5, 0, -2.0)
-const CRANK_PICKUP := Vector3(6.0, 0, 5.0)
-const CROWBAR_PICKUP := Vector3(-6.0, 0, 5.0)
-const LOCKER_POS := Vector3(7.5, 0, -2.0)
-const STORE_C := Vector3(14.0, 0, 0.0)
-const STORE_GATE := Vector3(10.5, 0, 0.0)
-const STORE_LOOT := Vector3(14.0, 0, -2.0)
+const POWER_POS := Vector3(-10.0, 0, -2.0)
+const CRANK_PICKUP := Vector3(9.0, 0, 6.0)
+const CROWBAR_PICKUP := Vector3(-9.0, 0, 6.0)
+const LOCKER_POS := Vector3(10.0, 0, -2.0)
+const STORE_C := Vector3(20.5, 0, 0.0)
+const STORE_GATE := Vector3(16.0, 0, 0.0)
+const STORE_LOOT := Vector3(20.5, 0, -2.0)
 
 var _cleared := false
 var _enemies_cleared := false
@@ -95,20 +96,20 @@ func _build_level() -> void:
 func _rooms() -> void:
 	# Dock yard — concrete, combat. Openings: south (office), east (storeroom).
 	set_theme(FLOOR_CONCRETE, WALL_CONCRETE)
-	room(Vector3.ZERO, 18, 18, FT_YARD, WT_YARD, WALL_H, ["s", "e"], 3.0, true)
-	corridor(Vector3(0, 0, 9), "s", 1.0, FT_YARD, WT_YARD, 3.0, WALL_H, true, CORNER_COL)        # → office
-	corridor(Vector3(9, 0, 0), "e", 1.5, FT_YARD, WT_YARD, 3.0, WALL_H, true, CORNER_COL)        # → storeroom
+	room(Vector3.ZERO, 24, 20, FT_YARD, WT_YARD, WALL_H, ["s", "e"], 4.0, true)
+	corridor(Vector3(0, 0, 10), "s", 4.0, FT_YARD, WT_YARD, 4.0, WALL_H, true, CORNER_COL)        # → office
+	corridor(Vector3(12, 0, 0), "e", 4.0, FT_YARD, WT_YARD, 4.0, WALL_H, true, CORNER_COL)        # → storeroom
 	# Office — tile floor, concrete walls (combat-free). South vestibule = exit.
 	set_theme(FLOOR_TILE, WALL_CONCRETE)
-	room(OFFICE_C, 12, 8, FT_OFFICE, WT_YARD, 3.2, ["n", "s"], 3.0, true)
-	corridor(OFFICE_C + Vector3(0, 0, 4.0), "s", 2.0, FT_OFFICE, WT_YARD, 3.0, 3.2, true, CORNER_COL)
+	room(OFFICE_C, 14, 10, FT_OFFICE, WT_YARD, 3.2, ["n", "s"], 4.0, true)
+	corridor(OFFICE_C + Vector3(0, 0, 5.0), "s", 2.0, FT_OFFICE, WT_YARD, 4.0, 3.2, true, CORNER_COL)
 	# Storeroom — dirt floor, brick walls. Threshold sealed until the boiler key.
 	set_theme(FLOOR_DIRT, WALL_BRICK)
-	room(STORE_C, 7, 8, FT_STORE, WT_STORE, 3.0, ["w"], 3.0, true)
+	room(STORE_C, 9, 9, FT_STORE, WT_STORE, 3.0, ["w"], 4.0, true)
 	_store_wall = _gate_panel(STORE_GATE, 3.0)
 
 func _gate_panel(pos: Vector3, h: float) -> Node3D:
-	var size := Vector3(0.4, h, 3.0)
+	var size := Vector3(0.4, h, 4.0)
 	var sb := StaticBody3D.new()
 	sb.collision_layer = Combat3D.L_WORLD
 	var cs := CollisionShape3D.new(); var bs := BoxShape3D.new()
@@ -119,7 +120,7 @@ func _gate_panel(pos: Vector3, h: float) -> Node3D:
 	return sb
 
 func _water() -> void:
-	add_child(box_mesh(Vector3(24.0, 0.1, 5.0), WATER_COL, Vector3(0, 0.02, -12.0), 0.25))
+	add_child(box_mesh(Vector3(34.0, 0.1, 7.0), WATER_COL, Vector3(0, 0.02, -13.5), 0.25))
 
 func _crane() -> void:
 	# Generated Synty gantry crane (synty-prop-gen) — VISUAL ONLY, no collision/logic rides
