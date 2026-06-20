@@ -66,7 +66,16 @@ estimate — eyeball + nudge positions.
    - **Jazzy music** (`Audio.play_music` — procedural or an asset track).
    - Build from existing Synty props + primitives now; any bespoke jazz-club props → Phase F (optional).
 
-## Phase 5 — Gimme Dat Spoon presentation polish (no farm; big UI/camera task)
+## Phase 5 — Gimme Dat Spoon presentation polish (no farm; big UI/camera task)  ✅ DONE
+Spoon3D reworked from watch-only to **interactive**: the player controls their **active lead**
+(`last_level_duo[0]`), others stay AI. Camera **jump-cuts** across the table then **slow-dollies**
+in each turn; on the human turn it **holds** while a **scrollable** panel lets them pick a spoon
+(Pass / PLAY power / Discard). **Poker lower-third** (coloured name + spoon count, "(you)" tag) and
+a **PiP "ON THE CALL" announcer** panel give **run-aware** colour commentary (cleared-location
+count, Bies, power plays, eliminations). Win → banner + `spoon_game_won`. Boots clean.
+**Lighter than spec (optional follow-ups):** the announcer is a framed broadcast panel, not a live
+second-camera SubViewport of an announcer character; per-character storytelling anims are light
+(seated `sit` pose + slump/shake/FX rather than bespoke gesture clips).
 10. **Camera direction**: stop the current camera drift; on each turn **jump-cut** to a player camera
     across the table, then **slow dolly-in**. Pause a beat for NPC turns; for the **human** player, hold
     after the dolly until their choice is made.
