@@ -343,7 +343,7 @@ Loft. Still-single-room levels inherit this as they're converted to multi-room.)
 - **Unlock condition:** Complete The Old Parish Church
 - **Unlocks:** Ben
 - **Key puzzle(s):** Evan's strength moves the barbell sealing Ben's cage alcove
-- **3D build:** multi-room — combat-free LOBBY (clerk Marv + exit + Doug's locker) → WEIGHT FLOOR (combat + barbell/Ben) → BOILER ROOM (east). Evan jams the **pressure plate** to hold the boiler gate open; Quinn turns the **boiler valve** → `boiler_key`; Evan forces **Doug's locker** → `doug_locker_tag`. Concrete/steel surfaces.
+- **3D build:** expanded multi-room — combat-free LOBBY (clerk Marv + exit + Doug's locker + a locker bank) → 4m corridor → WEIGHT FLOOR (combat + barbell/Ben) → 4m corridor → BOILER ROOM (east). Evan jams the **pressure plate** to hold the boiler gate open; Quinn turns the **boiler valve** → `boiler_key`; Evan forces **Doug's locker** → `doug_locker_tag`. **Hero props are Prop-Farm** — bench-press benches, a dumbbell rack, a gym locker bank; the boiler reuses the `bellows_engine` mesh. Concrete/steel surfaces.
 - **Enemy types:** Grunts + Brute (weight floor only)
 - **Level progress flags:** `enemies_cleared` / `barbell_moved` / `boiler_gate_open` / `boiler_key_taken` / `locker_opened` / `marv_met`
 - **NPCs:** Marv (front-desk clerk, lobby)
