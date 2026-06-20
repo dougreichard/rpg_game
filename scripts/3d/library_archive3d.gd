@@ -29,13 +29,14 @@ const WOOD := Color(0.34, 0.22, 0.13)
 const WALL_H := 3.6
 const REACH := 2.2
 
-const READ_C := Vector3(0, 0, 10.0)
-const PRISWICK_POS := Vector3(0.0, 0.0, 6.0)
-const CHECK_GATE := Vector3(0.0, 0.0, 4.5)
-const STACK_C := Vector3(0, 0, -4.0)
-const TERMINAL_POS := Vector3(0.0, 0.0, -10.5)
-const CATALOG_POS := Vector3(-6.0, 0.0, -2.0)
-const LOCKSTACK_POS := Vector3(6.0, 0.0, -9.0)
+# Enlarged: reading room 18x12 @ z+13, restricted stacks 20x18 @ z-7, joined by a 5m corridor.
+const READ_C := Vector3(0, 0, 13.0)
+const PRISWICK_POS := Vector3(0.0, 0.0, 9.0)
+const CHECK_GATE := Vector3(0.0, 0.0, 6.5)
+const STACK_C := Vector3(0, 0, -7.0)
+const TERMINAL_POS := Vector3(0.0, 0.0, -15.0)
+const CATALOG_POS := Vector3(-8.0, 0.0, -5.0)
+const LOCKSTACK_POS := Vector3(8.0, 0.0, -13.0)
 
 var _cleared := false
 var _enemies_cleared := false
@@ -63,8 +64,8 @@ func _build_level() -> void:
 	_stacks()
 	_terminal()
 	_catalog()
-	add_hiding_spot(Vector3(-5.0, 0, -3.0))   # between the stacks
-	add_hiding_spot(Vector3(5.0, 0, -5.5))
+	add_hiding_spot(Vector3(-5.0, 0, -11.0))   # between the stacks
+	add_hiding_spot(Vector3(5.0, 0, -11.0))
 	make_dialog()
 	_build_hud()
 	_priswick = spawn_npc("congregant_f", PRISWICK_POS, PI)
@@ -78,16 +79,16 @@ func _rooms() -> void:
 	# Reading room — carpet, wood walls (combat-free). South vestibule = exit;
 	# the north checkpoint is sealed until Priswick is satisfied.
 	set_theme(FLOOR_CARPET, WALL_WOOD)
-	room(READ_C, 16, 10, FT_READ, WT_READ, WALL_H, ["n", "s"], 3.0, true)
-	corridor(READ_C + Vector3(0, 0, 5.0), "s", 2.0, FT_READ, WT_READ, 3.0, WALL_H, true, CORNER_COL)
-	corridor(READ_C + Vector3(0, 0, -5.0), "n", 1.0, FT_READ, WT_READ, 3.0, WALL_H, true, CORNER_COL)  # → stacks
+	room(READ_C, 18, 12, FT_READ, WT_READ, WALL_H, ["n", "s"], 4.0, true)
+	corridor(READ_C + Vector3(0, 0, 6.0), "s", 2.0, FT_READ, WT_READ, 4.0, WALL_H, true, CORNER_COL)
+	corridor(READ_C + Vector3(0, 0, -6.0), "n", 5.0, FT_READ, WT_READ, 4.0, WALL_H, true, CORNER_COL)  # → stacks
 	_check_wall = _gate_panel(CHECK_GATE, WALL_H)
 	# Restricted stacks — tile floor, wood walls. Combat.
 	set_theme(FLOOR_TILE, WALL_WOOD)
-	room(STACK_C, 16, 16, FT_STACK, WT_READ, WALL_H, ["s"], 3.0, true)
+	room(STACK_C, 20, 18, FT_STACK, WT_READ, WALL_H, ["s"], 4.0, true)
 
 func _gate_panel(pos: Vector3, h: float) -> Node3D:
-	var size := Vector3(3.0, h, 0.4)   # doorway runs along X (panel thin in Z)
+	var size := Vector3(4.0, h, 0.4)   # doorway runs along X (panel thin in Z)
 	var sb := StaticBody3D.new()
 	sb.collision_layer = Combat3D.L_WORLD
 	var cs := CollisionShape3D.new(); var bs := BoxShape3D.new()
@@ -98,39 +99,33 @@ func _gate_panel(pos: Vector3, h: float) -> Node3D:
 	return sb
 
 func _reading_room() -> void:
-	for pos: Vector3 in [READ_C + Vector3(-4.0, 0, 1.5), READ_C + Vector3(4.0, 0, 1.5)]:
+	for pos: Vector3 in [READ_C + Vector3(-5.0, 0, 1.5), READ_C + Vector3(5.0, 0, 1.5), READ_C + Vector3(-5.0, 0, -2.0), READ_C + Vector3(5.0, 0, -2.0)]:
 		prop("res://assets/models/props/table.glb", pos, 0.0)
 		prop("res://assets/models/props/chair.glb", pos + Vector3(0, 0, 0.8), PI)
+	prop("res://assets/models/props/shelf.glb", READ_C + Vector3(-8.0, 0, -1.0), deg_to_rad(90))   # wall shelves
+	prop("res://assets/models/props/shelf.glb", READ_C + Vector3(8.0, 0, -1.0), deg_to_rad(-90))
 	# Priswick's checkpoint desk, just south of the gate
 	add_child(box_mesh(Vector3(3.0, 1.0, 0.7), WOOD, PRISWICK_POS + Vector3(0, 0.5, 0.7)))
 	add_child(box_mesh(Vector3(3.0, 0.1, 0.7), WOOD.lightened(0.1), PRISWICK_POS + Vector3(0, 1.05, 0.7)))
 
 func _stacks() -> void:
-	for x: float in [-5.0, -2.4, 2.4, 5.0]:
-		for z: float in [-3.5, -6.0]:
-			_bookshelf(Vector3(x, 0, z))
-
-func _bookshelf(pos: Vector3) -> void:
-	add_child(box_mesh(Vector3(1.6, 2.6, 0.5), WOOD.darkened(0.1), pos + Vector3(0, 1.3, 0)))
-	for i: int in range(4):
-		var y: float = 0.5 + float(i) * 0.6
-		var hue := Color(0.5 + 0.3 * sin(pos.x + float(i)), 0.35, 0.3 + 0.2 * float(i % 2))
-		add_child(box_mesh(Vector3(1.5, 0.12, 0.42), hue, pos + Vector3(0, y, 0.05)))
+	# rows of real bookshelves (reuse shelf.glb) flanking a central aisle — clear of the
+	# terminal (0,-15), catalog (-8,-5) and locked stack (8,-13).
+	for x: float in [-6.5, -3.5, 3.5, 6.5]:
+		for z: float in [-9.5, -12.5]:
+			prop("res://assets/models/props/shelf.glb", Vector3(x, 0, z), PI if x > 0 else 0.0)
 
 func _terminal() -> void:
-	add_child(box_mesh(Vector3(1.0, 1.1, 0.7), Color(0.2, 0.2, 0.24), TERMINAL_POS + Vector3(0, 0.55, 0)))
-	var screen := box_mesh(Vector3(0.9, 0.7, 0.06), Color(0.1, 0.3, 0.4), TERMINAL_POS + Vector3(0, 1.4, 0.32), 0.6)
-	screen.rotation.x = deg_to_rad(-12)
-	add_child(screen)
+	# Prop-Farm microfilm/archive terminal (Ethan hacks it); keep the status pips on top
+	prop("res://assets/models/props/archive_terminal.glb", TERMINAL_POS, 0.0)
 	for i: int in range(3):
-		var pip := box_mesh(Vector3(0.18, 0.06, 0.06), Color(0.9, 0.3, 0.25), TERMINAL_POS + Vector3(-0.3 + float(i) * 0.3, 1.0, 0.36), 1.2)
+		var pip := box_mesh(Vector3(0.16, 0.05, 0.05), Color(0.9, 0.3, 0.25), TERMINAL_POS + Vector3(-0.3 + float(i) * 0.3, 1.2, 0.4), 1.2)
 		add_child(pip)
 		_terminal_lights.append(pip)
 
 func _catalog() -> void:
-	# card-catalog cabinet (Ethan's cipher) + the locked-stack cage
-	add_child(box_mesh(Vector3(1.4, 1.2, 0.8), WOOD.darkened(0.05), CATALOG_POS + Vector3(0, 0.6, 0)))
-	add_child(box_mesh(Vector3(1.2, 0.9, 0.7), Color(0.45, 0.3, 0.18), CATALOG_POS + Vector3(0, 1.3, 0)))
+	# Prop-Farm card-catalog cabinet (Ethan's cipher) + the locked-stack cage
+	prop("res://assets/models/props/card_catalog.glb", CATALOG_POS, deg_to_rad(90))
 	# locked-stack cage bars
 	for i: int in range(5):
 		add_child(box_mesh(Vector3(0.08, 2.4, 0.08), Color(0.4, 0.42, 0.3), LOCKSTACK_POS + Vector3(-0.8 + float(i) * 0.4, 1.2, 0.7)))

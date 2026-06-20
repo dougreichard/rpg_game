@@ -424,5 +424,32 @@
     "height": 2.2,
     "poly": 2500,
     "ref_count": 1
+  },
+  "archive_terminal": {
+    "prompt": "an old library microfilm reader terminal, a boxy beige computer monitor and keyboard on a desk console with a glowing green screen",
+    "seed": 16,
+    "track": "painted",
+    "angle": 6,
+    "height": 1.3,
+    "poly": 3000,
+    "ref_count": 1
+  },
+  "card_catalog": {
+    "prompt": "a wooden library card-catalog cabinet, a tall chest of many small labeled drawers each with a brass handle",
+    "seed": 13,
+    "track": "painted",
+    "angle": 6,
+    "height": 1.5,
+    "poly": 3000,
+    "ref_count": 1
+  },
+  "library_globe": {
+    "prompt": "an antique world globe on a wooden floor stand, a large sphere globe held in a turned-wood cradle",
+    "seed": 13,
+    "track": "painted",
+    "angle": 6,
+    "height": 1.2,
+    "poly": 2000,
+    "ref_count": 1
   }
 }
