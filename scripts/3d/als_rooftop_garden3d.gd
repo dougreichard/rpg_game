@@ -30,9 +30,11 @@ var _hud_banner: Label = null
 
 func _ready() -> void:
 	super._ready()
-	# We're reached THROUGH the Arcade building, so a return to the overworld should
-	# drop the duo at the Arcade door (Level3D._ready set this to our own location_id).
+	# We're reached THROUGH the Arcade building, so a return to the overworld (and a
+	# Continue from the title) should resume at the Arcade door, not "als_rooftop".
 	GameManager.last_location_id = "gimme_dat_spoon"
+	GameManager.last_building_visited = "gimme_dat_spoon"
+	SaveManager.save_game()
 
 func _build_level() -> void:
 	location_id = "als_rooftop"

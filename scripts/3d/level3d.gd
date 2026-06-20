@@ -72,6 +72,9 @@ func _ready() -> void:
 		# Remember which building we're in, so any return to the overworld (walk
 		# out, Esc → Quit to Map, or on clear) drops the duo back at its door.
 		GameManager.last_location_id = location_id
+		# Persist it too, so a Continue from the title resumes at this building.
+		GameManager.last_building_visited = location_id
+		SaveManager.save_game()
 	if "--capture" in OS.get_cmdline_user_args() or "--capture" in OS.get_cmdline_args():
 		_shot_frames = 18
 	if "--capture-late" in OS.get_cmdline_user_args() or "--capture-late" in OS.get_cmdline_args():

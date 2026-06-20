@@ -75,6 +75,9 @@ var preferred_active: String = ""
 # clear-overlay "press ENTER" or Doorway exit) so OverworldMap.tscn can spawn
 # the duo back at that location's door instead of always at the start.
 var last_location_id: String = ""
+# Persisted across sessions: the overworld door of the last building entered, so a
+# Continue from the title starts the duo at that building instead of the default spawn.
+var last_building_visited: String = ""
 
 # Removes an item from a character's inventory (one-shot consumable use).
 func consume_item(character_name: String, item_id: String) -> void:
@@ -138,6 +141,7 @@ func reset_progress() -> void:
 	inventories = {}
 	level_progress = {}
 	last_location_id = ""
+	last_building_visited = ""
 	AchievementManager.reset()
 
 func complete_location(id: String) -> void:

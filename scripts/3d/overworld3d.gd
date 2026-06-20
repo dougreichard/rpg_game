@@ -108,6 +108,10 @@ func _build_level() -> void:
 	# a fresh arrival (title) starts near — but not on — the first level (Pipe Organ Works).
 	var start := _slot_pos(SLOTS[0]) + Vector3(5.0, 0.1, DOOR_INSET + 3.0)
 	var ret: String = GameManager.last_location_id
+	# Continue from the title: no in-session return id, so fall back to the last
+	# building visited (persisted) and resume the duo at its door.
+	if ret == "":
+		ret = GameManager.last_building_visited
 	if ret != "":
 		for d2 in _doors:
 			if d2["id"] == ret:
