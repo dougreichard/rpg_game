@@ -104,6 +104,7 @@ func _floor1() -> void:
 	add_child(_loot_box)
 	prop("res://assets/models/props/shelf.glb", F1 + Vector3(-3.5, 0, -14), deg_to_rad(90))
 	prop("res://assets/models/props/barrel.glb", F1 + Vector3(3.5, 0, -14))
+	prop("res://assets/models/props/clock_face.glb", F1 + Vector3(4.5, 0, 3.5), deg_to_rad(200))   # ornate display clock (lobby)
 	# Doug's pocket-watch on a workbench
 	add_child(box_mesh(Vector3(1.0, 0.8, 0.6), Color(0.3, 0.22, 0.16), F1 + WATCH + Vector3(0, 0.4, 0)))
 	add_child(box_mesh(Vector3(0.22, 0.06, 0.22), BRASS, F1 + WATCH + Vector3(0, 0.84, 0), 1.5))
@@ -164,12 +165,17 @@ func _floating_label(txt: String, pos: Vector3, col: Color) -> void:
 	add_child(l)
 
 func _gear_mechanism() -> void:
+	# Prop-Farm clockwork gear train as the hero backdrop; the primitive gears spin in front of
+	# it (the "it's running" cue once Quinn repairs it).
+	prop("res://assets/models/props/clock_gears.glb", F2 + GEARPOS + Vector3(0, 1.4, -1.0), 0.0)
 	_gear = _make_gear(0.9, 16, BRASS)
 	_gear.position = F2 + GEARPOS + Vector3(0, 0.6, 0); _gear.rotation.x = deg_to_rad(90)
 	add_child(_gear)
 	var g2 := _make_gear(0.55, 12, Color(0.55, 0.45, 0.28))
 	g2.position = F2 + GEARPOS + Vector3(1.3, 0.4, 0.2); g2.rotation.x = deg_to_rad(90)
 	add_child(g2)
+	# a clockmaker's display pieces dressing the hall
+	prop("res://assets/models/props/clock_pendulum.glb", F2 + GEARPOS + Vector3(4.5, 0, 1.5), deg_to_rad(-30))
 
 func _make_gear(radius: float, teeth: int, col: Color) -> Node3D:
 	var root := Node3D.new()
@@ -206,6 +212,9 @@ func _pendulum() -> void:
 	add_child(_pend_gate)
 
 func _bell_rack() -> void:
+	# Prop-Farm bronze tower bells as the belfry hero; the primitive bells (below) are the
+	# playable set Ben rings in sequence.
+	prop("res://assets/models/props/tower_bells.glb", F3 + BELLS + Vector3(0, 0, -1.2), 0.0)
 	add_child(box_mesh(Vector3(3.2, 0.18, 0.18), Color(0.3, 0.22, 0.14), F3 + BELLS + Vector3(0, 2.8, 0)))
 	for i: int in range(4):
 		var x: float = -1.1 + float(i) * 0.75

@@ -316,5 +316,41 @@
     "height": 1.0,
     "poly": 3000,
     "ref_count": 1
+  },
+  "clock_gears": {
+    "prompt": "a large interlocking clockwork gear train, several big brass and iron toothed gears meshed together on an iron frame, an escapement",
+    "seed": 15,
+    "track": "painted",
+    "angle": 6,
+    "height": 2.5,
+    "poly": 4500,
+    "ref_count": 1
+  },
+  "tower_bells": {
+    "prompt": "a set of three large bronze tower bells of different sizes hanging from a heavy timber bell frame",
+    "seed": 11,
+    "track": "painted",
+    "angle": 6,
+    "height": 2.6,
+    "poly": 3500,
+    "ref_count": 1
+  },
+  "clock_face": {
+    "prompt": "a large round tower clock face, an ornate cream dial with black roman numerals and ornate brass hands in a decorative gold frame",
+    "seed": 15,
+    "track": "painted",
+    "angle": 6,
+    "height": 2.2,
+    "poly": 3000,
+    "ref_count": 1
+  },
+  "clock_pendulum": {
+    "prompt": "a tall clock pendulum, a long slim brass rod with a large round polished brass disc weight at the bottom",
+    "seed": 16,
+    "track": "painted",
+    "angle": 6,
+    "height": 2.8,
+    "poly": 2000,
+    "ref_count": 1
   }
 }
