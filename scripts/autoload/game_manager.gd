@@ -33,6 +33,7 @@ var standby_player = null
 const REVIVE_HOLD_DURATION: float = 1.5
 var completed_locations: Array = []
 var unlocked_characters: Array = ["quinn"]
+var last_level_duo: Array = []   # lowercase names of the duo from the level just played → overworld strollers
 
 # Collectibles & inventory — see CLAUDE.md "Collectibles & Inventory".
 # Keyed by lowercase character name (matches `unlocked_characters`), each
@@ -133,6 +134,7 @@ func set_level_flag(location_id: String, key: String, value) -> void:
 func reset_progress() -> void:
 	completed_locations = []
 	unlocked_characters = ["quinn"]
+	last_level_duo = []
 	inventories = {}
 	level_progress = {}
 	last_location_id = ""

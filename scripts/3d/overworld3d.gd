@@ -126,11 +126,19 @@ func _build_level() -> void:
 # Quinn alone at the start; Quinn+Erin once Bellows & Sons is done; and so on.
 func _overworld_duo() -> Array:
 	var duo: Array = []
-	for name: String in GameManager.unlocked_characters:
-		if name in CHARS:
+	# prefer the duo from the location just played (only those still valid/unlocked)…
+	for name: String in GameManager.last_level_duo:
+		if name in CHARS and name in GameManager.unlocked_characters and CHARS[name] not in duo:
 			duo.append(CHARS[name])
 		if duo.size() >= 2:
 			break
+	# …else fall back to the first two unlocked (fresh boot / no last duo)
+	if duo.is_empty():
+		for name: String in GameManager.unlocked_characters:
+			if name in CHARS:
+				duo.append(CHARS[name])
+			if duo.size() >= 2:
+				break
 	if duo.is_empty():
 		duo.append(QUINN)
 	return duo

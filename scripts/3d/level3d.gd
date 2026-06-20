@@ -280,6 +280,13 @@ func spawn_duo(datas: Array, pos: Vector3, with_camera: bool = true) -> Node3D:
 		add_child(cam)
 	duo.call("setup", datas, pos, cam, self)
 	player = duo
+	# remember this duo so the overworld strolls the characters from the location just played
+	var names: Array = []
+	for d in datas:
+		if d != null:
+			names.append(String(d.get("character_name")).to_lower())
+	if not names.is_empty():
+		GameManager.last_level_duo = names
 	return duo
 
 func spawn_enemy(data: Resource, pos: Vector3, mesh_path: String = "", mesh_scale: float = 1.0, mesh_tint: Color = Color(1, 1, 1, 1)) -> CharacterBody3D:
