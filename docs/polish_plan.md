@@ -8,7 +8,18 @@ so the Blender/animation context is loaded once.
 ---
 
 ## Plan A — Characters: identity, look, pose, special anims
-**Status:** A1 ✅ (09542d6) · A2 ✅ (1e7db03) · A3 ✅ DONE (059c2c6 looks · 0486b89 Synty accessories · ca729f8 Ben keytar) · A4 ⬜ special anims.
+**Status:** A1 ✅ (09542d6) · A2 ✅ (1e7db03) · A3 ✅ (059c2c6 · 0486b89 · ca729f8) · A4 ✅ DONE — Plan A COMPLETE.
+
+**A4 — per-character Special animations.** Each lead's Special now plays a unique gesture (the "special"
+clip): Quinn = HA laugh (the pre-existing "special" seq, unchanged); Erin = fast-talk gesticulation;
+Evan = fingers-to-mouth whistle + beckon; Ben = keytar riff; Ethan = tablet hack-tap. Authored as
+`special_<name>` POSE_SEQUENCES in render_anim_character.py (+ `_larm`/`_head`/`_spine` helpers), baked
+via the new `export_anim_authored --special <key>` arg. **Code:** the "special" clip was baked but
+NEVER played — added `_special_anim_t` to player_3d.gd (set on the special input, played in the anim
+state machine: attack > special > walk/idle). Rebaking a lead drops its joined accessory, so the flow is
+rebake body (--special) → re-attach the accessory (attach_prop/attach_hat). Rig limit: arms only swing in
+the side (Z) plane, so "both hands in front" reads as "presenting to the side" — acceptable at the
+pulled-back camera.
 
 **A3 — all LOOKS DONE (accessories still TODO).** Body picks (all Doug-approved, all boot clean):
 - **Quinn** = SpyKit `SK_Chr_Male_Spy_Necktie` (dark suit+shades, `PolygonSpy_Texture_01_A`) + near-black **flat cap** (Kids `SM_Chr_Attach_Hat_Flatcap_01`) via `attach_hat.py`.

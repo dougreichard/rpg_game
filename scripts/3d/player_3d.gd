@@ -40,6 +40,7 @@ var _facing: Vector3 = Vector3.FORWARD
 var _moving: bool = false
 var _attack_cd: float = 0.0
 var _attack_anim_t: float = 0.0
+var _special_anim_t: float = 0.0
 var _input_locked: bool = false
 
 func _ready() -> void:
@@ -143,6 +144,9 @@ func _physics_process(delta: float) -> void:
 		if _attack_anim_t > 0.0:
 			if _anim.current_animation != "attack":
 				_anim.play("attack")
+		elif _special_anim_t > 0.0:
+			if _anim.current_animation != "special":
+				_anim.play("special")
 		else:
 			var want := "walk" if _moving else "idle"
 			if _anim.current_animation != want:
@@ -155,6 +159,7 @@ func _physics_process(delta: float) -> void:
 		_attack()
 	_companion_cd = maxf(_companion_cd - delta, 0.0)
 	if Input.is_action_just_pressed(prefix + "special"):
+		_special_anim_t = 0.6
 		# Erin's special doubles as a distraction — calms nearby alerted guards.
 		if active_name() == "Erin":
 			GameManager.calm_enemies(Vector2(global_position.x, global_position.z), 130.0 / PX_PER_M)
