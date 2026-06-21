@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://rj1rd836u2ul"
-path="res://.godot/imported/frosty.glb-b5da1572d0ee19c938c06f9d97d98e3e.scn"
+uid="uid://q1h3vsdbo5ch"
+path="res://.godot/imported/frosty_v1.glb-2b059a0bae046fe9a191abff395ed31e.scn"
 
 [deps]
 
-source_file="res://assets/models/pets/frosty.glb"
-dest_files=["res://.godot/imported/frosty.glb-b5da1572d0ee19c938c06f9d97d98e3e.scn"]
+source_file="res://assets/models/pets/frosty_v1.glb"
+dest_files=["res://.godot/imported/frosty_v1.glb-2b059a0bae046fe9a191abff395ed31e.scn"]
 
 [params]
 
