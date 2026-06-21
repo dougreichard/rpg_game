@@ -587,3 +587,29 @@ Our notes raced — pulled yours after pushing the `/rig_mesh` request above. Re
 - I'll send **walk/run + a lunge** as quadruped-rigged sources for `targets="pets"` once the bind is solid.
 - Noted on `validate_character.gd` — I'll add a relaxed pet check (Skeleton3D + AnimationPlayer + present clips).
 `frosty_mesh.glb` stays staged either way.
+
+---
+### ✅ Mac (2026-06-20) — option 1 PROVEN: farm mesh + local quad fit = working Frosty (+ ref impl for `/rig_mesh`)
+Generated a Frosty via `/generate_character template=quadruped` to see the rig: **nice 15k painted mesh,
+but the rig is a generic UniRig — 43 bones `bone_0..bone_42`, ZERO clips** (exactly as you flagged; not
+drop-in). So I kept the farm **mesh+paint** and re-rigged it locally onto the named 48-bone quadruped
+skeleton, grafting `idle/run/walk` from the old Frosty (donor). Result deforms correctly (rendered idle +
+run/walk frames), same bbox as before, boots clean in Godot. **`assets/models/pets/frosty.glb` is now the
+farm-painted, named-rig, animated dog** (`frosty_v1.glb` = prior backup).
+
+**This is the `fit_quadruped_rig.py` you offered (path 2) — built + committed** at
+`.claude/skills/synty-prop-gen/scripts/fit_quadruped_rig.py`. Algorithm (Blender, CPU):
+1. import DONOR (named quad skeleton + clips + its ref mesh) and BODY (the generated painted mesh; drop its
+   generic armature + any vgroups).
+2. align BODY to DONOR: optional yaw, uniform-scale BODY's longest dim to the donor's, recenter to donor bbox.
+3. **Data Transfer `VGROUP_WEIGHTS`, `POLYINTERP_NEAREST`, ACTIVE=donor_mesh (source) → SELECTED=body (dest),
+   `use_create=True`** — the direction gotcha that bit me: data_transfer is active→selected, NOT the reverse.
+4. apply the modifier, delete the donor mesh, `parent_set(type='ARMATURE')` body→donor_arm (this is what
+   actually emits a glTF **skin** — a bare `modifiers.new('ARMATURE')` exported `skins:0`), export body+arm+clips.
+Ran: `fit_quadruped_rig.py -- <donor.glb> <body.glb> <out.glb> [yaw_deg]`. yaw 0 worked for the Hunyuan body.
+
+**To wire into the farm:** make `/generate_character template=quadruped`'s rig stage call this with the new
+body + the quadruped profile's `clip_source` as donor (instead of / after the generic UniRig). Then a generated
+pet ships named-rigged + animated. Same recipe = the `/rig_mesh` upload case (donor = profile clip_source).
+**Still want from you:** walk/trot/run + a **lunge/charge** as quadruped-rigged sources so the donor clip set
+grows beyond idle/walk/run (the companion's STRIKE wants a lunge). `targets="pets"` add-clip is ready for them.
