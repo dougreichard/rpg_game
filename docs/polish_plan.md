@@ -96,7 +96,13 @@ dialog text. Do A1 first (cheap, no Blender); then batch A2–A4 in ONE re-bake 
 ---
 
 ## Plan B — World dressing: lobby NPCs + overworld
-**Status:** B1 ✅ (c42c6df) · B2 ✅ (88775c8) · B3 🔶 4 buildings WIRED+committed; 3 awaiting a Prop-Farm reroll.
+**Status:** B1 ✅ (c42c6df) · B2 ✅ (88775c8) · B3 ✅ DONE — all 7 Prop-Farm buildings wired (4 + the 3 reroll).
+**B3 reroll (DONE):** the 3 rough ones regenerated with "one complete freestanding building" prompts +
+`remesh_preset "hero ~6k"`: `gym_bld` (red-brick building, scale 1.0) → Iron & Strings Gym;
+`organ_works_bld` (came out a small church — KEPT: Quinn's shop is a converted church in the lore, and
+it's distinct from the actual Church mesh; scale 1.7) → Pipe Organ Works; `studio_bld` (ON-AIR-sign
+storefront, scale 1.2) → Recording Studio. All face the camera at yaw 0. Boots clean. (Library stays
+`cityhall`; `library_bld` was dropped when the Clocktower took the courthouse.)
 
 **B3 progress:** Generated 8 thematic whole-buildings via Prop Farm (painted). **WIRED + committed** (4):
 `courthouse` → Clocktower (domed civic + the existing `_add_clock_tower` clock piece = courthouse-WITH-clock,

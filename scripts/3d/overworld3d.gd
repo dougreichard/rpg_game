@@ -33,7 +33,8 @@ const SLOTS := [
 # big office towers scaled down so footprints fit the block; shops stay 1.0
 const BLD_SCALE := {"bld_round": 0.7, "bld_round3": 0.7, "bld_octagon": 0.7,
 	"bld_office_large": 0.75, "bld_square": 0.8, "bld_square3": 0.8, "bld_office_small": 0.85,
-	"courthouse": 0.85, "subway_entrance": 1.3, "carousel": 2.5}
+	"courthouse": 0.85, "subway_entrance": 1.3, "carousel": 2.5,
+	"organ_works_bld": 1.7, "studio_bld": 1.2}
 const DOOR_INSET := 5.0     # interaction point pulled toward the boulevard
 const INTERACT := 4.5
 const GROUND := Color(0.30, 0.42, 0.26)   # grassy town green
@@ -45,10 +46,10 @@ const BLDG_SETBACK := 6.0                 # push buildings back so fronts clear 
 
 # id, display name, 3D scene, unlock requirement, building glb
 const LOCS := [
-	{"id": "pipe_organ_works", "name": "Pipe Organ Works", "scene": "res://scenes/3d/PipeOrganWorks3D.tscn", "req": "", "glb": "shop_01"},
+	{"id": "pipe_organ_works", "name": "Pipe Organ Works", "scene": "res://scenes/3d/PipeOrganWorks3D.tscn", "req": "", "glb": "organ_works_bld"},
 	{"id": "old_parish_church", "name": "Old Parish Church", "scene": "res://scenes/3d/Church3D.tscn", "req": "pipe_organ_works", "glb": "church"},
-	{"id": "iron_strings_gym", "name": "Iron & Strings Gym", "scene": "res://scenes/3d/IronStringsGym3D.tscn", "req": "old_parish_church", "glb": "shop_02"},
-	{"id": "recording_studio", "name": "Recording Studio", "scene": "res://scenes/3d/RecordingStudio3D.tscn", "req": "iron_strings_gym", "glb": "shop_03"},
+	{"id": "iron_strings_gym", "name": "Iron & Strings Gym", "scene": "res://scenes/3d/IronStringsGym3D.tscn", "req": "old_parish_church", "glb": "gym_bld"},
+	{"id": "recording_studio", "name": "Recording Studio", "scene": "res://scenes/3d/RecordingStudio3D.tscn", "req": "iron_strings_gym", "glb": "studio_bld"},
 	{"id": "clocktower", "name": "The Clocktower", "scene": "res://scenes/3d/Clocktower3D.tscn", "req": "recording_studio", "glb": "courthouse"},
 	{"id": "harbor_docks", "name": "Harbor & Docks", "scene": "res://scenes/3d/HarborDocks3D.tscn", "req": "recording_studio", "glb": "warehouse"},
 	{"id": "library", "name": "Library & Archive", "scene": "res://scenes/3d/LibraryArchive3D.tscn", "req": "recording_studio", "glb": "cityhall"},
