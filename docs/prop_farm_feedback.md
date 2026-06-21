@@ -485,3 +485,20 @@ right (Spy↔Jock proportions match). So the **whole lead roster + kids are now 
   ping me and I'll switch add_clip to glTF-surgery (merge the clip without re-exporting the mesh).
 - ⚠ **Eyeball the feet** in-game — this is the cross-proportion case (Mesh2Motion body vs the enemy mesh);
   if feet slide, that's the foot-IK/hip-lock follow-up. Validate with `tests/validate_character.gd`.
+
+---
+## Mac request (2026-06-20) — QUADRUPED rig reference (for Frosty + the pets)
+Committed `assets/models/pets/quadruped_ref.glb` — a mesh2motion-rigged **fox** (low-poly, ~3.6 m raw
+nose-to-tail, 1 `Idle` clip, textured). It's a **rig reference only**, NOT a final pet mesh. Use it to
+stand up a **`quadruped` rig profile** so the Character Farm can produce game-ready four-legged pets
+(Frosty = white schnoodle, Calvin & Coolidge = Great Pyrenees, etc.) on ONE consistent skeleton.
+
+- **Skeleton (49 bones):** `root, Hips, Spine_1, Spine_2, Spine_2001, Spine_3, Spine_4, Head, Headtip,
+  Ear_L/Ear_Tip_L, Chin/Chin_Tip, Ear_R/Ear_Tip_R, Front_Leg_{Shoulder,Upper,Lower,Ankle,Foot,Tip}_{L,R},
+  Stomach/Stomach_tip, Tail_{Base,Mid,Mid001,End,Tip}, Back_Leg_{Pelvis,Upper,Lower,Ankle,Foot,Foot_1,Tip}_{L,R}`.
+- **Ask:** add `quadruped` to `rig_profiles.json` (target_skeleton = above; clip_source = this GLB's `Idle`
+  to start) so `/generate_character template=quadruped` + `/retarget` conform a generated dog to it, and
+  `/add_clip` can graft quadruped motions by name. We'll want **walk/trot/run + a charge/lunge** (the
+  companion does CHARGE → STRIKE → RETURN in `animal_companion3d.gd`, currently primitive boxes).
+- **Then:** generate **Frosty** (small white shaggy dog) rigged to this profile → we wire it into
+  `AnimalCompanion3D` (swap the primitive `_build` for the mesh + play walk during the charge).
