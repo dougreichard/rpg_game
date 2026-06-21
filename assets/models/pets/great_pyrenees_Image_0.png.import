@@ -3,22 +3,24 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://qkg5uvmkkh2a"
-path="res://.godot/imported/great_pyrenees_Image_0.png-58a6065562e296f742053d9dcf3943be.ctex"
+path.s3tc="res://.godot/imported/great_pyrenees_Image_0.png-58a6065562e296f742053d9dcf3943be.s3tc.ctex"
+path.etc2="res://.godot/imported/great_pyrenees_Image_0.png-58a6065562e296f742053d9dcf3943be.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
-"md5": "b34f9e8562c0a53118ab22ee56648ac0"
+"md5": "0e1ff1b2968c0125288e065222483b13"
 }
 
 [deps]
 
 source_file="res://assets/models/pets/great_pyrenees_Image_0.png"
-dest_files=["res://.godot/imported/great_pyrenees_Image_0.png-58a6065562e296f742053d9dcf3943be.ctex"]
+dest_files=["res://.godot/imported/great_pyrenees_Image_0.png-58a6065562e296f742053d9dcf3943be.s3tc.ctex", "res://.godot/imported/great_pyrenees_Image_0.png-58a6065562e296f742053d9dcf3943be.etc2.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
@@ -40,4 +42,4 @@ process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
 process/size_limit=0
-detect_3d/compress_to=1
+detect_3d/compress_to=0

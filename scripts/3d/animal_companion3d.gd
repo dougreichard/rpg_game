@@ -12,8 +12,8 @@ const STRIKE_TIME: float = 0.45   # brief lunge dwell so the 'bite' clip reads b
 # Prop-Farm quadruped pets — all share the named rig + idle/run/walk/bite/sit; nose faces +Z at yaw 0.
 # scale tuned to each breed's real size (raw bbox heights ~0.5-0.6 m).
 const BREEDS := {
-	"frosty": {"mesh": "res://assets/models/pets/frosty.glb", "scale": 0.9},            # schnoodle (solo)
-	"great_pyrenees": {"mesh": "res://assets/models/pets/great_pyrenees.glb", "scale": 1.7},  # Calvin & Coolidge (pair) — big
+	"frosty": {"mesh": "res://assets/models/pets/frosty.glb", "scale": 0.9},            # schnoodle (solo), ~0.54 m
+	"great_pyrenees": {"mesh": "res://assets/models/pets/great_pyrenees.glb", "scale": 1.15},  # Calvin & Coolidge (pair), ~0.86 m
 }
 const DEFAULT_BREED := "frosty"
 

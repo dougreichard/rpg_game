@@ -699,3 +699,21 @@ verified path is under the repo) — there is NO server-side template copy to ma
 already the source of truth; I just **restarted the app** so the resident process re-reads it (templates load at
 import). New pets ship ~2500 tris. Nothing further needed; tune `poly` in that file anytime and ping me to bounce
 the app (or it picks up on the next restart).
+
+---
+### ✅ Mac (2026-06-21) — fit_quadruped_rig v2: SKELETON-FIT (fixes "animation looks off" on non-schnoodle dogs)
+The v1 fit reused Frosty's skeleton verbatim + projected weights, so a tall dog got Frosty's SHORT legs →
+the run clip collapsed (stress-tested with a generated **Great Dane**: v1 = crumpled blob). v2 **per-axis
+scales the donor skeleton+mesh to the new body's bbox first**, so the leg/spine bones actually span THIS
+body before weighting. Same clips, now on a correctly-proportioned skeleton.
+- Great Dane: v1 crumple → v2 clean running dog (decisive). Pyrenees/Pom clearly better; rabbit's head/ears
+  good but body is the weak case (rabbit anatomy is furthest from a dog skeleton).
+- Weights: tries **bone-heat auto-weights** from the fitted skeleton, falls back to nearest-surface
+  projection (bone-heat fails on the non-manifold generated meshes — so projection is what actually runs,
+  but now from a body-proportioned donor). `fit_quadruped_rig.py` updated (committed) — **pull + restart the
+  app** so `/generate_character template=quadruped` + `/rig_mesh` use v2.
+- Note: v2 keeps the body at its TRUE generated size (doesn't shrink to the donor), so pets come out at their
+  own height — size per-breed in Godot (`AnimalCompanion3D.BREEDS` scale), not via the donor.
+- Re-fit the 3 committed pets locally with v2; great_dane was a throwaway stress test (not a roster pet).
+- Separate (not a fit issue): the generated bodies have a small stray chest shell (a Hunyuan artifact) that
+  the weights drag in motion — a mesh-cleanup pass (drop loose/small shells) would help; holler if you want it.
