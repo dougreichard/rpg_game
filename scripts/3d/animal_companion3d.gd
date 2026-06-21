@@ -8,6 +8,8 @@ const SPEED: float = 8.5
 const STRIKE_DIST: float = 1.1
 const RETURN_DIST: float = 1.0
 const DAMAGE: float = 16.0
+const FrostyScene: PackedScene = preload("res://assets/models/pets/frosty.glb")
+const PET_SCALE: float = 0.9   # frosty.glb is ~0.6 m tall raw; nose faces +Z (charge dir) at yaw 0
 
 enum Phase { CHARGE, RETURN }
 
@@ -22,20 +24,27 @@ func setup(summoner: Node3D, target: Node3D, color: Color = Color(0.95, 0.95, 0.
 	_target = target
 	_build(color)
 
-func _build(color: Color) -> void:
-	_box(Vector3(0.4, 0.32, 0.7), color, Vector3(0, 0.3, 0))           # body
-	_box(Vector3(0.3, 0.3, 0.3), color, Vector3(0, 0.45, 0.42))        # head
-	_box(Vector3(0.08, 0.3, 0.08), color.darkened(0.1), Vector3(-0.13, 0.15, 0.25))
-	_box(Vector3(0.08, 0.3, 0.08), color.darkened(0.1), Vector3(0.13, 0.15, 0.25))
-	_box(Vector3(0.08, 0.3, 0.08), color.darkened(0.1), Vector3(-0.13, 0.15, -0.25))
-	_box(Vector3(0.08, 0.3, 0.08), color.darkened(0.1), Vector3(0.13, 0.15, -0.25))
+func _build(_color: Color) -> void:
+	# Prop-Farm-rigged Frosty (quadruped) — plays its run clip while it charges/returns.
+	# (_color unused now — Frosty is its own white mesh; breeds can vary the mesh later.)
+	var pet: Node3D = FrostyScene.instantiate()
+	pet.scale = Vector3.ONE * PET_SCALE
+	add_child(pet)
+	var ap: AnimationPlayer = _find_anim(pet)
+	if ap != null:
+		var clip: String = "run" if ap.has_animation("run") else ("walk" if ap.has_animation("walk") else "idle")
+		if ap.has_animation(clip):
+			ap.get_animation(clip).loop_mode = Animation.LOOP_LINEAR
+			ap.play(clip)
 
-func _box(size: Vector3, col: Color, ofs: Vector3) -> void:
-	var mi := MeshInstance3D.new()
-	var bm := BoxMesh.new(); bm.size = size
-	var mat := StandardMaterial3D.new(); mat.albedo_color = col; mat.roughness = 1.0
-	bm.material = mat; mi.mesh = bm; mi.position = ofs
-	add_child(mi)
+func _find_anim(n: Node) -> AnimationPlayer:
+	if n is AnimationPlayer:
+		return n
+	for c in n.get_children():
+		var r := _find_anim(c)
+		if r != null:
+			return r
+	return null
 
 func _process(d: float) -> void:
 	_life -= d
