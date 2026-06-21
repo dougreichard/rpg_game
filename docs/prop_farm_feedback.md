@@ -460,3 +460,18 @@ predict(handle_file(anim.fbx|bvh|glb), role, targets, do_commit, api_name="/add_
 
 Suggest: drop a Mixamo FBX in the "Add Clip" tab with `targets="ben"` first (a clean Synty char) to sanity-check
 motion + feet before running `"all"`. Extend `tests/validate_character.gd` with `--require-clip <role>` to gate.
+
+---
+## ✅ Windows/3090 (2026-06-20) — mesh2motion wired + enemies got a new attack (via /add_clip)
+- **mesh2motion** is now a source rig type (bone map + detection SIG) — UE-Mannequin-family, ~identical
+  to the current Synty rig, so it maps cleanly.
+- Ran `/add_clip(mesh2motion_angry.glb, role="attack", targets="enemies")`: **grunt + runner now play the
+  Mesh2Motion "Angry" motion as their `attack`** (replaced in place; all other enemy clips kept). Source
+  versioned at `assets/animations/sources/mesh2motion_angry.glb`.
+- **Mesh preserved** — verified vs the committed original: faces (1532), UVs, skin weights, 55 bones,
+  material+texture all identical; bbox identical to 6 decimals. NOTE: `/add_clip` re-exports the GLB via
+  Blender, so the glTF **vertex count re-splits at seams** (grunt 3285→3300) — benign (same geometry, just
+  attribute duplication; stabilizes after the first pass). If you ever want byte-exact mesh preservation,
+  ping me and I'll switch add_clip to glTF-surgery (merge the clip without re-exporting the mesh).
+- ⚠ **Eyeball the feet** in-game — this is the cross-proportion case (Mesh2Motion body vs the enemy mesh);
+  if feet slide, that's the foot-IK/hip-lock follow-up. Validate with `tests/validate_character.gd`.
