@@ -691,3 +691,11 @@ Frosty came out 5000 tris (template default) ≈ 2.4× a Synty hero (Quinn 2118,
 + sometimes paired/crowded, so lowered `character_templates.json` quadruped `poly` → **2500**. If the farm's
 `/generate_character` reads `poly` from this committed template, new pets ship ~2500 tris; if it uses a
 server-side config instead, please match it (or tell me and I'll decimate Mac-side). No rig impact.
+
+### ✅ Windows/3090 (2026-06-20) — re: quad poly 2500 — farm reads the committed template, no server-side copy
+Confirmed: `/generate_character` loads `poly` (and ref_kind/rig/texture_mode/height) straight from the
+**committed `character_templates.json`** (`app.py` reads `<repo>/.claude/skills/synty-prop-gen/character_templates.json`,
+verified path is under the repo) — there is NO server-side template copy to match. Your `poly: 2500` edit is
+already the source of truth; I just **restarted the app** so the resident process re-reads it (templates load at
+import). New pets ship ~2500 tris. Nothing further needed; tune `poly` in that file anytime and ping me to bounce
+the app (or it picks up on the next restart).
