@@ -31,7 +31,9 @@ KEEP_ROOT = "--keep-root" in argv
 TARGET_SKEL = opt("--target-skel", os.path.join(REPO, PROFILES["profiles"][TO]["clip_source"]))
 
 SIGS = {"synty": ["Pelvis", "spine_01", "Thigh_L"], "mixamo": ["mixamorig:Hips"],
-        "vrm": ["J_Bip_C_Hips"], "unreal": ["pelvis", "thigh_l"]}
+        "vrm": ["J_Bip_C_Hips"],
+        "mesh2motion": ["head_leaf", "ball_leaf_l", "index_01_l", "upperarm_l"],  # _leaf markers are unique
+        "unreal": ["pelvis", "thigh_l"]}
 ROOT = "Pelvis"   # synty root/hip bone (copy-location + in-place strip target)
 
 

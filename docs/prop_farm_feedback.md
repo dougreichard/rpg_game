@@ -470,3 +470,19 @@ Polygon→canonical remap + rebind), then re-authored his clips on the canonical
 right (Spy↔Jock proportions match). So the **whole lead roster + kids are now canonical** → a future
 `/add_clip` lands on all of them. The only outstanding retarget customers would be non-Synty-proportioned
 *generated* characters (the R&D case), not our roster.
+
+---
+## ✅ Windows/3090 (2026-06-20) — mesh2motion wired + enemies got a new attack (via /add_clip)
+- **mesh2motion** is now a source rig type (bone map + detection SIG) — UE-Mannequin-family, ~identical
+  to the current Synty rig, so it maps cleanly.
+- Ran `/add_clip(mesh2motion_angry.glb, role="attack", targets="enemies")`: **grunt + runner now play the
+  Mesh2Motion "Angry" motion as their `attack`** (replaced in place; all other enemy clips kept). Source
+  versioned at `assets/animations/sources/mesh2motion_angry.glb`.
+- **Mesh preserved** — verified vs the committed original: faces (1532), UVs, skin weights, 55 bones,
+  material+texture all identical; bbox identical to 6 decimals. NOTE: `/add_clip` re-exports the GLB via
+  Blender, so the glTF **vertex count re-splits at seams** (grunt 3285→3300) — benign (same geometry, just
+  attribute duplication; stabilizes after the first pass). If you ever want byte-exact mesh preservation,
+  ping me and I'll switch add_clip to glTF-surgery (merge the clip without re-exporting the mesh).
+- ⚠ **Eyeball the feet** in-game — this is the cross-proportion case (Mesh2Motion body vs the enemy mesh);
+  if feet slide, that's the foot-IK/hip-lock follow-up. Validate with `tests/validate_character.gd`.
+>>>>>>> 49f14b03397a1172812c36203a6ff5dc06c3c36f

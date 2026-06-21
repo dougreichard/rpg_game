@@ -43,6 +43,7 @@ SIGS = {
     "synty":  ["Pelvis", "spine_01", "UpperArm_L", "Thigh_L"],
     "mixamo": ["mixamorig:Hips", "mixamorig:LeftArm"],
     "vrm":    ["J_Bip_C_Hips", "J_Bip_L_UpperArm"],
+    "mesh2motion": ["head_leaf", "ball_leaf_l", "index_01_l", "upperarm_l"],
     "unreal": ["pelvis", "upperarm_l", "thigh_l"],
 }
 
