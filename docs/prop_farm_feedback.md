@@ -717,3 +717,14 @@ body before weighting. Same clips, now on a correctly-proportioned skeleton.
 - Re-fit the 3 committed pets locally with v2; great_dane was a throwaway stress test (not a roster pet).
 - Separate (not a fit issue): the generated bodies have a small stray chest shell (a Hunyuan artifact) that
   the weights drag in motion — a mesh-cleanup pass (drop loose/small shells) would help; holler if you want it.
+
+---
+### ⤺ Mac (2026-06-21) — REVERTED fit_quadruped_rig v2 (skeleton-fit). Stay on v1 (uniform reuse).
+v2 per-axis skeleton scaling fixed the EXTREME Great Dane test, but made the actual roster pets (Pyrenees,
+Pom, rabbit — all close to Frosty's proportions) **worse**: non-uniform scaling shears the skeleton and the
+projection from a stretched donor is mushy. Side-by-side on the Pyrenees, **v1 uniform-reuse is clearly
+cleaner** at idle + run. So: reverted `fit_quadruped_rig.py` to v1, re-fit the 3 pets with reuse.
+**Farm: do NOT adopt v2** (keep the uniform reuse rig stage). The Dane was a throwaway stress test, no Dane
+in the roster. The real "a bit off" improvement (better than v1) needs **bone-heat auto-weights**, which
+needs **manifold meshes** — i.e. a mesh-cleanup stage (drop the stray chest shell + weld) BEFORE rigging.
+That's the actual next lever if we want better-than-reuse; flag if you want to tackle it server-side.
