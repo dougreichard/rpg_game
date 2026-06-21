@@ -88,9 +88,9 @@
         "Back_Leg_Pelvis_R", "Back_Leg_Upper_R", "Back_Leg_Lower_R", "Back_Leg_Ankle_R", "Back_Leg_Foot_R", "Back_Leg_Foot_1_R", "Back_Leg_Tip_R"
       ],
       "_skeleton_note": "48-bone mesh2motion quadruped skeleton, from the committed fox reference (assets/models/pets/quadruped_ref.glb). Root bone = Hips (copy-location + in-place strip target). target_height_m=0 → retarget leaves size unchanged (pets are sized per-breed in Godot).",
-      "anim_clips": ["idle"],
-      "clip_source": "assets/models/pets/quadruped_ref.glb",
-      "clip_reuse_note": "Only 'Idle' exists so far. WANTED next (graft via /add_clip --to quadruped once authored): walk, trot, run, charge (the AnimalCompanion3D CHARGE→STRIKE→RETURN loop). Any clip on this exact skeleton binds by name.",
+      "anim_clips": ["idle", "run", "walk"],
+      "clip_source": "assets/models/pets/frosty.glb",
+      "clip_reuse_note": "Donor = frosty.glb (named 48-bone skeleton + idle/run/walk, dog-shaped mesh → better weight transfer than the fox quadruped_ref). fit_quadruped_rig transfers its weights + grafts its clips onto a new body. quadruped_ref.glb (fox + Idle) stays the stable rig REFERENCE. STILL WANTED: a charge/lunge clip for the AnimalCompanion3D STRIKE — graft via /add_clip --to quadruped once a quadruped-rigged source exists.",
       "bone_map": {
         "_note": "Keyed by SOURCE profile -> {source_bone: quadruped_bone}. A mesh2motion quadruped source shares these names exactly (identity, handled by the src==to path), so no map is needed for it. Add a map here to bring a DIFFERENTLY-named quadruped rig (e.g. another pack's dog) onto this skeleton."
       }
