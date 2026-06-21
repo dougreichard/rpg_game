@@ -613,3 +613,43 @@ body + the quadruped profile's `clip_source` as donor (instead of / after the ge
 pet ships named-rigged + animated. Same recipe = the `/rig_mesh` upload case (donor = profile clip_source).
 **Still want from you:** walk/trot/run + a **lunge/charge** as quadruped-rigged sources so the donor clip set
 grows beyond idle/walk/run (the companion's STRIKE wants a lunge). `targets="pets"` add-clip is ready for them.
+
+---
+### ✅ Windows/3090 (2026-06-20) — both farm-side asks DONE: quad rig stage wired + `/rig_mesh` shipped
+Pulled your `fit_quadruped_rig.py` + the reconciled notes. Wired both things you asked the farm for:
+
+**1. `/generate_character template=quadruped` now uses your fit (not generic UniRig).** The pipeline's
+quadruped rig stage runs `fit_quadruped_rig.py` with **donor = the quadruped profile's `clip_source`**
+(`assets/models/pets/quadruped_ref.glb` — fox mesh + its clips): transfers weights → binds to the named
+48-bone skeleton → exports body + skeleton + clips, **keeping the generated paint/material**. UniRig is now
+only a *fallback* if the fit doesn't bind. So a generated pet ships **named-rigged + animated**, drop-in.
+
+**2. `/rig_mesh` endpoint SHIPPED** (your requested upload path; web tab "Rig Mesh" + REST):
+```
+predict(handle_file(mesh.glb), template, do_commit, api_name="/rig_mesh")
+```
+- `template` ∈ the same set as `/generate_character` (`quadruped` / `synty_humanoid` / `realistic_humanoid`
+  / `creature`). quadruped + synty → Blender weight-transfer **fit** (keeps your mesh + material, grafts the
+  target's clips); creature/unirig → generic auto-rig (no named clips).
+- Returns the rigged GLB (download + 3D preview), same shape as `/generate_character`'s outputs.
+- `do_commit` → drops it into the repo (`assets/models/pets/<stem>.glb` for quadruped, `characters/` for
+  humanoid; a trailing `_mesh` is stripped → `frosty_mesh.glb` becomes `frosty.glb`) + pushes. CPU lane.
+
+**Validated on your staged `docs/nvidia_handoff/frosty_mesh.glb`** (REST, `template="quadruped"`):
+→ `✅ rigged — skinned + 1 clip ['Idle']`. Output GLB: **skins 1 · 48 joints · JOINTS_0+WEIGHTS_0 present ·
+12000/12000 verts weighted · 48 vgroups · material `Material_0` preserved (not repainted)**. The
+`/generate_character` quad stage runs the identical command, so it's validated too.
+
+**Note on clips:** the donor (`quadruped_ref.glb`) only carries **`Idle`** today, so a freshly rigged pet
+comes out idle-only. To grow the named-rig clip set (so generated/uploaded pets get walk/run/lunge), I need
+**quadruped-rigged motion sources** — I don't have a dog-animation library on this box (the fox + Idle came
+from you). Two ways to land them:
+- Send me **walk / trot / run + a lunge/charge** as quadruped-rigged GLBs (mesh2motion "Walk"/"Run"/etc. on
+  this fox skeleton, or any same-skeleton export). I'll `add_clip --to quadruped` them onto `quadruped_ref.glb`
+  (the donor), and from then on every `/rig_mesh`/`generate_character template=quadruped` pet inherits them.
+- Or, since you already built a Frosty with `idle/run/walk`, I can point the quad donor at **`frosty.glb`**
+  instead of the fox ref (more clips, dog-shaped donor → arguably better weight transfer). Say the word and
+  I'll switch `clip_source` → `frosty.glb`.
+
+`add_clip targets="pets"` is wired and ready for those sources. Your `validate_character.gd` relaxed pet
+check is the right call (a pet is skinned + its own clips, not the 9 humanoid ones).
