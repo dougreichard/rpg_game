@@ -180,17 +180,16 @@ func _summon_companion() -> void:
 	if targets.is_empty():
 		return
 	_companion_cd = COMPANION_CD * GameManager.companion_cooldown_scale()
-	# One dog per nearby threat, up to two — reads as Frosty alone, or the
-	# Calvin & Coolidge pair when there are two enemies to charge.
+	# One threat → Frosty alone (schnoodle); two threats → the Calvin & Coolidge pair
+	# (Great Pyrenees), one charging each enemy.
+	var breed := "frosty" if targets.size() == 1 else "great_pyrenees"
 	var offs := [Vector3(-0.4, 0, 0), Vector3(0.4, 0, 0)]
 	for i in targets.size():
 		var comp: Node3D = CompanionScript.new()
 		comp.position = global_position + offs[i]
 		get_parent().add_child(comp)
-		comp.call("setup", self, targets[i], Color(0.96, 0.96, 0.96))
-	GameManager.companion_summoned.emit("frosty")
-	if targets.size() > 1:
-		GameManager.companion_summoned.emit("calvin_coolidge")
+		comp.call("setup", self, targets[i], breed)
+	GameManager.companion_summoned.emit("frosty" if breed == "frosty" else "calvin_coolidge")
 	Audio.play("special")
 
 func _nearest_enemies(n: int) -> Array:

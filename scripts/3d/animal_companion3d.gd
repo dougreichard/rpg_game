@@ -9,8 +9,13 @@ const STRIKE_DIST: float = 1.1
 const RETURN_DIST: float = 1.0
 const DAMAGE: float = 16.0
 const STRIKE_TIME: float = 0.45   # brief lunge dwell so the 'bite' clip reads before returning
-const FrostyScene: PackedScene = preload("res://assets/models/pets/frosty.glb")
-const PET_SCALE: float = 0.9   # frosty.glb is ~0.6 m tall raw; nose faces +Z (charge dir) at yaw 0
+# Prop-Farm quadruped pets — all share the named rig + idle/run/walk/bite/sit; nose faces +Z at yaw 0.
+# scale tuned to each breed's real size (raw bbox heights ~0.5-0.6 m).
+const BREEDS := {
+	"frosty": {"mesh": "res://assets/models/pets/frosty.glb", "scale": 0.9},            # schnoodle (solo)
+	"great_pyrenees": {"mesh": "res://assets/models/pets/great_pyrenees.glb", "scale": 1.7},  # Calvin & Coolidge (pair) — big
+}
+const DEFAULT_BREED := "frosty"
 
 enum Phase { CHARGE, STRIKE, RETURN }
 
@@ -22,16 +27,19 @@ var _life: float = 6.0
 var _strike_t: float = 0.0
 var _anim: AnimationPlayer = null
 
-func setup(summoner: Node3D, target: Node3D, color: Color = Color(0.95, 0.95, 0.95)) -> void:
+var _breed: String = DEFAULT_BREED
+
+func setup(summoner: Node3D, target: Node3D, breed: String = DEFAULT_BREED) -> void:
 	_summoner = summoner
 	_target = target
-	_build(color)
+	_breed = breed if BREEDS.has(breed) else DEFAULT_BREED
+	_build()
 
-func _build(_color: Color) -> void:
-	# Prop-Farm-rigged Frosty (quadruped) — plays its run clip while it charges/returns.
-	# (_color unused now — Frosty is its own white mesh; breeds can vary the mesh later.)
-	var pet: Node3D = FrostyScene.instantiate()
-	pet.scale = Vector3.ONE * PET_SCALE
+func _build() -> void:
+	# Prop-Farm-rigged quadruped pet — plays its run clip while it charges/returns.
+	var info: Dictionary = BREEDS[_breed]
+	var pet: Node3D = (load(info["mesh"]) as PackedScene).instantiate()
+	pet.scale = Vector3.ONE * float(info["scale"])
 	add_child(pet)
 	_anim = _find_anim(pet)
 	_play("run", true)   # charge in at a run
