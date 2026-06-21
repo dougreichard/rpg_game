@@ -45,6 +45,7 @@ SIGS = {
     "vrm":    ["J_Bip_C_Hips", "J_Bip_L_UpperArm"],
     "mesh2motion": ["head_leaf", "ball_leaf_l", "index_01_l", "upperarm_l"],
     "unreal": ["pelvis", "upperarm_l", "thigh_l"],
+    "quadruped": ["Front_Leg_Shoulder_L", "Back_Leg_Pelvis_L", "Tail_Base"],
 }
 
 
