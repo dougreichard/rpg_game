@@ -51,6 +51,21 @@
           "J_Bip_R_Shoulder": "clavicle_r", "J_Bip_R_UpperArm": "UpperArm_R", "J_Bip_R_LowerArm": "lowerarm_r", "J_Bip_R_Hand": "Hand_R",
           "J_Bip_L_UpperLeg": "Thigh_L", "J_Bip_L_LowerLeg": "calf_l", "J_Bip_L_Foot": "Foot_L", "J_Bip_L_ToeBase": "ball_l",
           "J_Bip_R_UpperLeg": "Thigh_R", "J_Bip_R_LowerLeg": "calf_r", "J_Bip_R_Foot": "Foot_R", "J_Bip_R_ToeBase": "ball_r"
+        },
+        "mesh2motion": {
+          "_note": "Mesh2Motion uses a UE-Mannequin-family skeleton ~identical to Synty's (lowercase); half map by exact name, the rest are case-fixes. root/*_leaf/pinky/ring bones have no Synty equivalent (dropped).",
+          "pelvis": "Pelvis", "spine_01": "spine_01", "spine_02": "spine_02", "spine_03": "spine_03",
+          "neck_01": "neck_01", "head": "head",
+          "clavicle_l": "clavicle_l", "upperarm_l": "UpperArm_L", "lowerarm_l": "lowerarm_l", "hand_l": "Hand_L",
+          "clavicle_r": "clavicle_r", "upperarm_r": "UpperArm_R", "lowerarm_r": "lowerarm_r", "hand_r": "Hand_R",
+          "thigh_l": "Thigh_L", "calf_l": "calf_l", "foot_l": "Foot_L", "ball_l": "ball_l",
+          "thigh_r": "Thigh_R", "calf_r": "calf_r", "foot_r": "Foot_R", "ball_r": "ball_r",
+          "thumb_01_l": "thumb_01_l", "thumb_02_l": "thumb_02_l", "thumb_03_l": "thumb_03_l",
+          "index_01_l": "indexFinger_01_l", "index_02_l": "indexFinger_02_l", "index_03_l": "indexFinger_03_l",
+          "middle_01_l": "finger_01_l", "middle_02_l": "finger_02_l", "middle_03_l": "finger_03_l",
+          "thumb_01_r": "thumb_01_r", "thumb_02_r": "thumb_02_r", "thumb_03_r": "thumb_03_r",
+          "index_01_r": "indexFinger_01_r", "index_02_r": "indexFinger_02_r", "index_03_r": "indexFinger_03_r",
+          "middle_01_r": "finger_01_r", "middle_02_r": "finger_02_r", "middle_03_r": "finger_03_r"
         }
       }
     },
