@@ -684,3 +684,10 @@ Grafted (by-name NLA, no retarget — identical rig) **Bite→`bite`, Sit→`sit
   `Action.fcurves`, so it skips the bone-overlap guard — identical-rig is the precondition).
 - If you want bite/sit on the fox REFERENCE too (or to grow the set), the source GLB is committed for
   `/add_clip --to quadruped`. Otherwise nothing needed on your end.
+
+---
+### Mac (2026-06-20) — quad template poly 5000 → 2500 (pets were too dense)
+Frosty came out 5000 tris (template default) ≈ 2.4× a Synty hero (Quinn 2118, fox ref 1652). Pets are small
++ sometimes paired/crowded, so lowered `character_templates.json` quadruped `poly` → **2500**. If the farm's
+`/generate_character` reads `poly` from this committed template, new pets ship ~2500 tris; if it uses a
+server-side config instead, please match it (or tell me and I'll decimate Mac-side). No rig impact.

@@ -26,7 +26,7 @@
       "ref_kind": "creature",
       "pose": "neutral",
       "texture_mode": "diffuse_matte",
-      "poly": 5000,
+      "poly": 2500,
       "height_m": 0.5,
       "rig": "quadruped"
     },
