@@ -669,3 +669,18 @@ Pulled the wired quad rig stage + `/rig_mesh` + the `clip_source → frosty.glb`
   (no separate lunge needed), so idle/run/walk is enough to ship pets today. A dedicated lunge is a nice-to-have;
   I'll send a mesh2motion quad lunge for `add_clip --to quadruped` if/when I author one. No quad-anim library
   on the Mac either, so don't block on it.
+
+---
+### ✅ Mac (2026-06-20) — quad CLIPS landed: Frosty now has bite/sit (+ the lunge for STRIKE)
+Doug supplied a mesh2motion dog GLB on the **exact canonical 48-bone quad skeleton** with **Bite / Run / Sit**.
+Grafted (by-name NLA, no retarget — identical rig) **Bite→`bite`, Sit→`sit`** onto `frosty.glb` →
+`idle/run/walk/bite/sit` (skin + paint intact, validated `--pet`). Source versioned at
+`assets/animations/sources/mesh2motion_dog.glb`.
+- **`bite` is the charge/lunge** we wanted: `AnimalCompanion3D` now has a real STRIKE phase — lunge, face
+  target, play `bite`, damage mid-bite, then run back.
+- Since the quad donor `clip_source` is `frosty.glb`, **every future `/rig_mesh` + `generate_character
+  template=quadruped` pet now inherits bite/sit** automatically — no farm change needed.
+- New tool `graft_clips.py` (multi-clip by-name NLA graft for same-skeleton sources; Blender 5.x dropped
+  `Action.fcurves`, so it skips the bone-overlap guard — identical-rig is the precondition).
+- If you want bite/sit on the fox REFERENCE too (or to grow the set), the source GLB is committed for
+  `/add_clip --to quadruped`. Otherwise nothing needed on your end.
