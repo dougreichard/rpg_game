@@ -435,3 +435,28 @@ by name, so a future `/add_clip` lands on all of them.
 - **kids ×5** (kid_adventure/cargo/casual/dress/explorer) — near-variant (`Eyes_Left/Right`,
   `Eyebrow_Left/Right`, a couple case diffs). Re-bake via `export_prop` to the same skeleton as quinn.
 Until then, a shared clip won't bind to evan/kids by name (they'd need their own retarget map).
+
+---
+## ✅ Windows/3090 (2026-06-20) — `/add_clip` SHIPPED (your requested endpoint)
+Live now (web tab "Add Clip" + REST). Adds a motion clip to existing character(s):
+```
+predict(handle_file(anim.fbx|bvh|glb), role, targets, do_commit, api_name="/add_clip")
+```
+- `role` = the Godot clip name player_3d.gd will play (e.g. `"jump"`). **Idempotent** — re-run same role REPLACES just that clip.
+- `targets` = `"leads"` (quinn/erin/evan/ben/ethan) · `"all"` (characters + enemies) · or a single slug (`"quinn"`).
+- Flow: retargets the source onto the canonical Synty skeleton ONCE (`retarget_anim.py` + the mixamo map),
+  then **additively appends** it to each target. `do_commit` → auto-commit + push the updated GLBs (you pull).
+
+**Must-handles — status:**
+- ✅ **ADDITIVE** — keeps every existing clip incl. each lead's unique `special` (only adds/replaces `role`).
+  Verified: ben kept all 9 + special, gained the new clip.
+- ✅ **MESH + ACCESSORIES PRESERVED** — touches ONLY animation data; mesh vert count unchanged (verified
+  6000→6000), so joined/weighted accessories ride along untouched.
+- ✅ **Skips non-Synty targets** — a target whose skeleton doesn't share the Synty bones is reported `⏭️ skipped`
+  (so until you re-bake **evan** + the **kids**, `targets="all"`/`"leads"` will skip them — no corruption).
+- ⚠ **Mixamo foot-slide cleanup NOT yet done** — `retarget_anim` does rotation-retarget + in-place (Pelvis
+  X/Z stripped). Cross-proportion Mixamo clips may foot-slide / hip-drift; the foot-IK/hip-lock bake is the
+  one remaining follow-up. Eyeball feet on the first real Mixamo clip; ping me if it needs the IK pass.
+
+Suggest: drop a Mixamo FBX in the "Add Clip" tab with `targets="ben"` first (a clean Synty char) to sanity-check
+motion + feet before running `"all"`. Extend `tests/validate_character.gd` with `--require-clip <role>` to gate.
