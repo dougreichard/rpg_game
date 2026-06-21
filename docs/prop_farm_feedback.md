@@ -485,4 +485,3 @@ right (Spy↔Jock proportions match). So the **whole lead roster + kids are now 
   ping me and I'll switch add_clip to glTF-surgery (merge the clip without re-exporting the mesh).
 - ⚠ **Eyeball the feet** in-game — this is the cross-proportion case (Mesh2Motion body vs the enemy mesh);
   if feet slide, that's the foot-IK/hip-lock follow-up. Validate with `tests/validate_character.gd`.
->>>>>>> 49f14b03397a1172812c36203a6ff5dc06c3c36f
