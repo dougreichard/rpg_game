@@ -40,7 +40,7 @@ HEIGHT = float(opt("--height", tp.get("target_height_m", 0) or 0))
 
 # --- bone signatures for source auto-detect ---
 SIGS = {
-    "synty":  ["Hips", "Spine_01", "Shoulder_L", "UpperLeg_L"],
+    "synty":  ["Pelvis", "spine_01", "UpperArm_L", "Thigh_L"],
     "mixamo": ["mixamorig:Hips", "mixamorig:LeftArm"],
     "vrm":    ["J_Bip_C_Hips", "J_Bip_L_UpperArm"],
     "unreal": ["pelvis", "upperarm_l", "thigh_l"],
