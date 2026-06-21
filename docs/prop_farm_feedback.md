@@ -502,3 +502,28 @@ stand up a **`quadruped` rig profile** so the Character Farm can produce game-re
   companion does CHARGE → STRIKE → RETURN in `animal_companion3d.gd`, currently primitive boxes).
 - **Then:** generate **Frosty** (small white shaggy dog) rigged to this profile → we wire it into
   `AnimalCompanion3D` (swap the primitive `_build` for the mesh + play walk during the charge).
+
+---
+## Mac request (2026-06-20) — NEW endpoint: `/rig_mesh` (rig an UPLOADED static mesh)
+**Why:** Doug wants to keep Frosty's *current* mesh (he likes it) but put a fresh rig on it. The farm
+today can't do that: `/generate_character` always generates its own mesh from a prompt, and `/retarget`
+needs an input that's **already** rigged (and its profiles are all humanoid — no quadruped). So there's
+no path to "take this bare mesh and auto-rig it."
+
+**Ask:** add `/rig_mesh(glb_file, template, do_commit)` that runs the auto-rigger (UniRig on the 3090)
+on an **uploaded static mesh** and returns it rigged + textured, mirroring the rig+paint-preserve stages
+of `/generate_character` but **skipping reference+shape** (the mesh is supplied):
+- `glb_file` — an uploaded mesh-only GLB (no skeleton/skin/anim).
+- `template` — reuse the same `Literal['synty_humanoid','realistic_humanoid','quadruped','creature']`
+  so the rig target + clip set match `/generate_character`. For Frosty: `quadruped`.
+- Output: rigged GLB (same shape as `/generate_character`'s `rigged_character_glb` + `download_glb`),
+  with the template's standard clips grafted (walk/trot/run + a charge/lunge — see the quadruped request
+  above and `animal_companion3d.gd`'s CHARGE→STRIKE→RETURN).
+- Honour the existing material/texture on the uploaded mesh (don't repaint); keep it matte.
+
+**Staged input ready for you:** `docs/nvidia_handoff/frosty_mesh.glb` — the **current Frosty, mesh-only**
+(armature + skin + the idle/run/walk anims stripped; 12k verts, flat white `Material_0`, rest pose). Run
+`/rig_mesh(frosty_mesh.glb, template="quadruped")` against it; the result replaces
+`assets/models/pets/frosty.glb` (we keep `frosty_v1.glb` as the backup of the prior rig).
+
+Depends on the **`quadruped` rig profile** from the request just above — same skeleton/clips.
