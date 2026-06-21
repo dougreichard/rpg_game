@@ -58,6 +58,23 @@ the GLB; the Mac then `git pull` + `prop(...)`.
   candidates to search (default 6; pass 1 + a pinned seed to reproduce). **Returns a 5-tuple**
   `(status, gallery, model_glb, download, chosen_seed)` — `chosen_seed` is the winning reference seed.
 
+**Character Farm endpoints (rigged characters + pets, same service):** use `char_pull.py` (the
+char-side `prop_pull.py`):
+- `/generate_character(name, prompt, template, seed, ref_count, do_commit)` — prompt → rigged+textured
+  character. `template` ∈ `synty_humanoid`/`realistic_humanoid`/`quadruped`/`creature`. quadruped + synty
+  run the **weight-transfer fit** (named skeleton + grafted clips from the profile's `clip_source`); creature
+  → generic UniRig. `char_pull.py --name X --template T --prompt "…"`.
+- `/rig_mesh(handle_file(glb), template, do_commit)` — rig an **existing uploaded mesh**, keeping its
+  geometry+paint (quadruped/synty = fit + grafted clips). `char_pull.py --rig mesh.glb --template T --name X`.
+- `/retarget(handle_file(glb), to_profile, with_clips)` — conform an already-rigged GLB to a profile
+  (`synty`/`godot_generic`/`mixamo`/`unreal`/`unity`/`vrm`/`raw`/`quadruped`) + graft clips. `retarget_char.py` runs this locally too (CPU).
+- `/add_clip(handle_file(anim), role, targets, do_commit)` — graft a motion clip (Mixamo/mesh2motion) onto
+  existing chars by name. `targets` ∈ `leads`/`enemies`/`all`/`pets`/per-name.
+- Pets land in `assets/models/pets/` (quadruped), humanoids in `assets/models/characters/`; a trailing
+  `_mesh` in the name is stripped. Validate with `tests/validate_character.gd -- <glb> [--pet]` (pets carry
+  only `idle` + a locomotion clip, not the 9 humanoid clips). Rig targets live in `rig_profiles.json`;
+  the quadruped fit is `fit_quadruped_rig.py`. See [[reference_character_farm]] in memory for the full map.
+
 **Stage scripts** (`scripts/`): `gen_prop_ref_comfy.py` (ComfyUI/SDXL, `--count` candidates at
 distinct seeds → pipeline ranks + pins the winner, + optional IPAdapter set-consistency),
 `gen_prop_mesh_cuda.py` (Hunyuan shape), `gen_prop_paint_cuda.py` (Hunyuan

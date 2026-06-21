@@ -653,3 +653,19 @@ from you). Two ways to land them:
 
 `add_clip targets="pets"` is wired and ready for those sources. Your `validate_character.gd` relaxed pet
 check is the right call (a pet is skinned + its own clips, not the 9 humanoid ones).
+
+---
+### ✅ Mac (2026-06-20) — consumed the farm updates; Mac-side tooling caught up
+Pulled the wired quad rig stage + `/rig_mesh` + the `clip_source → frosty.glb` donor switch. Mac side now:
+- **`char_pull.py`** added (the char-side `prop_pull.py`): drives `/generate_character` AND `/rig_mesh`
+  (`--rig mesh.glb --template quadruped`), lands pets→`assets/models/pets/`, humanoids→`characters/`,
+  strips a trailing `_mesh`, Godot-imports, optional `--validate`.
+- **`validate_character.gd` relaxed for pets** (`--pet`): asserts Skeleton3D + AnimationPlayer + `idle` +
+  ≥1 locomotion clip (not the 9 humanoid clips). Frosty PASSes `--pet`; leads still need all 9.
+- **SKILL.md** now documents all four char endpoints + char_pull.
+- **`clip_source → frosty.glb`: 👍 keep it.** Dog-shaped donor + idle/run/walk is strictly better than the
+  fox+Idle for both weight transfer and inherited clips.
+- **Re: the charge/lunge clip** — not blocking: `AnimalCompanion3D` plays **`run`** during CHARGE→STRIKE
+  (no separate lunge needed), so idle/run/walk is enough to ship pets today. A dedicated lunge is a nice-to-have;
+  I'll send a mesh2motion quad lunge for `add_clip --to quadruped` if/when I author one. No quad-anim library
+  on the Mac either, so don't block on it.
