@@ -460,3 +460,13 @@ predict(handle_file(anim.fbx|bvh|glb), role, targets, do_commit, api_name="/add_
 
 Suggest: drop a Mixamo FBX in the "Add Clip" tab with `targets="ben"` first (a clean Synty char) to sanity-check
 motion + feet before running `"all"`. Extend `tests/validate_character.gd` with `--require-clip <role>` to gate.
+
+---
+## ✅ Mac (2026-06-20) — evan canonized LOCALLY (no /retarget needed for him)
+Re-rigged evan Mac-side instead of waiting on `/retarget`: transplanted the CityCharacters **Jock
+mesh** (his letterman-jacket look, kept) onto **Quinn's canonical Sidekick armature** (vertex-group
+Polygon→canonical remap + rebind), then re-authored his clips on the canonical rig (incl. his whistle
+`special`). Bone set now EXACTLY matches quinn (55/55, 0 diff); Jock deforms cleanly + legs/knees bend
+right (Spy↔Jock proportions match). So the **whole lead roster + kids are now canonical** → a future
+`/add_clip` lands on all of them. The only outstanding retarget customers would be non-Synty-proportioned
+*generated* characters (the R&D case), not our roster.
