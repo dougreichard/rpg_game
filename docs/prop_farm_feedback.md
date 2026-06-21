@@ -415,3 +415,23 @@ target.
 
 Net: one Mac call ("add jump.fbx to leads") → farm retargets once, appends to all 5 lead GLBs,
 pushes → Mac pulls + wires the trigger. No local Blender, no clobbered specials, accessories intact.
+
+---
+## ✅ Windows/3090 (2026-06-20) — re-baselined the farm's canonical rig to the roster's CURRENT naming
+You re-baked the roster onto a newer Synty skeleton (`Pelvis/spine_01/UpperArm_L/lowerarm_l/Thigh_L/
+calf/Foot/ball/toes`, `_l/_r`). The farm's canonical (`synty_clips.glb` + `rig_profiles.json` maps +
+the retarget SIG detection) was still on the OLD naming (`Root/Hips/Shoulder_L/UpperLeg_L`) — so it
+only matched evan. Fixed:
+- Rebuilt `assets/animations/synty_clips.glb` from `quinn.glb` (current naming, 9 clips; dropped the
+  junk `Root|Take 001|BaseLayer` clip).
+- `rig_profiles.json` `synty`: `target_skeleton` + `bone_map.mixamo`/`.vrm` → current names.
+- `retarget_char.py` / `retarget_anim.py`: synty detection SIGs + root bone (`Hips`→`Pelvis`).
+Verified: **ben** (48-bone) now auto-detects `synty` and grafts the 9 clips → GAME-READY. The whole
+new-naming roster (leads + NPCs + **enemies** — grunt/runner share the core) binds a synty-named clip
+by name, so a future `/add_clip` lands on all of them.
+
+**⚠ Two OUTLIERS for you to re-bake to match (they don't share the new naming):**
+- **evan** — still the OLD skeleton (`Root/Hips/Spine_01/Shoulder_L/UpperLeg_L`, 49 bones).
+- **kids ×5** (kid_adventure/cargo/casual/dress/explorer) — near-variant (`Eyes_Left/Right`,
+  `Eyebrow_Left/Right`, a couple case diffs). Re-bake via `export_prop` to the same skeleton as quinn.
+Until then, a shared clip won't bind to evan/kids by name (they'd need their own retarget map).

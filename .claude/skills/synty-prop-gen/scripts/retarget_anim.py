@@ -30,8 +30,9 @@ FROM = opt("--from", "auto")
 KEEP_ROOT = "--keep-root" in argv
 TARGET_SKEL = opt("--target-skel", os.path.join(REPO, PROFILES["profiles"][TO]["clip_source"]))
 
-SIGS = {"synty": ["Hips", "Spine_01", "UpperLeg_L"], "mixamo": ["mixamorig:Hips"],
+SIGS = {"synty": ["Pelvis", "spine_01", "Thigh_L"], "mixamo": ["mixamorig:Hips"],
         "vrm": ["J_Bip_C_Hips"], "unreal": ["pelvis", "thigh_l"]}
+ROOT = "Pelvis"   # synty root/hip bone (copy-location + in-place strip target)
 
 
 def imp(path):
@@ -93,7 +94,7 @@ for syn_bone, src_bone in inv.items():
         continue
     c = pb.constraints.new("COPY_ROTATION")
     c.target = src; c.subtarget = src_bone
-    if syn_bone == "Hips":
+    if syn_bone == ROOT:
         cl = pb.constraints.new("COPY_LOCATION")
         cl.target = src; cl.subtarget = src_bone
 
@@ -108,9 +109,9 @@ print(f"RETARGET-ANIM: baked '{ROLE}' frames {f0}-{f1}, fcurves={len(baked.fcurv
 
 # in-place: drop Hips horizontal translation (keep vertical bob)
 if not KEEP_ROOT:
-    for fc in [fc for fc in baked.fcurves if fc.data_path == 'pose.bones["Hips"].location' and fc.array_index in (0, 2)]:
+    for fc in [fc for fc in baked.fcurves if fc.data_path == 'pose.bones["%s"].location' % ROOT and fc.array_index in (0, 2)]:
         baked.fcurves.remove(fc)
-    print("RETARGET-ANIM: stripped Hips X/Z translation (in-place)")
+    print("RETARGET-ANIM: stripped %s X/Z translation (in-place)" % ROOT)
 
 # keep only target + baked clip; export
 bpy.ops.object.mode_set(mode="OBJECT")
