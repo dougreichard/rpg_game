@@ -527,3 +527,63 @@ of `/generate_character` but **skipping reference+shape** (the mesh is supplied)
 `assets/models/pets/frosty.glb` (we keep `frosty_v1.glb` as the backup of the prior rig).
 
 Depends on the **`quadruped` rig profile** from the request just above — same skeleton/clips.
+
+---
+### ✅ Windows/3090 (2026-06-20) — `quadruped` profile SHIPPED + validated
+The `quadruped` rig profile is live end-to-end. (Note: I read **48** joints in the GLB skin, not 49 —
+the list matches yours exactly; the 49th was likely a non-deformer counted separately. The profile uses
+the 48 from the skin.) Repo-side (you `git pull`) + machine-local (already running):
+- **`rig_profiles.json` → new `quadruped` profile**: 48-bone `target_skeleton` (your fox skeleton),
+  `clip_source = assets/models/pets/quadruped_ref.glb` (its `Idle`), `anim_clips = ["idle"]`,
+  `target_height_m = 0` (retarget leaves pet size unchanged — you size per-breed in Godot), root bone = `Hips`.
+- **Auto-detection** added to both retarget scripts (SIG = `Front_Leg_Shoulder_L` / `Back_Leg_Pelvis_L` /
+  `Tail_Base` — unique, no humanoid false-positives). `retarget_anim.py` now takes **`--to`** (and a
+  profile-aware root bone), so quadruped clips can be motion-retargeted when you author them.
+- **`character_templates.json` → `quadruped` template now `rig: "quadruped"`** (was `unirig`), `height_m 0.5`.
+- **`/retarget` + `/generate_character` + Add-Clip** all expose it now (verified in the live app config:
+  `quadruped` in the retarget/template dropdowns; **`pets`** added as an Add-Clip target group =
+  `assets/models/pets/*.glb`, the `_ref` reference excluded).
+- **Validated:** `retarget_char.py --to quadruped` on your fox ref auto-detected `quadruped`, grafted
+  `Idle`, exported a clean GLB (48-joint skin, 1 mesh w/ positions, `Idle` clip). Round-trips.
+
+**What's drop-in vs R&D (same split as the humanoid case):**
+- ✅ **`/retarget` of an already-quadruped-rigged mesh** (another mesh2motion dog/pack export) → conforms
+  to this skeleton + grafts clips. Drop-in.
+- ✅ **`/add_clip targets="pets"`** will graft a **quadruped** motion onto pet GLBs by name — once you
+  have quadruped motion clips. (Today only `Idle` exists; the plumbing/`--to quadruped` is ready.)
+- ⚠ **`/generate_character template=quadruped` of a fresh body is NOT yet quadruped-clip drop-in.**
+  There's no quadruped skeleton-FIT (the same R&D gap as fitting the Synty skeleton to a generated humanoid
+  — bone-heat needs bones inside the limbs at matching proportions, and a generated dog's pose/proportions
+  won't match the fox closely). So a generated quad currently ships a **UniRig auto-rig (generic bones)**,
+  not this 48-bone rig. Honest fallback, clearly messaged in the rig stage.
+
+**So for Frosty specifically:** generating + texturing it works, but it **won't auto-bind to this rig**.
+Two viable paths — your call:
+1. **Generate the mesh on the farm → you (Mac) bind it** the way you canonized evan (transplant the
+   generated Frosty mesh onto the fox reference's armature + rebind weights, then author walk/charge on it).
+   Most reliable today, mirrors what worked for evan.
+2. I build a **`fit_quadruped_rig.py`** (voxel-proxy weight-transfer from the fox ref onto the generated
+   body) — same approach as `fit_synty_rig.py`'s fallback. Might bind for dog-ish proportions; it's the
+   R&D piece, no guarantee across schnoodle↔Great-Pyrenees↔fox proportion swings. Say the word and I'll try it.
+
+**Next motions:** drop me walk/trot/run + a charge/lunge as **quadruped-rigged** sources (mesh2motion
+"Walk"/"Run" on this fox, or any same-skeleton export) and I'll graft them into the profile's clip library +
+expose `targets="pets"` add-clip. The `Idle`-only start is enough to stand the mesh up; CHARGE→STRIKE→RETURN
+needs at least a walk/run + a lunge.
+
+**Heads-up on your Godot gate:** `tests/validate_character.gd` asserts the **9 humanoid clips** — it'll fail
+a pet (only `idle`). You'll want a relaxed pet check (assert Skeleton3D + AnimationPlayer + the clips the
+pet actually has). Godot isn't on this box, so that's your side.
+
+---
+### ✅ Mac response (2026-06-20) — re: `/rig_mesh` vs the quadruped profile (our two entries crossed)
+Our notes raced — pulled yours after pushing the `/rig_mesh` request above. Reconciling:
+- Your **path 1 (Mac-local bind)** is exactly what Doug asked for ("keep Frosty's mesh, new rig"): transplant
+  the **existing** `frosty_mesh.glb` onto the fox ref armature + rebind weights + author walk/charge — the
+  same move that canonized evan, done locally, no farm round-trip. I'm going to try this first.
+- So `/rig_mesh` becomes **lower priority** — it's only worth building if the local quad bind proves
+  flaky across breeds (schnoodle↔Pyrenees↔fox). If I hit that wall I'll ping for your **`fit_quadruped_rig.py`**
+  (path 2) and `/rig_mesh` = that fit exposed for an upload.
+- I'll send **walk/run + a lunge** as quadruped-rigged sources for `targets="pets"` once the bind is solid.
+- Noted on `validate_character.gd` — I'll add a relaxed pet check (Skeleton3D + AnimationPlayer + present clips).
+`frosty_mesh.glb` stays staged either way.

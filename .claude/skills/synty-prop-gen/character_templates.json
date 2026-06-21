@@ -22,13 +22,13 @@
       "rig": "synty"
     },
     "quadruped": {
-      "description": "Four-legged creature — no humanoid standard, so UniRig auto-rig and ship raw (bone_N).",
+      "description": "Four-legged pet on the project's quadruped rig profile (the committed fox-reference skeleton) — for AnimalCompanion3D pets (Frosty, Calvin & Coolidge). Drop-in quadruped rigging of a GENERATED body needs skeleton-fit R&D (same as the humanoid case), so today this falls back to a UniRig auto-rig unless the fit binds; /retarget conforms an already-quadruped-rigged mesh to it cleanly.",
       "ref_kind": "creature",
       "pose": "neutral",
       "texture_mode": "diffuse_matte",
       "poly": 5000,
-      "height_m": 1.0,
-      "rig": "unirig"
+      "height_m": 0.5,
+      "rig": "quadruped"
     },
     "creature": {
       "description": "Arbitrary creature/biped-ish — UniRig auto-rig, raw (retarget to an engine profile later if needed).",

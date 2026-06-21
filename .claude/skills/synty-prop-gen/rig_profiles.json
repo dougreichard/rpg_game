@@ -70,6 +70,32 @@
       }
     },
 
+    "quadruped": {
+      "description": "Four-legged pet rig for Hunkle Bunkle's animal companions (Frosty, Calvin & Coolidge, …). A mesh2motion-family quadruped skeleton (the committed fox reference). A character on this profile is a four-legged Skeleton3D with named clips — wired into AnimalCompanion3D (CHARGE→STRIKE→RETURN). NOT the humanoid Synty rig; do not mix with it.",
+      "engine": "godot",
+      "container": "glb",
+      "up_axis": "Y",
+      "scale_units": "m",
+      "target_height_m": 0,
+      "target_skeleton": [
+        "root", "Hips", "Spine_1", "Spine_2", "Spine_2001", "Spine_3", "Spine_4",
+        "Head", "Headtip", "Ear_L", "Ear_Tip_L", "Chin", "Chin_Tip", "Ear_R", "Ear_Tip_R",
+        "Front_Leg_Shoulder_L", "Front_Leg_Upper_L", "Front_Leg_Lower_L", "Front_Leg_Ankle_L", "Front_Leg_Foot_L", "Front_Leg_Tip_L",
+        "Front_Leg_Shoulder_R", "Front_Leg_Upper_R", "Front_Leg_Lower_R", "Front_Leg_Ankle_R", "Front_Leg_Foot_R", "Front_Leg_Tip_R",
+        "Stomach", "Stomach_tip",
+        "Tail_Base", "Tail_Mid", "Tail_Mid001", "Tail_End", "Tail_Tip",
+        "Back_Leg_Pelvis_L", "Back_Leg_Upper_L", "Back_Leg_Lower_L", "Back_Leg_Ankle_L", "Back_Leg_Foot_L", "Back_Leg_Foot_1_L", "Back_Leg_Tip_L",
+        "Back_Leg_Pelvis_R", "Back_Leg_Upper_R", "Back_Leg_Lower_R", "Back_Leg_Ankle_R", "Back_Leg_Foot_R", "Back_Leg_Foot_1_R", "Back_Leg_Tip_R"
+      ],
+      "_skeleton_note": "48-bone mesh2motion quadruped skeleton, from the committed fox reference (assets/models/pets/quadruped_ref.glb). Root bone = Hips (copy-location + in-place strip target). target_height_m=0 → retarget leaves size unchanged (pets are sized per-breed in Godot).",
+      "anim_clips": ["idle"],
+      "clip_source": "assets/models/pets/quadruped_ref.glb",
+      "clip_reuse_note": "Only 'Idle' exists so far. WANTED next (graft via /add_clip --to quadruped once authored): walk, trot, run, charge (the AnimalCompanion3D CHARGE→STRIKE→RETURN loop). Any clip on this exact skeleton binds by name.",
+      "bone_map": {
+        "_note": "Keyed by SOURCE profile -> {source_bone: quadruped_bone}. A mesh2motion quadruped source shares these names exactly (identity, handled by the src==to path), so no map is needed for it. Add a map here to bring a DIFFERENTLY-named quadruped rig (e.g. another pack's dog) onto this skeleton."
+      }
+    },
+
     "godot_generic": {
       "description": "Any-skeleton Godot Skeleton3D — ship the rig as-is (renamed lightly), let the game assign a BoneMap in-editor. For non-Synty Godot projects.",
       "engine": "godot", "container": "glb", "up_axis": "Y", "scale_units": "m",
