@@ -93,6 +93,8 @@ func _render(header: String, sub: String) -> void:
 		b.anchor_left = 0.5; b.anchor_right = 0.5
 		b.offset_left = -200; b.offset_right = 200
 		b.offset_top = 320 + i * 58; b.offset_bottom = 372 + i * 58
+		b.pressed.connect(_on_item_pressed.bind(i))
+		b.mouse_entered.connect(_on_item_hover.bind(i))
 		_menu.add_child(b)
 		_item_nodes.append(b)
 	_title_label("W/S or ↑/↓ choose   ·   F / Enter select   ·   Esc back", 648, 18, UITheme.TEXT_DIM)
@@ -142,6 +144,19 @@ func _move(dir: int) -> void:
 		if _items[c]["enabled"]:
 			break
 	_cursor = c
+	Audio.play("ui_move"); _refresh()
+
+func _on_item_pressed(i: int) -> void:
+	if _busy or i >= _items.size() or not _items[i]["enabled"]:
+		return
+	_cursor = i
+	_refresh()
+	_select()
+
+func _on_item_hover(i: int) -> void:
+	if _busy or i >= _items.size() or not _items[i]["enabled"] or _cursor == i:
+		return
+	_cursor = i
 	Audio.play("ui_move"); _refresh()
 
 func _select() -> void:

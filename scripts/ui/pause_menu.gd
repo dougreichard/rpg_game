@@ -133,6 +133,8 @@ func _build_main_panel() -> void:
 		var b := UITheme.menu_button(_options[i], 18, false)
 		b.position = PANEL_RECT.position + Vector2(40.0, 96.0 + float(i) * 44.0)
 		b.size = Vector2(PANEL_RECT.size.x - 80.0, 38.0)
+		b.pressed.connect(_on_option_pressed.bind(i))
+		b.mouse_entered.connect(_on_option_hover.bind(i))
 		add_child(b)
 		_option_labels.append(b)
 		_main_panel_nodes.append(b)
@@ -375,6 +377,19 @@ func _adjust_volume(slot: int, delta: int) -> void:
 	Audio.save_settings()
 	Audio.play("ui_move")
 	_refresh_sliders()
+
+func _on_option_pressed(i: int) -> void:
+	if i >= _options.size():
+		return
+	_cursor = i
+	_refresh_options()
+	_select_main()
+
+func _on_option_hover(i: int) -> void:
+	if i >= _options.size() or _cursor == i:
+		return
+	_cursor = i
+	Audio.play("ui_move"); _refresh_options()
 
 func _select_main() -> void:
 	match _options[_cursor]:
