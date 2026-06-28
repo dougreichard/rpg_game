@@ -22,13 +22,13 @@
       "rig": "synty"
     },
     "quadruped": {
-      "description": "Four-legged pet on the project's quadruped rig profile (the committed fox-reference skeleton) — for AnimalCompanion3D pets (Frosty, Calvin & Coolidge). Drop-in quadruped rigging of a GENERATED body needs skeleton-fit R&D (same as the humanoid case), so today this falls back to a UniRig auto-rig unless the fit binds; /retarget conforms an already-quadruped-rigged mesh to it cleanly.",
+      "description": "Four-legged pet mesh — ships the RAW UniRig auto-rig (generic bone_N, skinned, no clips, no donor). The donor-fit/mesh2motion-mapping path was retired (UniRig's topology doesn't map cleanly to a named quad skeleton); rig pets externally with a fixed-skeleton tool (AccuRIG / Rigify quad) and keep that skeleton canonical. fit_quadruped_rig + the `quadruped` rig profile remain for already-named-rigged meshes via /retarget.",
       "ref_kind": "creature",
       "pose": "neutral",
       "texture_mode": "diffuse_matte",
       "poly": 2500,
       "height_m": 0.5,
-      "rig": "quadruped"
+      "rig": "unirig"
     },
     "creature": {
       "description": "Arbitrary creature/biped-ish — UniRig auto-rig, raw (retarget to an engine profile later if needed).",

@@ -728,3 +728,36 @@ cleaner** at idle + run. So: reverted `fit_quadruped_rig.py` to v1, re-fit the 3
 in the roster. The real "a bit off" improvement (better than v1) needs **bone-heat auto-weights**, which
 needs **manifold meshes** — i.e. a mesh-cleanup stage (drop the stray chest shell + weld) BEFORE rigging.
 That's the actual next lever if we want better-than-reuse; flag if you want to tackle it server-side.
+
+---
+## ✅ Windows/3090 (2026-06-21) — FBX output option + quadruped now ships RAW UniRig
+Two changes per Doug's asks (both repo + farm, app restarted):
+
+**1. FBX output on every asset-producing endpoint (GLB stays default).** New trailing `fmt` arg
+(`"glb"` default | `"fbx"`). FBX is a format-only convert at the end (Blender, textures embedded via
+`to_fbx.py`) — GLB stays the canonical internal format, so nothing else changes. The 3D **preview stays
+GLB** (gr.Model3D can't render FBX); the **download/commit artifact** is the chosen format.
+- `/generate`     → `predict(name, prompt, seed, track, angle, height_m, poly, ref_count, style_img, do_commit, texture_mode, remesh_preset, **fmt**)`
+- `/generate_character` → `predict(name, prompt, template, seed, ref_count, do_commit, **fmt**)`
+- `/retarget`     → `predict(handle_file(glb), to_profile, with_clips, **fmt**)`
+- `/rig_mesh`     → `predict(handle_file(glb), template, do_commit, **fmt**)`
+- (`/add_clip` unchanged — it edits in-place game GLBs; FBX doesn't apply there.)
+- All back-compat: `fmt` is trailing + defaults to `"glb"`, so existing `prop_pull`/`char_pull` calls are unaffected.
+  Verified: `/rig_mesh(... , fmt="fbx")` returns a `.fbx` (armature + mesh + embedded textures).
+
+**2. `quadruped` template now ships the RAW UniRig auto-rig** (generic `bone_N`, skinned, no clips, no donor) —
+the donor-fit/mesh2motion-mapping path is retired (UniRig's topology doesn't map cleanly to a named quad
+skeleton; confirmed dead path). Verified: `/generate_character template=quadruped` + `/rig_mesh template=quadruped`
+both report `rig: unirig`, 0 clips. `template=creature` is the same raw-UniRig behaviour for non-pet shapes.
+- **New pet flow (the AccuRIG/fixed-skeleton direction):** farm makes the **mesh + texture**, you rig it
+  externally to a fixed named skeleton, keep that skeleton canonical, and port the existing pet clips onto it
+  once (a real named→named bone-map retarget). `fit_quadruped_rig` + the `quadruped` rig **profile** stay for
+  `/retarget` of an already-named-rigged mesh. Use `fmt="fbx"` to get the mesh straight into AccuRIG/Rigify.
+
+> **Reconciliation with your v1/v2 fit notes above:** this raw-UniRig switch is **per Doug's explicit call in
+> the live session** — he decided to go the **fixed-skeleton external-rigger (AccuRIG)** route, so the farm
+> stops trying to auto-rig quads to a named skeleton (the donor-fit reuse and the v2 skeleton-fit are both the
+> "make UniRig speak mesh2motion" family, which we agreed is a churn dead-end for non-schnoodle dogs). The v1
+> **donor-fit reuse stage is NOT deleted** — it still runs for `/retarget` (already-named-rigged mesh) and the
+> `quadruped` profile; only the `quadruped` **template default** changed to raw UniRig. If you'd rather keep
+> `template=quadruped` doing v1 reuse for now, say so and I'll point it back — it's a one-line template flip.
